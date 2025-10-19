@@ -9,14 +9,15 @@ A Testbed environment for testing <a href="https://flower.ai/docs/framework/inde
 </p>
 
 
-<p align="center">
-Flower Testbed is an open-source project developed for research and educational purposes. It provides a platform for experimenting with federated learning algorithms using the Flower framework.
-<br>
-</p>
-
 <details>
 
 <summary>📑 Table of Contents</summary>
 
 </details>
+
+
+## About 
+
+Flower Testbed is an open-source project developed for research and educational purposes. It provides a platform for experimenting with federated learning algorithms using the Flower framework.
+
 
