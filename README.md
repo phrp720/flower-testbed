@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img src="flower-testbed-icon.png" alt="Flower Testbed" width="192" height="192" style="width:192px;height:192px;object-fit:contain;">
+    <img src="flower-testbed-icon.png" alt="Flower Testbed" style="width:400px;height:auto;object-fit:contain;">
   </picture>
 </p>
 
