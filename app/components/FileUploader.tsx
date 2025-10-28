@@ -7,12 +7,7 @@ type Props = {
     onFile?: (file: File | null) => void;
 };
 
-export default function SingleFileUploader({
-                                               id = "single-uploader",
-                                               accept = "*",
-                                               hint = "Drop or click to upload",
-                                               onFile,
-                                           }: Props) {
+export default function SingleFileUploader({id = "single-uploader", accept = "*", hint = "Drop or click to upload", onFile,}: Props) {
     const [file, setFile] = useState<File | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const inputRef = useRef<HTMLInputElement | null>(null);
