@@ -4,15 +4,19 @@ type Props = {
     title: string;
     subtitle?: string;
     children?: React.ReactNode;
+    className?: string;
 };
 
-export function FileCard({ title, subtitle, children }: Props) {
+export function FileCard({ title, subtitle, children, className }: Props) {
     return (
-        <section className="rounded-lg border bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-start justify-between">
+        <section
+            className={`rounded-md border bg-white p-3 shadow-sm text-sm ${className ?? ""}`}
+            style={{ maxWidth: 360 }}
+        >
+            <div className="mb-2 flex items-start justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-                    {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
+                    <h3 className="text-sm font-semibold text-gray-800" align={"start"}>{title}</h3>
+                    {subtitle && <p className="mt-1 text-xs text-gray-500">{subtitle}</p>}
                 </div>
             </div>
 
