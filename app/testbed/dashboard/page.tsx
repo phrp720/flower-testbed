@@ -2,11 +2,21 @@
 import React from "react";
 import SingleFileUploader from "@/app/components/FileUploader";
 import { FileCard } from "@/app/components/FileCard";
+import Image from 'next/image';
 
 export default function DashboardPage() {
     return (
         <>
-            <h1 className="text-2xl font-semibold">Testbed Dashboard</h1>
+            <h1 className="text-2xl font-semibold flex items-center gap-3">
+                <Image
+                    src="/flower-testbed-icon.png"
+                    alt="Flower Testbed"
+                    width={64}
+                    height={64}
+                    className="inline-block"
+                />
+                Testbed Dashboard
+            </h1>
 
             <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FileCard title="Model" subtitle="Upload model files (e.g. pt files)">
