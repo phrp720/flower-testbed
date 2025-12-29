@@ -164,7 +164,7 @@ export default function DashboardPage() {
                 href="/testbed/experiments"
                 className="text-blue-600 hover:text-blue-800 text-sm font-medium"
               >
-                View All →
+                View All
               </Link>
             </div>
           </div>

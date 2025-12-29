@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import Dialog from "@/app/components/Dialog";
 
 type Experiment = {
   id: number;
@@ -21,6 +22,18 @@ type Experiment = {
 export default function ExperimentsPage() {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'error' | 'success' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
 
   useEffect(() => {
     fetchExperiments();
@@ -40,11 +53,15 @@ export default function ExperimentsPage() {
     }
   };
 
-  const deleteExperiment = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this experiment?')) return;
+  const handleDeleteClick = (id: number) => {
+    setDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteId === null) return;
 
     try {
-      const response = await fetch(`/api/experiments/${id}`, {
+      const response = await fetch(`/api/experiments/${deleteId}`, {
         method: 'DELETE',
       });
 
@@ -52,9 +69,16 @@ export default function ExperimentsPage() {
 
       // Refresh list
       fetchExperiments();
+      setDeleteId(null);
     } catch (error) {
       console.error('Error deleting experiment:', error);
-      alert('Failed to delete experiment');
+      setDialog({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to delete experiment. Please try again.',
+        type: 'error',
+      });
+      setDeleteId(null);
     }
   };
 
@@ -117,12 +141,12 @@ export default function ExperimentsPage() {
         {experiments.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <p className="text-gray-500 mb-4">No experiments yet</p>
-            <Link
-              href="/testbed/experiments/new"
-              className="text-blue-600 hover:underline"
-            >
-              Create your first experiment →
-            </Link>
+              <Link
+                  href="/testbed/experiments/new"
+                  className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                  Create Your First Experiment
+              </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
@@ -176,7 +200,7 @@ export default function ExperimentsPage() {
                       View
                     </Link>
                     <button
-                      onClick={() => deleteExperiment(exp.id)}
+                      onClick={() => handleDeleteClick(exp.id)}
                       className="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 rounded hover:bg-red-50"
                     >
                       Delete
@@ -188,6 +212,27 @@ export default function ExperimentsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        isOpen={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        title="Delete Experiment"
+        message="Are you sure you want to delete this experiment? This action cannot be undone."
+        type="confirm"
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+
+      {/* Error Dialog */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+      />
     </div>
   );
 }

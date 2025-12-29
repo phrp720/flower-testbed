@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import SingleFileUploader from "@/app/components/FileUploader";
+import Dialog from "@/app/components/Dialog";
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -25,6 +26,19 @@ export default function DashboardPage() {
 
     const [isCreating, setIsCreating] = useState(false);
 
+    // Dialog state
+    const [dialog, setDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        type: 'info' | 'error' | 'success' | 'warning';
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+    });
+
     const uploadFile = async (file: File, type: string): Promise<string> => {
         const formData = new FormData();
         formData.append('file', file);
@@ -46,7 +60,12 @@ export default function DashboardPage() {
 
     const handleStartExperiment = async () => {
         if (!algorithmFile) {
-            alert('Please select an algorithm file');
+            setDialog({
+                isOpen: true,
+                title: 'Missing Algorithm',
+                message: 'Please select an algorithm file to continue.',
+                type: 'warning',
+            });
             return;
         }
 
@@ -96,7 +115,12 @@ export default function DashboardPage() {
             router.push(`/testbed/experiments/${experiment.id}`);
         } catch (error) {
             console.error('Error:', error);
-            alert(`Failed to start experiment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setDialog({
+                isOpen: true,
+                title: 'Error',
+                message: `Failed to start experiment:\n${error instanceof Error ? error.message : 'Unknown error'}`,
+                type: 'error',
+            });
         } finally {
             setIsCreating(false);
         }
@@ -367,6 +391,14 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <Dialog
+                isOpen={dialog.isOpen}
+                onClose={() => setDialog({ ...dialog, isOpen: false })}
+                title={dialog.title}
+                message={dialog.message}
+                type={dialog.type}
+            />
         </div>
     );
 }
