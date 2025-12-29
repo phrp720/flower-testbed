@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
+    "deps": "./scripts/deps.sh",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -14,7 +15,7 @@
   "dependencies": {
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
-    "next": "15.5.6",
+    "next": "16.1.0-canary.19",
     "pg": "^8.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0"
