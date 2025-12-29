@@ -9,11 +9,11 @@ export default function DashboardPage() {
     const router = useRouter();
     const [preset, setPreset] = useState("pytorch");
 
-    // Track uploaded file paths
-    const [modelPath, setModelPath] = useState<string | null>(null);
-    const [configPath, setConfigPath] = useState<string | null>(null);
-    const [datasetPath, setDatasetPath] = useState<string | null>(null);
-    const [algorithmPath, setAlgorithmPath] = useState<string | null>(null);
+    // Track selected files (not uploaded yet)
+    const [modelFile, setModelFile] = useState<File | null>(null);
+    const [configFile, setConfigFile] = useState<File | null>(null);
+    const [datasetFile, setDatasetFile] = useState<File | null>(null);
+    const [algorithmFile, setAlgorithmFile] = useState<File | null>(null);
 
     // Experiment configuration
     const [experimentName, setExperimentName] = useState("");
@@ -25,15 +25,40 @@ export default function DashboardPage() {
 
     const [isCreating, setIsCreating] = useState(false);
 
+    const uploadFile = async (file: File, type: string): Promise<string> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', type);
+
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Upload failed');
+        }
+
+        const data = await response.json();
+        return data.path;
+    };
+
     const handleStartExperiment = async () => {
-        if (!algorithmPath) {
-            alert('Please upload an algorithm file');
+        if (!algorithmFile) {
+            alert('Please select an algorithm file');
             return;
         }
 
         setIsCreating(true);
         try {
-            // Create experiment
+            // Upload all files first
+            const algorithmPath = await uploadFile(algorithmFile, 'algorithm');
+            const modelPath = modelFile ? await uploadFile(modelFile, 'model') : null;
+            const configPath = configFile ? await uploadFile(configFile, 'config') : null;
+            const datasetPath = datasetFile ? await uploadFile(datasetFile, 'dataset') : null;
+
+            // Create experiment with uploaded file paths
             const response = await fetch('/api/experiments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -226,12 +251,12 @@ export default function DashboardPage() {
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">Ready to Start?</h3>
                                     <p className="text-sm text-gray-600 mt-1">
-                                        {algorithmPath ? '✓ Algorithm uploaded' : '⚠ Upload an algorithm to continue'}
+                                        {algorithmFile ? '✓ Algorithm selected' : '⚠ Select an algorithm to continue'}
                                     </p>
                                 </div>
                                 <button
                                     onClick={handleStartExperiment}
-                                    disabled={isCreating || !algorithmPath}
+                                    disabled={isCreating || !algorithmFile}
                                     className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600"
                                 >
                                     {isCreating ? (
@@ -266,7 +291,7 @@ export default function DashboardPage() {
                                         accept=".py"
                                         hint="Drop algorithm file"
                                         type="algorithm"
-                                        onUploadComplete={setAlgorithmPath}
+                                        onFileSelect={setAlgorithmFile}
                                     />
                                 </div>
 
@@ -283,7 +308,7 @@ export default function DashboardPage() {
                                         accept=".pt,.pth"
                                         hint="Drop model file"
                                         type="model"
-                                        onUploadComplete={setModelPath}
+                                        onFileSelect={setModelFile}
                                     />
                                 </div>
 
@@ -300,7 +325,7 @@ export default function DashboardPage() {
                                         accept=".py,.json,.yaml"
                                         hint="Drop config file"
                                         type="config"
-                                        onUploadComplete={setConfigPath}
+                                        onFileSelect={setConfigFile}
                                     />
                                 </div>
 
@@ -317,7 +342,7 @@ export default function DashboardPage() {
                                         accept=".py,.csv"
                                         hint="Drop dataset file"
                                         type="dataset"
-                                        onUploadComplete={setDatasetPath}
+                                        onFileSelect={setDatasetFile}
                                     />
                                 </div>
                             </div>
