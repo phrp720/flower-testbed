@@ -144,9 +144,12 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800">Experiment not found</h1>
-          <Link href="/testbed/experiments" className="text-blue-600 hover:underline mt-4 inline-block">
-            Back to experiments
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Experiment not found</h1>
+          <Link
+            href="/testbed/experiments"
+            className="bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition shadow-sm hover:shadow"
+          >
+            <span>← Back to Experiments</span>
           </Link>
         </div>
       </div>
@@ -175,8 +178,11 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
       <div className="max-w-6xl mx-auto px-4">
         {/* Header */}
         <div className="mb-6">
-          <Link href="/testbed/experiments" className="text-blue-600 hover:underline mb-2 inline-block">
-            ← Back to experiments
+          <Link
+            href="/testbed/experiments"
+            className="bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition shadow-sm hover:shadow mb-4"
+          >
+            <span>← Back to Experiments</span>
           </Link>
           <div className="flex items-center justify-between">
             <div>
