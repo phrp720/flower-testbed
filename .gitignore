@@ -4,3 +4,16 @@ node_modules/
 .next/
 .swc/
 .*.env
+.env.local
+.env
+
+# Uploads and experiment data
+uploads/
+checkpoints/
+data/
+
+# Database
+lib/db/migrations/
+
+# macOS
+.DS_Store

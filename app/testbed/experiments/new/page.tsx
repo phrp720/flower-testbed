@@ -1,0 +1,347 @@
+"use client";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import SingleFileUploader from "@/app/components/FileUploader";
+import Image from 'next/image';
+import Link from 'next/link';
+
+export default function DashboardPage() {
+    const router = useRouter();
+    const [preset, setPreset] = useState("pytorch");
+
+    // Track uploaded file paths
+    const [modelPath, setModelPath] = useState<string | null>(null);
+    const [configPath, setConfigPath] = useState<string | null>(null);
+    const [datasetPath, setDatasetPath] = useState<string | null>(null);
+    const [algorithmPath, setAlgorithmPath] = useState<string | null>(null);
+
+    // Experiment configuration
+    const [experimentName, setExperimentName] = useState("");
+    const [numClients, setNumClients] = useState(10);
+    const [numRounds, setNumRounds] = useState(3);
+    const [clientFraction, setClientFraction] = useState(0.5);
+    const [localEpochs, setLocalEpochs] = useState(1);
+    const [learningRate, setLearningRate] = useState(0.01);
+
+    const [isCreating, setIsCreating] = useState(false);
+
+    const handleStartExperiment = async () => {
+        if (!algorithmPath) {
+            alert('Please upload an algorithm file');
+            return;
+        }
+
+        setIsCreating(true);
+        try {
+            // Create experiment
+            const response = await fetch('/api/experiments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: experimentName || `Experiment - ${new Date().toLocaleString()}`,
+                    description: `Federated Learning experiment using ${preset}`,
+                    framework: preset,
+                    algorithmPath,
+                    modelPath,
+                    configPath,
+                    numClients,
+                    numRounds,
+                    clientFraction,
+                    localEpochs,
+                    learningRate,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create experiment');
+            }
+
+            const { experiment } = await response.json();
+
+            // Start the experiment
+            const startResponse = await fetch(`/api/experiments/${experiment.id}/start`, {
+                method: 'POST',
+            });
+
+            if (!startResponse.ok) {
+                throw new Error('Failed to start experiment');
+            }
+
+            // Navigate to experiment monitoring page
+            router.push(`/testbed/experiments/${experiment.id}`);
+        } catch (error) {
+            console.error('Error:', error);
+            alert(`Failed to start experiment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 py-8">
+            <div className="max-w-7xl mx-auto px-4">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <Image
+                            src="/flower-testbed-icon.png"
+                            alt="Flower Testbed"
+                            width={48}
+                            height={48}
+                        />
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">Create New Experiment</h1>
+                            <p className="text-gray-600 text-sm mt-1">Configure and launch a federated learning experiment</p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/testbed/dashboard"
+                        className="bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition shadow-sm hover:shadow"
+                    >
+                        <span>← Back to Dashboard</span>
+                    </Link>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left Column - Configuration */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Basic Info */}
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Experiment Details</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Experiment Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={experimentName}
+                                        onChange={(e) => setExperimentName(e.target.value)}
+                                        placeholder="My Federated Learning Experiment"
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Framework
+                                    </label>
+                                    <select
+                                        value={preset}
+                                        onChange={(e) => setPreset(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="pytorch">PyTorch</option>
+                                        <option value="tensorflow">TensorFlow</option>
+                                        <option value="sklearn">scikit-learn</option>
+                                        <option value="huggingface">Hugging Face</option>
+                                        <option value="jax">JAX</option>
+                                        <option value="mlx">MLX</option>
+                                        <option value="numpy">NumPy</option>
+                                        <option value="xgboost">XGBoost</option>
+                                        <option value="flowertune">FlowerTune</option>
+                                        <option value="flower-baseline">Flower Baseline</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Training Parameters */}
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Training Configuration</h2>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Number of Clients
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={numClients}
+                                        onChange={(e) => setNumClients(parseInt(e.target.value))}
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        min="1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Number of Rounds
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={numRounds}
+                                        onChange={(e) => setNumRounds(parseInt(e.target.value))}
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        min="1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Client Fraction
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="1"
+                                            step="0.1"
+                                            value={clientFraction}
+                                            onChange={(e) => setClientFraction(parseFloat(e.target.value))}
+                                            className="flex-1"
+                                        />
+                                        <span className="text-sm font-medium text-gray-900 w-12 text-right">
+                                            {(clientFraction * 100).toFixed(0)}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Local Epochs
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={localEpochs}
+                                        onChange={(e) => setLocalEpochs(parseInt(e.target.value))}
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        min="1"
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Learning Rate
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.001"
+                                        value={learningRate}
+                                        onChange={(e) => setLearningRate(parseFloat(e.target.value))}
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        min="0"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900">Ready to Start?</h3>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        {algorithmPath ? '✓ Algorithm uploaded' : '⚠ Upload an algorithm to continue'}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleStartExperiment}
+                                    disabled={isCreating || !algorithmPath}
+                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600"
+                                >
+                                    {isCreating ? (
+                                        <span className="flex items-center gap-2">
+                                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                            </svg>
+                                            Creating...
+                                        </span>
+                                    ) : 'Start Experiment'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column - File Uploads */}
+                    <div className="space-y-4">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload Files</h2>
+                            <div className="space-y-4">
+                                {/* Algorithm - Required */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-gray-700">
+                                            Algorithm <span className="text-red-500">*</span>
+                                        </label>
+                                        <span className="text-xs text-gray-500">.py</span>
+                                    </div>
+                                    <SingleFileUploader
+                                        id="algorithm-uploader"
+                                        accept=".py"
+                                        hint="Drop algorithm file"
+                                        type="algorithm"
+                                        onUploadComplete={setAlgorithmPath}
+                                    />
+                                </div>
+
+                                {/* Model - Optional */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-gray-700">
+                                            Model <span className="text-gray-400">(optional)</span>
+                                        </label>
+                                        <span className="text-xs text-gray-500">.pt, .pth</span>
+                                    </div>
+                                    <SingleFileUploader
+                                        id="model-uploader"
+                                        accept=".pt,.pth"
+                                        hint="Drop model file"
+                                        type="model"
+                                        onUploadComplete={setModelPath}
+                                    />
+                                </div>
+
+                                {/* Config - Optional */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-gray-700">
+                                            Configuration <span className="text-gray-400">(optional)</span>
+                                        </label>
+                                        <span className="text-xs text-gray-500">.py, .json, .yaml</span>
+                                    </div>
+                                    <SingleFileUploader
+                                        id="config-uploader"
+                                        accept=".py,.json,.yaml"
+                                        hint="Drop config file"
+                                        type="config"
+                                        onUploadComplete={setConfigPath}
+                                    />
+                                </div>
+
+                                {/* Dataset - Optional */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-gray-700">
+                                            Dataset <span className="text-gray-400">(optional)</span>
+                                        </label>
+                                        <span className="text-xs text-gray-500">.py, .csv</span>
+                                    </div>
+                                    <SingleFileUploader
+                                        id="dataset-uploader"
+                                        accept=".py,.csv"
+                                        hint="Drop dataset file"
+                                        type="dataset"
+                                        onUploadComplete={setDatasetPath}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Start Guide */}
+                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                            <h3 className="text-sm font-semibold text-blue-900 mb-2">Quick Start</h3>
+                            <ol className="text-xs text-blue-800 space-y-1.5 list-decimal list-inside">
+                                <li>Upload your FL algorithm (required)</li>
+                                <li>Configure training parameters</li>
+                                <li>Click "Start Experiment"</li>
+                                <li>Monitor progress in real-time</li>
+                            </ol>
+                            <div className="mt-3 pt-3 border-t border-blue-200">
+                                <p className="text-xs text-blue-700">
+                                    <strong>Need an example?</strong><br/>
+                                    Use <code className="bg-blue-100 px-1 rounded">examples/sample_algorithm.py</code>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
