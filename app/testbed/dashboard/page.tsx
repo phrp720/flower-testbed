@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Navigation from "@/app/components/Navigation";
 
 type Experiment = {
   id: number;
@@ -75,25 +75,20 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/flower-testbed-icon.png"
-              alt="Flower Testbed"
-              width={48}
-              height={48}
-            />
+        <div className="mb-8">
+          <Navigation />
+          <div className="flex items-center justify-between mt-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
               <p className="text-gray-600 text-sm mt-1">Overview of your federated learning experiments</p>
             </div>
+            <Link
+              href="/testbed/experiments/new"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+            >
+              + New Experiment
+            </Link>
           </div>
-          <Link
-            href="/testbed/experiments/new"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            + New Experiment
-          </Link>
         </div>
 
         {/* Stats Grid */}

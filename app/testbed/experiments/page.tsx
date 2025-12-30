@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 
@@ -114,19 +113,11 @@ export default function ExperimentsPage() {
         {/* Header */}
         <div className="mb-8">
           <Navigation />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/flower-testbed-icon.png"
-                alt="Flower Testbed"
-                width={48}
-                height={48}
-              />
-              <h1 className="text-3xl font-bold text-gray-900">Experiments</h1>
-            </div>
+          <div className="flex items-center justify-between mt-4">
+            <h2 className="text-2xl font-bold text-gray-900">Experiments</h2>
             <Link
               href="/testbed/experiments/new"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
             >
               + New Experiment
             </Link>

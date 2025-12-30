@@ -180,11 +180,11 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         {/* Header */}
         <div className="mb-6">
           <Navigation />
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{experiment.name}</h1>
+              <h2 className="text-2xl font-bold text-gray-900">{experiment.name}</h2>
               {experiment.description && (
-                <p className="text-gray-600 mt-1">{experiment.description}</p>
+                <p className="text-gray-600 mt-1 text-sm">{experiment.description}</p>
               )}
             </div>
             <div>{getStatusBadge(experiment.status)}</div>

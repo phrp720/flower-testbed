@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import SingleFileUploader from "@/app/components/FileUploader";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
-import Image from 'next/image';
-import Link from 'next/link';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -133,17 +131,9 @@ export default function DashboardPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <Navigation />
-                    <div className="flex items-center gap-3">
-                        <Image
-                            src="/flower-testbed-icon.png"
-                            alt="Flower Testbed"
-                            width={48}
-                            height={48}
-                        />
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Create New Experiment</h1>
-                            <p className="text-gray-600 text-sm mt-1">Configure and launch a federated learning experiment</p>
-                        </div>
+                    <div className="mt-4">
+                        <h2 className="text-2xl font-bold text-gray-900">Create New Experiment</h2>
+                        <p className="text-gray-600 text-sm mt-1">Configure and launch a federated learning experiment</p>
                     </div>
                 </div>
 
