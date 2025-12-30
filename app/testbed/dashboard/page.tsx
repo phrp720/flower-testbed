@@ -201,7 +201,7 @@ export default function DashboardPage() {
                     <YAxis stroke="#6b7280" />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                      formatter={(value: number) => `${value.toFixed(2)}%`}
+                      formatter={(value) => typeof value === 'number' ? `${value.toFixed(2)}%` : value}
                     />
                     <Legend />
                     <Line
