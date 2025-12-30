@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Navigation from "@/app/components/Navigation";
 
 type Experiment = {
   id: number;
@@ -178,12 +179,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
       <div className="max-w-6xl mx-auto px-4">
         {/* Header */}
         <div className="mb-6">
-          <Link
-            href="/testbed/experiments"
-            className="bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition shadow-sm hover:shadow mb-4"
-          >
-            <span>← Back to Experiments</span>
-          </Link>
+          <Navigation />
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{experiment.name}</h1>

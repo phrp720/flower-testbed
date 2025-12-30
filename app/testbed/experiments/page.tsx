@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Dialog from "@/app/components/Dialog";
+import Navigation from "@/app/components/Navigation";
 
 type Experiment = {
   id: number;
@@ -112,12 +113,7 @@ export default function ExperimentsPage() {
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <Link
-            href="/testbed/dashboard"
-            className="bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition shadow-sm hover:shadow mb-4"
-          >
-            <span>← Back to Dashboard</span>
-          </Link>
+          <Navigation />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Image
