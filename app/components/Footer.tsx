@@ -2,15 +2,15 @@
 
 export default function Footer() {
     return (
-        <footer className="mt-12 pt-6 border-t border-gray-200">
+        <footer className="mt-8 pt-3 pb-2">
             <div className="text-center">
-                <p className="text-sm text-gray-600">
+                <p className="text-xs text-gray-400">
                     Powered by{" "}
                     <a
                         href="https://github.com/phrp720"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-semibold text-blue-600 hover:text-blue-800 transition"
+                        className="text-gray-500 hover:text-blue-600 transition"
                     >
                         phrp720
                     </a>
