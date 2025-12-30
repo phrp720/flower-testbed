@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import SingleFileUploader from "@/app/components/FileUploader";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
+import Footer from "@/app/components/Footer";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -376,6 +377,8 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 </div>
+
+                <Footer />
             </div>
 
             <Dialog

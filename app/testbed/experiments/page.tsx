@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
+import Footer from "@/app/components/Footer";
 
 type Experiment = {
   id: number;
@@ -198,6 +199,8 @@ export default function ExperimentsPage() {
             ))}
           </div>
         )}
+
+        <Footer />
       </div>
 
       {/* Delete Confirmation Dialog */}

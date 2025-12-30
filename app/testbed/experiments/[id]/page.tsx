@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navigation from "@/app/components/Navigation";
+import Footer from "@/app/components/Footer";
 
 type Experiment = {
   id: number;
@@ -364,6 +365,8 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
         </div>
+
+        <Footer />
       </div>
     </div>
   );

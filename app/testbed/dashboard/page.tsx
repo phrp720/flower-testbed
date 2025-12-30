@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navigation from "@/app/components/Navigation";
+import Footer from "@/app/components/Footer";
 
 type Experiment = {
   id: number;
@@ -272,6 +273,8 @@ export default function DashboardPage() {
             </div>
           </a>
         </div>
+
+        <Footer />
       </div>
     </div>
   );
