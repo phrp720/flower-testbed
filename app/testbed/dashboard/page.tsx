@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 type Experiment = {
   id: number;
@@ -46,6 +47,41 @@ export default function DashboardPage() {
   const failedExperiments = experiments.filter(e => e.status === 'failed').length;
 
   const recentExperiments = experiments.slice(0, 5);
+
+  // Prepare chart data
+  const accuracyTrendData = experiments
+    .filter(e => e.status === 'completed' && e.finalAccuracy !== null)
+    .slice(-10)
+    .map((exp, idx) => ({
+      name: `Exp ${idx + 1}`,
+      accuracy: exp.finalAccuracy ? (exp.finalAccuracy * 100) : 0,
+      loss: exp.finalLoss || 0,
+    }));
+
+  // Framework distribution data
+  const frameworkCounts = experiments.reduce((acc, exp) => {
+    acc[exp.framework] = (acc[exp.framework] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const frameworkColors = [
+    '#3b82f6', // blue
+    '#8b5cf6', // purple
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#ec4899', // pink
+    '#06b6d4', // cyan
+    '#84cc16', // lime
+    '#f97316', // orange
+    '#6366f1', // indigo
+  ];
+
+  const frameworkData = Object.entries(frameworkCounts).map(([name, value], index) => ({
+    name,
+    experiments: value,
+    fill: frameworkColors[index % frameworkColors.length],
+  }));
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -150,6 +186,130 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Analytics Charts */}
+        {experiments.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Accuracy Trend Chart */}
+            {accuracyTrendData.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Accuracy Trends</h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={accuracyTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="name" stroke="#6b7280" />
+                    <YAxis stroke="#6b7280" />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                      formatter={(value: number) => `${value.toFixed(2)}%`}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="accuracy"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      name="Accuracy (%)"
+                      dot={{ fill: '#3b82f6', r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Framework Distribution Chart */}
+            {frameworkData.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Framework Distribution</h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={frameworkData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="name" stroke="#6b7280" />
+                    <YAxis stroke="#6b7280" />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                    />
+                    <Legend />
+                    <Bar dataKey="experiments" name="Experiments" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Average Performance Metrics */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Performance Summary</h2>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Average Accuracy</span>
+                    <span className="text-lg font-bold text-green-600">
+                      {completedExperiments > 0
+                        ? (
+                            (experiments
+                              .filter(e => e.status === 'completed' && e.finalAccuracy !== null)
+                              .reduce((sum, e) => sum + (e.finalAccuracy || 0), 0) /
+                              experiments.filter(e => e.status === 'completed' && e.finalAccuracy !== null).length) * 100
+                          ).toFixed(2)
+                        : '0.00'}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{
+                        width: `${
+                          completedExperiments > 0
+                            ? (experiments
+                                .filter(e => e.status === 'completed' && e.finalAccuracy !== null)
+                                .reduce((sum, e) => sum + (e.finalAccuracy || 0), 0) /
+                                experiments.filter(e => e.status === 'completed' && e.finalAccuracy !== null).length) * 100
+                            : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Success Rate</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      {totalExperiments > 0
+                        ? ((completedExperiments / totalExperiments) * 100).toFixed(1)
+                        : '0.0'}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{
+                        width: `${totalExperiments > 0 ? (completedExperiments / totalExperiments) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600">Total Rounds</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {experiments.reduce((sum, e) => sum + e.numRounds, 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Total Clients</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {experiments.reduce((sum, e) => sum + e.numClients, 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Recent Experiments */}
         <div className="bg-white rounded-lg shadow">
