@@ -229,7 +229,7 @@ export default function DashboardPage() {
                     <Tooltip
                       contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                     />
-                    <Bar dataKey="experiments" name="Experiments" maxBarSize={40} />
+                    <Bar dataKey="experiments" name="experiments" maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
