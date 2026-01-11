@@ -51,7 +51,7 @@ export async function POST(
       .where(eq(schema.experiments.id, experimentId));
 
     // Create checkpoint directory for this experiment
-    const checkpointDir = path.join(process.cwd(), 'checkpoints', `exp_${experimentId}`);
+    const checkpointDir = path.join(process.cwd(), 'checkpoints-data', `exp_${experimentId}`);
     await mkdir(checkpointDir, { recursive: true });
 
     // Start the experiment in the background
