@@ -4,6 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 export default function Navigation() {
+
+
     return (
         <div className="flex items-center justify-between pb-6 mb-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
@@ -17,15 +19,6 @@ export default function Navigation() {
             </div>
 
             <div className="flex items-center gap-2">
-                <button
-                    onClick={() => window.history.back()}
-                    className="bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 p-2 rounded-lg font-medium inline-flex items-center transition shadow-sm hover:shadow"
-                    title="Go back"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
                 <Link
                     href="/testbed/dashboard"
                     className="bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition shadow-sm hover:shadow"
