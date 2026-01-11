@@ -253,36 +253,20 @@ Response:
 **clients**: Virtual client information
 
 ## Roadmap
-
-### Phase 1: Core Infrastructure ✅
 - [x] Database setup with PostgreSQL & Drizzle
 - [x] File upload API
 - [x] Experiment CRUD API
 - [x] Dashboard UI with configuration
-
-### Phase 2: Flower Integration 🚧
 - [ ] Python runner for Flower experiments
 - [ ] Dynamic experiment execution
 - [ ] Real-time metrics collection
 - [ ] Model checkpointing per round
-
-### Phase 3: Monitoring & Visualization 🔜
 - [ ] Real-time experiment monitoring page
 - [ ] Metrics visualization (charts)
 - [ ] Experiment history page
-- [ ] Model comparison tools
-
-### Phase 4: Advanced Features 🔜
-- [ ] GPU/CPU resource detection
-- [ ] Multi-experiment queue system
 - [ ] Export results (CSV, JSON)
-- [ ] Custom metric definitions
-
-### Phase 5: Testing & Documentation 🔜
 - [ ] Unit tests
-- [ ] Integration tests
 - [ ] Sample applications
-- [ ] API documentation
 - [ ] User guide
 
 ## Contributing
