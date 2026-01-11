@@ -8,11 +8,10 @@ export default function Navigation() {
         <div className="flex items-center justify-between pb-6 mb-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
                 <Image
-                    src="/flower-testbed-icon.png"
+                    src="/testbed-icon-v2.png"
                     alt="Flower Testbed"
-                    width={40}
-                    height={40}
-                    className="rounded-full"
+                    width={70}
+                    height={70}
                 />
                 <h1 className="text-2xl font-bold text-gray-900">Flower Testbed</h1>
             </div>

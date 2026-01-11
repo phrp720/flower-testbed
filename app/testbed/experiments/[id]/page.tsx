@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
 
@@ -72,6 +73,18 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMetrics, setCurrentMetrics] = useState<StreamUpdate['metrics'] | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'error' | 'success' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
 
   // Fetch initial data
   useEffect(() => {
@@ -175,6 +188,33 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const currentRound = currentMetrics?.round || metrics[metrics.length - 1]?.round || 0;
   const progress = (currentRound / experiment.numRounds) * 100;
 
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const response = await fetch(`/api/experiments/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete experiment');
+      }
+
+      router.push('/testbed/experiments');
+    } catch (error) {
+      console.error('Error deleting experiment:', error);
+      setDialog({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to delete experiment. Please try again.',
+        type: 'error',
+      });
+      setShowDeleteDialog(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
@@ -188,7 +228,15 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                 <p className="text-gray-600 mt-1 text-sm">{experiment.description}</p>
               )}
             </div>
-            <div>{getStatusBadge(experiment.status)}</div>
+            <div className="flex items-center gap-3">
+              {getStatusBadge(experiment.status)}
+              <button
+                onClick={handleDeleteClick}
+                className="bg-red-600 text-white hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-medium transition"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
 
@@ -368,6 +416,27 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
 
         <Footer />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        title="Delete Experiment"
+        message="Are you sure you want to delete this experiment? This action cannot be undone."
+        type="confirm"
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+
+      {/* Error Dialog */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+      />
     </div>
   );
 }

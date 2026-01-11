@@ -15,6 +15,27 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Flower Testbed",
   description: "Flower Testbed for Federated Learning Experiments",
+  icons: {
+    icon: [
+      {
+        url: '/testbed-icon-v2.png',
+        sizes: '32x32',
+        type: 'image/png',
+      },
+      {
+        url: '/testbed-icon-v2.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+    ],
+    apple: [
+      {
+        url: '/testbed-icon-v2.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
