@@ -9,7 +9,7 @@ node_modules/
 
 # Uploads and experiment data
 uploads/
-checkpoints/
+checkpoints-data/
 data/
 
 # Database
