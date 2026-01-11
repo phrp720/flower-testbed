@@ -188,37 +188,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Analytics Charts */}
-        {experiments.length > 0 && (
+        {(
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Accuracy Trend Chart */}
-            {accuracyTrendData.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Accuracy Trends</h2>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={accuracyTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="name" stroke="#6b7280" />
-                    <YAxis stroke="#6b7280" />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                      formatter={(value) => typeof value === 'number' ? `${value.toFixed(2)}%` : value}
-                    />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="accuracy"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      name="Accuracy (%)"
-                      dot={{ fill: '#3b82f6', r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
             {/* Framework Distribution Chart */}
-            {frameworkData.length > 0 && (
+            {(
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Framework Distribution</h2>
                 <ResponsiveContainer width="100%" height={300}>
