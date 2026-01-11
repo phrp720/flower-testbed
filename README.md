@@ -35,46 +35,6 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 - **Multi-Framework Support**: PyTorch, TensorFlow, sklearn, JAX, and more
 - **Resource Flexibility**: CPU/GPU support with configurable client resources
 
-## Features
-
-- ✅ **Web UI for Experiment Management**
-  - File upload for algorithms, models, datasets, and configs
-  - Configurable FL parameters (rounds, clients, learning rate, etc.)
-  - Framework selection (PyTorch, TensorFlow, etc.)
-
-- ✅ **Database-Backed Experiment Tracking**
-  - PostgreSQL database with Drizzle ORM
-  - Full experiment history
-  - Per-round metrics storage
-  - Model checkpoint management
-
-- 🚧 **Flower Integration** (In Progress)
-  - Dynamic experiment execution
-  - Real-time metrics collection
-  - Model checkpointing per round
-
-- 🔜 **Monitoring Dashboard** (Planned)
-  - Real-time experiment status
-  - Metrics visualization
-  - Client performance tracking
-
-## Tech Stack
-
-**Frontend:**
-- Next.js 15 (App Router)
-- React 19
-- TypeScript
-- Tailwind CSS v4
-
-**Backend:**
-- Next.js API Routes
-- PostgreSQL (Docker)
-- Drizzle ORM
-- Python child processes for Flower experiments
-
-**Federated Learning:**
-- Flower Framework
-
 ## Getting Started
 
 ### Prerequisites
@@ -113,7 +73,8 @@ Flower Testbed is an open-source platform for experimenting with federated learn
    ```
 
 6. **Open the dashboard**
-   Navigate to [http://localhost:3000/testbed/dashboard](http://localhost:3000/testbed/dashboard)
+
+   Navigate to [http://localhost:3000/](http://localhost:3000/) in your web browser.
 
 ## Usage
 
