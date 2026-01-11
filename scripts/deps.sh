@@ -18,8 +18,7 @@ if ! command -v node &> /dev/null; then
 fi
 
 if ! command -v pnpm &> /dev/null; then
-    echo "❌ pnpm not found. Installing pnpm..."
-    npm install -g pnpm
+    echo "❌ pnpm not found. Please install pnpm  from https://pnpm.io/installation"
 fi
 
 if ! command -v docker &> /dev/null; then
@@ -70,10 +69,10 @@ pip install -r requirements.txt
 echo ""
 echo "✅ Setup complete!"
 echo ""
-echo "To start the development server:"
+echo "To start the development server run:"
 echo "  pnpm dev"
 echo ""
 echo "Then open your browser to:"
-echo "  http://localhost:3000/testbed/dashboard"
+echo "  http://localhost:3000/"
 echo ""
 echo "Happy federated learning! 🌸"

@@ -94,7 +94,7 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 
 2. **Install dependencies**
    ```bash
-   pnpm install
+   pnpm deps
    ```
 
 3. **Start PostgreSQL database**
@@ -102,23 +102,17 @@ Flower Testbed is an open-source platform for experimenting with federated learn
    docker compose up -d
    ```
 
-4. **Set up environment variables**
-   ```bash
-   cp .env.example .env.local
-   # Edit .env.local if needed (default config should work)
-   ```
-
-5. **Push database schema**
+4. **Push database schema**
    ```bash
    pnpm db:push
    ```
 
-6. **Start the development server**
+5. **Start the development server**
    ```bash
    pnpm dev
    ```
 
-7. **Open the dashboard**
+6. **Open the dashboard**
    Navigate to [http://localhost:3000/testbed/dashboard](http://localhost:3000/testbed/dashboard)
 
 ## Usage
@@ -142,9 +136,6 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 
 4. **Start Experiment**: Click "Start Experiment" to begin
 
-### Example: Using the Flower Tutorial
-
-See `/Users/phrp720/Desktop/FIT/yearProject/flower-tutorial` for a sample Flower project structure.
 
 ## Project Structure
 
