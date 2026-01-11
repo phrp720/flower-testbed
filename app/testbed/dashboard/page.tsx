@@ -225,12 +225,11 @@ export default function DashboardPage() {
                   <BarChart data={frameworkData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="name" stroke="#6b7280" />
-                    <YAxis stroke="#6b7280" />
+                    <YAxis stroke="#6b7280" allowDecimals={false} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                     />
-                    <Legend />
-                    <Bar dataKey="experiments" name="Experiments" />
+                    <Bar dataKey="experiments" name="Experiments" maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
