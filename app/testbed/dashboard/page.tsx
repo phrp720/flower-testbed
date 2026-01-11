@@ -46,7 +46,8 @@ export default function DashboardPage() {
   const completedExperiments = experiments.filter(e => e.status === 'completed').length;
   const failedExperiments = experiments.filter(e => e.status === 'failed').length;
 
-  const recentExperiments = experiments.slice(0, 5);
+  const recentExperiments = experiments.slice(-5).reverse();
+
 
   // Prepare chart data
   const accuracyTrendData = experiments
