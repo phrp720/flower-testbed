@@ -295,7 +295,6 @@ export default function DashboardPage() {
                                         <label className="text-sm font-medium text-gray-700">
                                             Algorithm <span className="text-red-500">*</span>
                                         </label>
-                                        <span className="text-xs text-gray-500">.py</span>
                                     </div>
                                     <SingleFileUploader
                                         id="algorithm-uploader"
@@ -312,7 +311,6 @@ export default function DashboardPage() {
                                         <label className="text-sm font-medium text-gray-700">
                                             Model <span className="text-gray-400">(optional)</span>
                                         </label>
-                                        <span className="text-xs text-gray-500">.pt, .pth</span>
                                     </div>
                                     <SingleFileUploader
                                         id="model-uploader"
@@ -329,7 +327,6 @@ export default function DashboardPage() {
                                         <label className="text-sm font-medium text-gray-700">
                                             Configuration <span className="text-gray-400">(optional)</span>
                                         </label>
-                                        <span className="text-xs text-gray-500">.py, .json, .yaml</span>
                                     </div>
                                     <SingleFileUploader
                                         id="config-uploader"
@@ -346,7 +343,6 @@ export default function DashboardPage() {
                                         <label className="text-sm font-medium text-gray-700">
                                             Dataset <span className="text-gray-400">(optional)</span>
                                         </label>
-                                        <span className="text-xs text-gray-500">.py, .csv</span>
                                     </div>
                                     <SingleFileUploader
                                         id="dataset-uploader"
@@ -368,12 +364,12 @@ export default function DashboardPage() {
                                 <li>Click "Start Experiment"</li>
                                 <li>Monitor progress in real-time</li>
                             </ol>
-                            <div className="mt-3 pt-3 border-t border-blue-200">
-                                <p className="text-xs text-blue-700">
-                                    <strong>Need an example?</strong><br/>
-                                    Use <code className="bg-blue-100 px-1 rounded">examples/sample_algorithm.py</code>
-                                </p>
-                            </div>
+                            {/*<div className="mt-3 pt-3 border-t border-blue-200">*/}
+                            {/*    <p className="text-xs text-blue-700">*/}
+                            {/*        <strong>Need an example?</strong><br/>*/}
+                            {/*        Use <code className="bg-blue-100 px-1 rounded">examples/sample_algorithm.py</code>*/}
+                            {/*    </p>*/}
+                            {/*</div>*/}
                         </div>
                     </div>
                 </div>
