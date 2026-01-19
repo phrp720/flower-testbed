@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img src="public/testbed-icon-v2.png" alt="Flower Testbed" style="width:400px;height:auto;object-fit:contain;">
+    <img src="public/testbed-icon-v2.png" alt="Flower Testbed" style="width:400px;height:200px;object-fit:contain;">
   </picture>
 </p>
 
@@ -13,12 +13,9 @@ A Testbed environment for testing <a href="https://flower.ai/docs/framework/inde
 <summary>📑 Table of Contents</summary>
 
 - [About](#about)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
-- [API Documentation](#api-documentation)
 - [Roadmap](#roadmap)
 
 </details>
@@ -126,84 +123,6 @@ flower-testbed/
 └── drizzle.config.ts         # Drizzle configuration
 ```
 
-## API Documentation
-
-### Upload File
-```
-POST /api/upload
-Content-Type: multipart/form-data
-
-Body:
-  - file: File
-  - type: 'algorithm' | 'model' | 'config' | 'dataset'
-
-Response:
-  {
-    "success": true,
-    "filename": "1234567890_file.py",
-    "path": "uploads/algorithms/1234567890_file.py",
-    "size": 12345,
-    "type": "algorithm"
-  }
-```
-
-### Create Experiment
-```
-POST /api/experiments
-Content-Type: application/json
-
-Body:
-  {
-    "name": "My Experiment",
-    "description": "Description",
-    "framework": "pytorch",
-    "algorithmPath": "uploads/algorithms/...",
-    "modelPath": "uploads/models/...",
-    "configPath": "uploads/configs/...",
-    "numClients": 10,
-    "numRounds": 3,
-    "clientFraction": 0.5,
-    "localEpochs": 1,
-    "learningRate": 0.01
-  }
-
-Response:
-  {
-    "experiment": { ...experiment object }
-  }
-```
-
-### Start Experiment
-```
-POST /api/experiments/:id/start
-
-Response:
-  {
-    "success": true,
-    "message": "Experiment started",
-    "experimentId": 1
-  }
-```
-
-### Get Experiment Details
-```
-GET /api/experiments/:id
-
-Response:
-  {
-    "experiment": { ...experiment object },
-    "metrics": [ ...per-round metrics ],
-    "checkpoints": [ ...model checkpoints ]
-  }
-```
-
-## Database Schema
-
-**experiments**: Experiment metadata and configuration
-**metrics**: Per-round training metrics
-**model_checkpoints**: Model states at each round
-**clients**: Virtual client information
-
 ## Roadmap
 - [x] Database setup with PostgreSQL & Drizzle
 - [x] File upload API
@@ -227,4 +146,6 @@ This is a research project. Contributions, issues, and feature requests are welc
 
 ## License
 
-This project is open-source and available for research and educational purposes.
+This project is licensed under the **MIT license**.
+
+See [LICENSE](https://github.com/phrp720/flower-testbed/blob/master/LICENSE) for more information.
