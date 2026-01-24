@@ -32,7 +32,7 @@ class ExperimentRunner:
         self.experiment_id = experiment_id
         self.conn = None
         self.experiment_config = None
-        self.checkpoint_dir = PROJECT_ROOT / "checkpoints" / f"exp_{experiment_id}"
+        self.checkpoint_dir = PROJECT_ROOT / "checkpoints-data" / f"exp_{experiment_id}"
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     def connect_db(self):
@@ -41,8 +41,12 @@ class ExperimentRunner:
         if not db_url:
             raise ValueError("DATABASE_URL not set")
 
-        # Parse postgres:// URL to connection params
-        # Format: postgresql://user:password@host:port/database
+        # Remove schema parameter if present (Prisma/Drizzle-specific, not supported by psycopg2)
+        if "?schema=" in db_url:
+            db_url = db_url.split("?schema=")[0]
+        elif "&schema=" in db_url:
+            db_url = db_url.replace("&schema=public", "").replace("&schema=", "")
+
         self.conn = psycopg2.connect(db_url)
         print(f"✓ Connected to database")
 
@@ -292,7 +296,8 @@ class ExperimentRunner:
         except Exception as e:
             error_msg = f"{type(e).__name__}: {str(e)}"
             print(f"\n✗ Experiment failed: {error_msg}")
-            self.update_status("failed", error_msg)
+            if self.conn:
+                self.update_status("failed", error_msg)
             raise
 
         finally:

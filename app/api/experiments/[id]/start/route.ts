@@ -78,8 +78,8 @@ function startFlowerExperiment(experimentId: number) {
   const projectRoot = process.cwd();
   const pythonScript = path.join(projectRoot, 'runner', 'flower_runner.py');
 
-  // Spawn Python process
-  const pythonProcess = spawn('python3', [pythonScript, experimentId.toString()], {
+  const pythonPath = path.join(projectRoot, 'venv', 'bin', 'python');
+  const pythonProcess = spawn(pythonPath, [pythonScript, experimentId.toString()], {
     cwd: projectRoot,
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
