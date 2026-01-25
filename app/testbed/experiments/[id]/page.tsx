@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Download, ChevronLeft } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -225,11 +225,20 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         <div className="mb-6">
           <Navigation />
           <div className="flex items-center justify-between mt-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{experiment.name}</h2>
-              {experiment.description && (
-                <p className="text-gray-600 mt-1 text-sm">{experiment.description}</p>
-              )}
+            <div className="flex items-center gap-3">
+              <Link
+                href="/testbed/experiments"
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Back to experiments"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </Link>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{experiment.name}</h2>
+                {experiment.description && (
+                  <p className="text-gray-600 mt-1 text-sm">{experiment.description}</p>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge(experiment.status)}

@@ -222,19 +222,6 @@ export default function ExperimentsPage() {
                       <span>Rounds: <strong>{exp.numRounds}</strong></span>
                       <span>Created: <strong>{new Date(exp.createdAt).toLocaleDateString()}</strong></span>
                     </div>
-
-                    {exp.status === 'completed' && exp.finalAccuracy !== null && (
-                      <div className="mt-3 pt-3 border-t">
-                        <div className="flex gap-6 text-sm">
-                          <span className="text-green-700">
-                            Final Accuracy: <strong>{(exp.finalAccuracy * 100).toFixed(2)}%</strong>
-                          </span>
-                          <span className="text-gray-700">
-                            Final Loss: <strong>{exp.finalLoss?.toFixed(4)}</strong>
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   <div className="flex gap-1 ml-4">
