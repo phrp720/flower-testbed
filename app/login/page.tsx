@@ -57,18 +57,16 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo and Title */}
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-2">
               <Image
                 src="/testbed-icon-v2.png"
                 alt="Flower Testbed"
-                width={80}
-                height={80}
+                width={140}
+                height={140}
               />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Flower Testbed</h1>
-              <p className="text-center text-gray-500 text-xs mt-6">
-                Federated Learning Experiment Platform
-              </p>
+            <p className="text-gray-500 text-sm mt-1">Federated Learning Experiment Platform</p>
           </div>
 
           {/* Login Form */}

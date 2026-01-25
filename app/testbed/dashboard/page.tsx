@@ -317,16 +317,6 @@ export default function DashboardPage() {
                         <span>Rounds: <strong>{exp.numRounds}</strong></span>
                         <span>{new Date(exp.createdAt).toLocaleDateString()}</span>
                       </div>
-                      {exp.status === 'completed' && exp.finalAccuracy !== null && (
-                        <div className="mt-2 text-sm">
-                          <span className="text-green-700">
-                            Accuracy: <strong>{(exp.finalAccuracy * 100).toFixed(2)}%</strong>
-                          </span>
-                          <span className="ml-4 text-gray-700">
-                            Loss: <strong>{exp.finalLoss?.toFixed(4)}</strong>
-                          </span>
-                        </div>
-                      )}
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
                   </div>
