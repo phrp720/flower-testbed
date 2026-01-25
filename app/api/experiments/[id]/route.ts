@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { getSession, unauthorized } from '@/lib/auth';
+import { unlink, rm } from 'fs/promises';
+import path from 'path';
 
 // GET /api/experiments/[id] - Get single experiment with metrics
 export async function GET(
@@ -63,6 +65,26 @@ export async function GET(
   }
 }
 
+// Helper to safely delete a file
+async function safeDeleteFile(filePath: string | null) {
+  if (!filePath) return;
+  try {
+    const fullPath = path.join(process.cwd(), filePath);
+    await unlink(fullPath);
+  } catch (error) {
+    console.log(`Could not delete file: ${filePath}`);
+  }
+}
+
+// Helper to safely delete a directory
+async function safeDeleteDir(dirPath: string) {
+  try {
+    await rm(dirPath, { recursive: true, force: true });
+  } catch (error) {
+    console.log(`Could not delete directory: ${dirPath}`);
+  }
+}
+
 // DELETE /api/experiments/[id] - Delete experiment
 export async function DELETE(
   request: NextRequest,
@@ -82,6 +104,29 @@ export async function DELETE(
       );
     }
 
+    // Fetch experiment to get file paths
+    const [experiment] = await db
+      .select()
+      .from(schema.experiments)
+      .where(eq(schema.experiments.id, experimentId));
+
+    if (!experiment) {
+      return NextResponse.json(
+        { error: 'Experiment not found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete uploaded files (algorithm, model, config)
+    await safeDeleteFile(experiment.algorithmPath);
+    await safeDeleteFile(experiment.modelPath);
+    await safeDeleteFile(experiment.configPath);
+
+    // Delete the experiment's checkpoint directory
+    const checkpointDir = path.join(process.cwd(), 'checkpoints-data', `exp_${experimentId}`);
+    await safeDeleteDir(checkpointDir);
+
+    // Delete experiment from database (cascades to metrics and checkpoints)
     await db
       .delete(schema.experiments)
       .where(eq(schema.experiments.id, experimentId));
