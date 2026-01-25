@@ -25,6 +25,7 @@ export default function ExperimentsPage() {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [dialog, setDialog] = useState<{
@@ -104,9 +105,10 @@ export default function ExperimentsPage() {
 
   const filteredExperiments = experiments.filter((exp) => {
     const matchesStatus = statusFilter === 'all' || exp.status === statusFilter;
+    const matchesPlatform = platformFilter === 'all' || exp.framework === platformFilter;
     const matchesSearch = exp.name.toLowerCase().includes(searchQuery.toLowerCase());
                           // || exp.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesPlatform && matchesSearch;
   });
 
   const totalPages = Math.ceil(filteredExperiments.length / itemsPerPage);
@@ -118,7 +120,7 @@ export default function ExperimentsPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, platformFilter, searchQuery]);
 
   if (loading) {
     return (
@@ -173,6 +175,27 @@ export default function ExperimentsPage() {
                 <option value="failed">Failed</option>
               </select>
             </div>
+
+            {/* Platform Filter */}
+            <div className="sm:w-48">
+              <select
+                value={platformFilter}
+                onChange={(e) => setPlatformFilter(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
+              >
+                <option value="all">All Platforms</option>
+                <option value="pytorch">PyTorch</option>
+                <option value="tensorflow">TensorFlow</option>
+                <option value="sklearn">scikit-learn</option>
+                <option value="huggingface">Hugging Face</option>
+                <option value="jax">JAX</option>
+                <option value="mlx">MLX</option>
+                <option value="numpy">NumPy</option>
+                <option value="xgboost">XGBoost</option>
+                <option value="flowertune">FlowerTune</option>
+                <option value="flower-baseline">Flower Baseline</option>
+              </select>
+            </div>
           </div>
         )}
 
@@ -194,6 +217,7 @@ export default function ExperimentsPage() {
               onClick={() => {
                 setSearchQuery('');
                 setStatusFilter('all');
+                setPlatformFilter('all');
               }}
               className="text-blue-600 hover:text-blue-800 font-medium"
             >
