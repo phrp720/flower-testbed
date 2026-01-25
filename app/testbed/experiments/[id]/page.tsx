@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ChevronLeft } from "lucide-react";
+import { Download, ChevronLeft, Trash2 } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -240,13 +240,17 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {getStatusBadge(experiment.status)}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Status:</span>
+                {getStatusBadge(experiment.status)}
+              </div>
               <button
                 onClick={handleDeleteClick}
-                className="bg-red-600 text-white hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-medium transition"
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete Experiment"
               >
-                Delete
+                <Trash2 className="w-5 h-5" />
               </button>
             </div>
           </div>

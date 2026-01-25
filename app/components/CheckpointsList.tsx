@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, HardDrive, Clock, FileDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, HardDrive, Clock, FileDown, ChevronLeft, ChevronRight, Flag } from "lucide-react";
 
 type Checkpoint = {
   id: number;
@@ -17,7 +17,7 @@ type CheckpointsListProps = {
   itemsPerPage?: number;
 };
 
-export default function CheckpointsList({ checkpoints, itemsPerPage = 4 }: CheckpointsListProps) {
+export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: CheckpointsListProps) {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(checkpoints.length / itemsPerPage);
 
@@ -53,7 +53,7 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 4 }: Check
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[420px] flex flex-col">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[520px] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
@@ -87,52 +87,71 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 4 }: Check
           </div>
         ) : (
           <div className="space-y-2">
-            {paginatedCheckpoints.map((cp) => (
-              <div
-                key={cp.id}
-                className="relative flex items-center gap-3 p-3 rounded-lg border transition-all hover:shadow-sm bg-gray-50 border-gray-100 hover:border-gray-200"
-              >
-                {/* Round Badge */}
-                <div className="flex-shrink-0 w-12 h-12 rounded-lg flex flex-col items-center justify-center bg-white border border-gray-200">
-                  <span className="text-[10px] text-gray-500 uppercase font-medium">Round</span>
-                  <span className="text-lg font-bold text-gray-700">
-                    {cp.round}
-                  </span>
-                </div>
-
-                {/* Metrics */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                      <Clock className="w-3 h-3" />
-                      {formatDate(cp.createdAt)}
+            {paginatedCheckpoints.map((cp) => {
+              const isFinal = cp.id === checkpoints[checkpoints.length - 1]?.id;
+              return (
+                <div
+                  key={cp.id}
+                  className={`relative flex items-center gap-3 p-3 rounded-lg border transition-all hover:shadow-sm ${
+                    isFinal
+                      ? 'bg-green-50 border-green-200 hover:border-green-300'
+                      : 'bg-gray-50 border-gray-100 hover:border-gray-200'
+                  }`}
+                >
+                  {/* Round Badge */}
+                  <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex flex-col items-center justify-center ${
+                    isFinal ? 'bg-green-100 border border-green-200' : 'bg-white border border-gray-200'
+                  }`}>
+                    <span className="text-[10px] text-gray-500 uppercase font-medium">Round</span>
+                    <span className={`text-lg font-bold ${isFinal ? 'text-green-700' : 'text-gray-700'}`}>
+                      {cp.round}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className={`px-2 py-1 rounded text-xs font-medium border ${getAccuracyBg(cp.accuracy)}`}>
-                      <span className="text-gray-500">Acc: </span>
-                      <span className={getAccuracyColor(cp.accuracy)}>
-                        {cp.accuracy ? `${(cp.accuracy * 100).toFixed(2)}%` : '—'}
+
+                  {/* Metrics */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {isFinal && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-100 rounded">
+                          <Flag className="w-3 h-3" />
+                          FINAL
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(cp.createdAt)}
                       </span>
                     </div>
-                    <div className="px-2 py-1 rounded text-xs font-medium bg-gray-100 border border-gray-200">
-                      <span className="text-gray-500">Loss: </span>
-                      <span className="text-gray-700">{cp.loss?.toFixed(4) || '—'}</span>
+                    <div className="flex items-center gap-4">
+                      <div className={`px-2 py-1 rounded text-xs font-medium border ${getAccuracyBg(cp.accuracy)}`}>
+                        <span className="text-gray-500">Acc: </span>
+                        <span className={getAccuracyColor(cp.accuracy)}>
+                          {cp.accuracy ? `${(cp.accuracy * 100).toFixed(2)}%` : '—'}
+                        </span>
+                      </div>
+                      <div className="px-2 py-1 rounded text-xs font-medium bg-gray-100 border border-gray-200">
+                        <span className="text-gray-500">Loss: </span>
+                        <span className="text-gray-700">{cp.loss?.toFixed(4) || '—'}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Download Button */}
-                <a
-                  href={`/${cp.filePath}`}
-                  download
-                  className="flex-shrink-0 p-2.5 rounded-lg transition-all bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-blue-600"
-                  title="Download Checkpoint"
-                >
-                  <Download className="w-5 h-5" />
-                </a>
-              </div>
-            ))}
+                  {/* Download Button */}
+                  <a
+                    href={`/${cp.filePath}`}
+                    download
+                    className={`flex-shrink-0 p-2.5 rounded-lg transition-all ${
+                      isFinal
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-blue-600'
+                    }`}
+                    title={isFinal ? "Download Final Model" : "Download Checkpoint"}
+                  >
+                    <Download className="w-5 h-5" />
+                  </a>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

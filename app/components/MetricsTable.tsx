@@ -18,7 +18,7 @@ type MetricsTableProps = {
   itemsPerPage?: number;
 };
 
-export default function MetricsTable({ metrics, itemsPerPage = 5 }: MetricsTableProps) {
+export default function MetricsTable({ metrics, itemsPerPage = 8 }: MetricsTableProps) {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(metrics.length / itemsPerPage);
 
@@ -70,7 +70,7 @@ export default function MetricsTable({ metrics, itemsPerPage = 5 }: MetricsTable
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[420px] flex flex-col">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[520px] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
