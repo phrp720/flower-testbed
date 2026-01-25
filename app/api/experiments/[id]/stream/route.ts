@@ -1,12 +1,18 @@
 import { NextRequest } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq, desc } from 'drizzle-orm';
+import { getSession } from '@/lib/auth';
 
 // GET /api/experiments/:id/stream - Server-Sent Events for real-time updates
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
   const { id } = await params;
   const experimentId = parseInt(id);
 

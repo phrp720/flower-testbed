@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
+import { getSession, unauthorized } from '@/lib/auth';
 
 // GET /api/checkpoints/[...path] - Download checkpoint file
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
   try {
     const { path: filePath } = await params;
 

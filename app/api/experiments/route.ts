@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
-import { eq, desc } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
+import { getSession, unauthorized } from '@/lib/auth';
 
 // GET /api/experiments - List all experiments
 export async function GET() {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
   try {
     const experiments = await db
       .select()
@@ -22,6 +26,9 @@ export async function GET() {
 
 // POST /api/experiments - Create a new experiment
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
   try {
     const body = await request.json();
 

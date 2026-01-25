@@ -4,12 +4,16 @@ import { eq } from 'drizzle-orm';
 import { spawn } from 'child_process';
 import path from 'path';
 import { mkdir } from 'fs/promises';
+import { getSession, unauthorized } from '@/lib/auth';
 
 // POST /api/experiments/[id]/start - Start an experiment
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
   try {
     const { id } = await params;
     const experimentId = parseInt(id);

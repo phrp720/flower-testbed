@@ -3,10 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FlaskConical, Plus } from "lucide-react";
+import { LayoutDashboard, FlaskConical, Plus, LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 export default function Navigation() {
     const pathname = usePathname();
+
+    const handleLogout = () => {
+        signOut({ callbackUrl: "/login" });
+    };
 
     const navItems = [
         { href: "/testbed/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -46,6 +51,14 @@ export default function Navigation() {
                         </Link>
                     );
                 })}
+                <div className="w-px h-6 bg-gray-200 mx-2" />
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+                >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                </button>
             </nav>
         </div>
     );

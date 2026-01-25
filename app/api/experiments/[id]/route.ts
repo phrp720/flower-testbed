@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
+import { getSession, unauthorized } from '@/lib/auth';
 
 // GET /api/experiments/[id] - Get single experiment with metrics
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
   try {
     const { id } = await params;
     const experimentId = parseInt(id);
@@ -64,6 +68,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
   try {
     const { id } = await params;
     const experimentId = parseInt(id);
