@@ -65,16 +65,6 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: Check
             <p className="text-xs text-gray-500">{checkpoints.length} checkpoints saved</p>
           </div>
         </div>
-        {checkpoints.length > 0 && (
-          <a
-            href={`/api/checkpoints/${checkpoints[checkpoints.length - 1]?.filePath.replace('checkpoints-data/', '')}`}
-            download
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-          >
-            <FileDown className="w-3.5 h-3.5" />
-            Latest
-          </a>
-        )}
       </div>
 
       {/* List */}
