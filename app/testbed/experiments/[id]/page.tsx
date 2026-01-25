@@ -229,7 +229,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
               <Link
                 href="/testbed/experiments"
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Back to experiments"
+                title="Back to Experiments"
               >
                 <ChevronLeft className="w-6 h-6" />
               </Link>
