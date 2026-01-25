@@ -3,10 +3,11 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
+import MetricsTable from "@/app/components/MetricsTable";
+import CheckpointsList from "@/app/components/CheckpointsList";
 
 type Experiment = {
   id: number;
@@ -86,8 +87,6 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     message: '',
     type: 'info',
   });
-  const [metricsPage, setMetricsPage] = useState(1);
-  const metricsPerPage = 10;
 
   // Fetch initial data
   useEffect(() => {
@@ -352,109 +351,8 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Metrics Table */}
-          <div className="bg-white rounded-lg shadow p-6 h-[420px] flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Metrics by Round</h2>
-              {metrics.length > 0 && (
-                <span className="text-xs text-gray-500">{metrics.length} rounds</span>
-              )}
-            </div>
-            <div className="flex-1 overflow-auto min-h-0">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Round</th>
-                    <th className="px-4 py-2 text-left">Train Loss</th>
-                    <th className="px-4 py-2 text-left">Eval Acc</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metrics.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
-                        No metrics yet
-                      </td>
-                    </tr>
-                  ) : (
-                    metrics
-                      .slice((metricsPage - 1) * metricsPerPage, metricsPage * metricsPerPage)
-                      .map((m) => (
-                        <tr key={m.id} className="border-t">
-                          <td className="px-4 py-2">{m.round}</td>
-                          <td className="px-4 py-2">{m.trainLoss?.toFixed(4) || '—'}</td>
-                          <td className="px-4 py-2">
-                            {m.evalAccuracy ? (m.evalAccuracy * 100).toFixed(2) + '%' : '—'}
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {/* Pagination */}
-            {metrics.length > metricsPerPage && (
-              <div className="flex items-center justify-between pt-4 border-t mt-auto">
-                <span className="text-sm text-gray-600">
-                  {(metricsPage - 1) * metricsPerPage + 1}-{Math.min(metricsPage * metricsPerPage, metrics.length)} of {metrics.length}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setMetricsPage((p) => Math.max(1, p - 1))}
-                    disabled={metricsPage === 1}
-                    className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-3 py-1 text-sm">
-                    {metricsPage} / {Math.ceil(metrics.length / metricsPerPage)}
-                  </span>
-                  <button
-                    onClick={() => setMetricsPage((p) => Math.min(Math.ceil(metrics.length / metricsPerPage), p + 1))}
-                    disabled={metricsPage >= Math.ceil(metrics.length / metricsPerPage)}
-                    className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Checkpoints */}
-          <div className="bg-white rounded-lg shadow p-6 h-[420px] flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Model Checkpoints</h2>
-              {checkpoints.length > 0 && (
-                <span className="text-xs text-gray-500">{checkpoints.length} checkpoints</span>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
-              {checkpoints.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No checkpoints yet</p>
-              ) : (
-                checkpoints.map((cp) => (
-                  <div key={cp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <div>
-                      <p className="font-medium">Round {cp.round}</p>
-                      <p className="text-xs text-gray-600">
-                        Acc: {cp.accuracy ? (cp.accuracy * 100).toFixed(2) + '%' : '—'} |
-                        Loss: {cp.loss?.toFixed(4) || '—'}
-                      </p>
-                    </div>
-                    <a
-                      href={`/${cp.filePath}`}
-                      download
-                      className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50 transition"
-                      title="Download checkpoint"
-                    >
-                      <Download className="w-5 h-5" />
-                    </a>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <MetricsTable metrics={metrics} />
+          <CheckpointsList checkpoints={checkpoints} />
         </div>
 
         <Footer />
