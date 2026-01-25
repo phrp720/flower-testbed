@@ -12,6 +12,7 @@ psycopg2-binary>=2.9.0
 # Data handling
 numpy>=1.24.0
 pandas>=2.0.0
+dill>=0.3.8
 
 # Utilities
 python-dotenv>=1.0.0
