@@ -11,7 +11,7 @@ export default function Navigation() {
     const navItems = [
         { href: "/testbed/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/testbed/experiments", label: "Experiments", icon: FlaskConical },
-        { href: "/testbed/experiments/new", label: "New", icon: Plus },
+        { href: "/testbed/experiments/new", label: "New Experiment", icon: Plus },
     ];
 
     return (

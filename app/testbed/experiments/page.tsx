@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Eye, Trash2 } from "lucide-react";
+import { Search, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -38,6 +38,8 @@ export default function ExperimentsPage() {
     message: '',
     type: 'info',
   });
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchExperiments();
@@ -107,6 +109,17 @@ export default function ExperimentsPage() {
     return matchesStatus && matchesSearch;
   });
 
+  const totalPages = Math.ceil(filteredExperiments.length / itemsPerPage);
+  const paginatedExperiments = filteredExperiments.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, searchQuery]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -126,12 +139,6 @@ export default function ExperimentsPage() {
           <Navigation />
           <div className="flex items-center justify-between mt-4">
             <h2 className="text-2xl font-bold text-gray-900">Experiments</h2>
-            <Link
-              href="/testbed/experiments/new"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-            >
-              + New Experiment
-            </Link>
           </div>
         </div>
 
@@ -195,7 +202,7 @@ export default function ExperimentsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {filteredExperiments.map((exp) => (
+            {paginatedExperiments.map((exp) => (
               <div
                 key={exp.id}
                 className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
@@ -243,6 +250,58 @@ export default function ExperimentsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {filteredExperiments.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-6 bg-white rounded-lg shadow px-4 py-3">
+            <span className="text-sm text-gray-600">
+              Showing {(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, filteredExperiments.length)} of {filteredExperiments.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-1 px-2">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`w-9 h-9 text-sm font-medium rounded-lg transition-colors ${
+                        page === pageNum
+                          ? 'bg-blue-600 text-white'
+                          : 'hover:bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         )}
 
