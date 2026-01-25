@@ -26,17 +26,15 @@ export async function GET(
       );
     }
 
-    // Read file
     const fileBuffer = await readFile(fullPath);
     const fileName = path.basename(fullPath);
 
-    // Return file as download
-    return new Response(fileBuffer, {
+    return new Response(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${fileName}"`,
       },
-    });
+    })
   } catch (error) {
     console.error('Error downloading checkpoint:', error);
     return NextResponse.json(

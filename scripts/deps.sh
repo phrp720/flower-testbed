@@ -21,11 +21,6 @@ if ! command -v pnpm &> /dev/null; then
     echo "❌ pnpm not found. Please install pnpm  from https://pnpm.io/installation"
 fi
 
-if ! command -v docker &> /dev/null; then
-    echo "❌ Docker not found. Please install Docker Desktop from https://docker.com/products/docker-desktop"
-    exit 1
-fi
-
 if ! command -v python3 &> /dev/null; then
     echo "❌ Python 3 not found. Please install Python 3.9+ from https://python.org/"
     exit 1
@@ -68,11 +63,5 @@ pip install -r requirements.txt
 
 echo ""
 echo "✅ Setup complete!"
-echo ""
-echo "To start the development server run:"
-echo "  pnpm dev"
-echo ""
-echo "Then open your browser to:"
-echo "  http://localhost:3000/"
 echo ""
 echo "Happy federated learning! 🌸"
