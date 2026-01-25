@@ -55,7 +55,7 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 
 3. **Start PostgreSQL database**
    ```bash
-   docker compose up -d
+   docker compose -f deployments/development/docker-compose.yml up -d
    ```
 
 4. **Push database schema**
