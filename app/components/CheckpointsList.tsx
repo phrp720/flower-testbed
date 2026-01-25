@@ -67,7 +67,7 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: Check
         </div>
         {checkpoints.length > 0 && (
           <a
-            href={`/${checkpoints[checkpoints.length - 1]?.filePath}`}
+            href={`/api/checkpoints/${checkpoints[checkpoints.length - 1]?.filePath.replace('checkpoints-data/', '')}`}
             download
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
           >
@@ -138,7 +138,7 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: Check
 
                   {/* Download Button */}
                   <a
-                    href={`/${cp.filePath}`}
+                    href={`/api/checkpoints/${cp.filePath.replace('checkpoints-data/', '')}`}
                     download
                     className={`flex-shrink-0 p-2.5 rounded-lg transition-all ${
                       isFinal
