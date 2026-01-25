@@ -12,6 +12,7 @@ export const experiments = pgTable('experiments', {
   algorithmPath: text('algorithm_path'),
   modelPath: text('model_path'),
   configPath: text('config_path'),
+  datasetPath: text('dataset_path'),
 
   // Configuration
   numClients: integer('num_clients').notNull().default(10),
@@ -35,6 +36,9 @@ export const experiments = pgTable('experiments', {
   finalAccuracy: real('final_accuracy'),
   finalLoss: real('final_loss'),
   errorMessage: text('error_message'),
+
+  // Execution logs
+  logs: text('logs'),
 });
 
 // Model checkpoints - stores model states after each round

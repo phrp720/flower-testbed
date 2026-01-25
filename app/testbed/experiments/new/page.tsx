@@ -1,11 +1,19 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Download, Info } from "lucide-react";
 import SingleFileUploader from "@/app/components/FileUploader";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
+
+// Template download links
+const TEMPLATES = {
+    model: '/api/templates/pytorch/model_template.py',
+    dataset: '/api/templates/pytorch/dataset_template.py',
+    strategy: '/api/templates/pytorch/strategy_template.py',
+    config: '/api/templates/pytorch/config_template.py',
+};
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -60,20 +68,10 @@ export default function DashboardPage() {
     };
 
     const handleStartExperiment = async () => {
-        if (!algorithmFile) {
-            setDialog({
-                isOpen: true,
-                title: 'Missing Algorithm',
-                message: 'Please select an algorithm file to continue.',
-                type: 'warning',
-            });
-            return;
-        }
-
         setIsCreating(true);
         try {
-            // Upload all files first
-            const algorithmPath = await uploadFile(algorithmFile, 'algorithm');
+            // Upload files if provided
+            const algorithmPath = algorithmFile ? await uploadFile(algorithmFile, 'algorithm') : null;
             const modelPath = modelFile ? await uploadFile(modelFile, 'model') : null;
             const configPath = configFile ? await uploadFile(configFile, 'config') : null;
             const datasetPath = datasetFile ? await uploadFile(datasetFile, 'dataset') : null;
@@ -89,6 +87,7 @@ export default function DashboardPage() {
                     algorithmPath,
                     modelPath,
                     configPath,
+                    datasetPath,
                     numClients,
                     numRounds,
                     clientFraction,
@@ -125,6 +124,10 @@ export default function DashboardPage() {
         } finally {
             setIsCreating(false);
         }
+    };
+
+    const downloadTemplate = (templateKey: keyof typeof TEMPLATES) => {
+        window.open(TEMPLATES[templateKey], '_blank');
     };
 
     return (
@@ -263,22 +266,16 @@ export default function DashboardPage() {
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">Ready to Start?</h3>
                                     <p className="text-sm text-gray-600 mt-1 flex items-center gap-1.5">
-                                        {algorithmFile ? (
-                                          <>
-                                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                            Algorithm selected
-                                          </>
-                                        ) : (
-                                          <>
-                                            <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                                            Select an algorithm to continue
-                                          </>
-                                        )}
+                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                        {modelFile || datasetFile || algorithmFile
+                                            ? `Custom files: ${[modelFile && 'model', datasetFile && 'dataset', algorithmFile && 'strategy'].filter(Boolean).join(', ')}`
+                                            : 'Using defaults (CIFAR-10 CNN with FedAvg)'
+                                        }
                                     </p>
                                 </div>
                                 <button
                                     onClick={handleStartExperiment}
-                                    disabled={isCreating || !algorithmFile}
+                                    disabled={isCreating}
                                     className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600"
                                 >
                                     {isCreating ? (
@@ -295,46 +292,96 @@ export default function DashboardPage() {
                     {/* Right Column - File Uploads */}
                     <div className="space-y-4">
                         <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload Files</h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-semibold text-gray-900">Upload Files</h2>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">All optional</span>
+                            </div>
                             <div className="space-y-4">
-                                {/* Algorithm - Required */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Algorithm <span className="text-red-500">*</span>
-                                        </label>
-                                    </div>
-                                    <SingleFileUploader
-                                        id="algorithm-uploader"
-                                        accept=".py"
-                                        hint="Drop algorithm file"
-                                        type="algorithm"
-                                        onFileSelect={setAlgorithmFile}
-                                    />
-                                </div>
-
                                 {/* Model - Optional */}
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="text-sm font-medium text-gray-700">
-                                            Model <span className="text-gray-400">(optional)</span>
+                                            Model
                                         </label>
+                                        <button
+                                            onClick={() => downloadTemplate('model')}
+                                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                        >
+                                            <Download className="w-3 h-3" />
+                                            Template
+                                        </button>
                                     </div>
                                     <SingleFileUploader
                                         id="model-uploader"
-                                        accept=".pt,.pth"
-                                        hint="Drop model file"
+                                        accept=".py,.pt,.pth"
+                                        hint="Drop model.py file"
                                         type="model"
                                         onFileSelect={setModelFile}
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">Default: CIFAR-10 CNN</p>
+                                </div>
+
+                                {/* Dataset - Optional */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-gray-700">
+                                            Dataset
+                                        </label>
+                                        <button
+                                            onClick={() => downloadTemplate('dataset')}
+                                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                        >
+                                            <Download className="w-3 h-3" />
+                                            Template
+                                        </button>
+                                    </div>
+                                    <SingleFileUploader
+                                        id="dataset-uploader"
+                                        accept=".py"
+                                        hint="Drop dataset.py file"
+                                        type="dataset"
+                                        onFileSelect={setDatasetFile}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Default: CIFAR-10 (IID)</p>
+                                </div>
+
+                                {/* Strategy/Algorithm - Optional */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-gray-700">
+                                            Strategy
+                                        </label>
+                                        <button
+                                            onClick={() => downloadTemplate('strategy')}
+                                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                        >
+                                            <Download className="w-3 h-3" />
+                                            Template
+                                        </button>
+                                    </div>
+                                    <SingleFileUploader
+                                        id="algorithm-uploader"
+                                        accept=".py"
+                                        hint="Drop strategy.py file"
+                                        type="algorithm"
+                                        onFileSelect={setAlgorithmFile}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Default: FedAvg</p>
                                 </div>
 
                                 {/* Config - Optional */}
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="text-sm font-medium text-gray-700">
-                                            Configuration <span className="text-gray-400">(optional)</span>
+                                            Configuration
                                         </label>
+                                        <button
+                                            onClick={() => downloadTemplate('config')}
+                                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                        >
+                                            <Download className="w-3 h-3" />
+                                            Template
+                                        </button>
                                     </div>
                                     <SingleFileUploader
                                         id="config-uploader"
@@ -344,40 +391,27 @@ export default function DashboardPage() {
                                         onFileSelect={setConfigFile}
                                     />
                                 </div>
-
-                                {/* Dataset - Optional */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Dataset <span className="text-gray-400">(optional)</span>
-                                        </label>
-                                    </div>
-                                    <SingleFileUploader
-                                        id="dataset-uploader"
-                                        accept=".py,.csv"
-                                        hint="Drop dataset file"
-                                        type="dataset"
-                                        onFileSelect={setDatasetFile}
-                                    />
-                                </div>
                             </div>
                         </div>
 
                         {/* Quick Start Guide */}
                         <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                            <h3 className="text-sm font-semibold text-blue-900 mb-2">Quick Start</h3>
+                            <h3 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-1.5">
+                                <Info className="w-4 h-4" />
+                                Quick Start
+                            </h3>
                             <ol className="text-xs text-blue-800 space-y-1.5 list-decimal list-inside">
-                                <li>Upload your FL algorithm (required)</li>
                                 <li>Configure training parameters</li>
-                                <li>Click "Start Experiment"</li>
+                                <li>Optionally upload custom files</li>
+                                <li>Click &quot;Start Experiment&quot;</li>
                                 <li>Monitor progress in real-time</li>
                             </ol>
-                            {/*<div className="mt-3 pt-3 border-t border-blue-200">*/}
-                            {/*    <p className="text-xs text-blue-700">*/}
-                            {/*        <strong>Need an example?</strong><br/>*/}
-                            {/*        Use <code className="bg-blue-100 px-1 rounded">examples/sample_algorithm.py</code>*/}
-                            {/*    </p>*/}
-                            {/*</div>*/}
+                            <div className="mt-3 pt-3 border-t border-blue-200">
+                                <p className="text-xs text-blue-700">
+                                    <strong>No files needed!</strong><br/>
+                                    Default setup uses CIFAR-10 dataset with a CNN model and FedAvg strategy.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

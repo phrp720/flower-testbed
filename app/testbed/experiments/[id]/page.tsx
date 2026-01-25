@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ChevronLeft, Trash2 } from "lucide-react";
+import { Download, ChevronLeft, Trash2, Terminal, ChevronDown, ChevronUp } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -27,6 +27,7 @@ type Experiment = {
   finalAccuracy: number | null;
   finalLoss: number | null;
   errorMessage: string | null;
+  logs: string | null;
 };
 
 type Metric = {
@@ -77,6 +78,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
   const [currentMetrics, setCurrentMetrics] = useState<StreamUpdate['metrics'] | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -399,6 +401,33 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
           <MetricsTable metrics={metrics} />
           <CheckpointsList checkpoints={checkpoints} />
         </div>
+
+        {/* Execution Logs */}
+        {experiment.logs && (
+          <div className="bg-white rounded-lg shadow mt-6">
+            <button
+              onClick={() => setShowLogs(!showLogs)}
+              className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors rounded-lg"
+            >
+              <div className="flex items-center gap-2">
+                <Terminal className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">Execution Logs</h2>
+              </div>
+              {showLogs ? (
+                <ChevronUp className="w-5 h-5 text-gray-500" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-500" />
+              )}
+            </button>
+            {showLogs && (
+              <div className="px-6 pb-6">
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono max-h-[500px] overflow-y-auto">
+                  {experiment.logs}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
 
         <Footer />
       </div>

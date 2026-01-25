@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
     // Validate file extensions
     const validExtensions: Record<string, string[]> = {
       algorithm: ['.py'],
-      model: ['.pt', '.pth', '.h5', '.pkl'],
+      model: ['.py', '.pt', '.pth', '.h5', '.pkl'],
       config: ['.py', '.json', '.yaml', '.yml'],
-      dataset: ['.py', '.csv', '.npy', '.npz'],
+      dataset: ['.py'],
     };
 
     const fileExt = path.extname(file.name).toLowerCase();
