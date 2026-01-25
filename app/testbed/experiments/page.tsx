@@ -104,8 +104,8 @@ export default function ExperimentsPage() {
 
   const filteredExperiments = experiments.filter((exp) => {
     const matchesStatus = statusFilter === 'all' || exp.status === statusFilter;
-    const matchesSearch = exp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          exp.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = exp.name.toLowerCase().includes(searchQuery.toLowerCase());
+                          // || exp.description?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
