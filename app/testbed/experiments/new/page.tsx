@@ -276,7 +276,7 @@ export default function DashboardPage() {
                                 <button
                                     onClick={handleStartExperiment}
                                     disabled={isCreating}
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600"
+                                    className="bg-gradient-to-r bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600"
                                 >
                                     {isCreating ? (
                                         <span className="flex items-center gap-2">
@@ -406,12 +406,6 @@ export default function DashboardPage() {
                                 <li>Click &quot;Start Experiment&quot;</li>
                                 <li>Monitor progress in real-time</li>
                             </ol>
-                            <div className="mt-3 pt-3 border-t border-blue-200">
-                                <p className="text-xs text-blue-700">
-                                    <strong>No files needed!</strong><br/>
-                                    Default setup uses CIFAR-10 dataset with a CNN model and FedAvg strategy.
-                                </p>
-                            </div>
                         </div>
                     </div>
                 </div>

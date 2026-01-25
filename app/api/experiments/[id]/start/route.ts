@@ -96,7 +96,7 @@ function startFlowerExperiment(experimentId: number) {
 
   // Log stderr
   pythonProcess.stderr?.on('data', (data) => {
-    console.error(`[Experiment ${experimentId}] ERROR: ${data.toString().trim()}`);
+    console.error(`[Experiment ${experimentId}] ${data.toString().trim()}`);
   });
 
   // Handle completion
