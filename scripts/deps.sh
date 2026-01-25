@@ -39,18 +39,6 @@ if [ ! -f .env.local ]; then
     cp .env.example .env.local
 fi
 
-## Start Docker containers
-#echo "🐳 Starting PostgreSQL database..."
-#docker compose up -d
-#
-## Wait for PostgreSQL to be ready
-#echo "⏳ Waiting for database to be ready..."
-#sleep 5
-#
-## Push database schema
-#echo "📊 Setting up database schema..."
-#pnpm db:push
-
 # Python setup
 echo "🐍 Setting up Python environment..."
 if [ ! -d "venv" ]; then
