@@ -193,7 +193,7 @@ export default function DashboardPage() {
                                     <input
                                         type="number"
                                         value={numClients}
-                                        onChange={(e) => setNumClients(parseInt(e.target.value))}
+                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setNumClients(v); }}
                                         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         min="1"
                                     />
@@ -205,7 +205,7 @@ export default function DashboardPage() {
                                     <input
                                         type="number"
                                         value={numRounds}
-                                        onChange={(e) => setNumRounds(parseInt(e.target.value))}
+                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setNumRounds(v); }}
                                         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         min="1"
                                     />
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                                     <input
                                         type="number"
                                         value={localEpochs}
-                                        onChange={(e) => setLocalEpochs(parseInt(e.target.value))}
+                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setLocalEpochs(v); }}
                                         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         min="1"
                                     />
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                                         type="number"
                                         step="0.001"
                                         value={learningRate}
-                                        onChange={(e) => setLearningRate(parseFloat(e.target.value))}
+                                        onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) setLearningRate(v); }}
                                         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         min="0"
                                     />
