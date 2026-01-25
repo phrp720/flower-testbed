@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, Eye, Trash2 } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -237,18 +237,20 @@ export default function ExperimentsPage() {
                     )}
                   </div>
 
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex gap-1 ml-4">
                     <Link
                       href={`/testbed/experiments/${exp.id}`}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 rounded hover:bg-blue-50"
+                      className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                      title="View experiment"
                     >
-                      View
+                      <Eye className="w-5 h-5" />
                     </Link>
                     <button
                       onClick={() => handleDeleteClick(exp.id)}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 rounded hover:bg-red-50"
+                      className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition-colors"
+                      title="Delete experiment"
                     >
-                      Delete
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
