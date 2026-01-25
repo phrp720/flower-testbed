@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -444,9 +445,10 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                     <a
                       href={`/${cp.filePath}`}
                       download
-                      className="text-blue-600 hover:text-blue-800 text-sm"
+                      className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50 transition"
+                      title="Download checkpoint"
                     >
-                      Download
+                      <Download className="w-5 h-5" />
                     </a>
                   </div>
                 ))
