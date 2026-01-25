@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import SingleFileUploader from "@/app/components/FileUploader";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
@@ -262,8 +262,18 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">Ready to Start?</h3>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        {algorithmFile ? '✓ Algorithm selected' : '⚠ Select an algorithm to continue'}
+                                    <p className="text-sm text-gray-600 mt-1 flex items-center gap-1.5">
+                                        {algorithmFile ? (
+                                          <>
+                                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                            Algorithm selected
+                                          </>
+                                        ) : (
+                                          <>
+                                            <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                                            Select an algorithm to continue
+                                          </>
+                                        )}
                                     </p>
                                 </div>
                                 <button
