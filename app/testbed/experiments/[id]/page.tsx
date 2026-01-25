@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -324,8 +325,8 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         {/* Final Results */}
         {experiment.status === 'completed' && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4 text-green-900">Final Results</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <h2 className="text-lg font-semibold text-green-900 mb-4">Final Results</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <span className="text-green-700">Final Accuracy:</span>
                 <p className="text-2xl font-bold text-green-900">
@@ -338,6 +339,37 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                   {experiment.finalLoss?.toFixed(4) || '—'}
                 </p>
               </div>
+              <div>
+                <span className="text-green-700">Duration:</span>
+                <p className="text-2xl font-bold text-green-900">
+                  {experiment.startedAt && experiment.completedAt
+                    ? (() => {
+                        const ms = new Date(experiment.completedAt).getTime() - new Date(experiment.startedAt).getTime();
+                        const seconds = Math.floor(ms / 1000);
+                        const minutes = Math.floor(seconds / 60);
+                        const hours = Math.floor(minutes / 60);
+                        if (hours > 0) return `${hours}h ${minutes % 60}m`;
+                        if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+                        return `${seconds}s`;
+                      })()
+                    : '—'}
+                </p>
+              </div>
+              {checkpoints.length > 0 && (
+                <div>
+                  <span className="text-green-700">Final Model:</span>
+                  <p>
+                    <a
+                        href={`/${checkpoints[checkpoints.length - 1]?.filePath}`}
+                        download
+                        className="mt-1 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </a>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
