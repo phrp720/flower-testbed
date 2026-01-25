@@ -8,6 +8,16 @@
 A Testbed Experiment Platform for testing <a href="https://flower.ai/docs/framework/index.html">Flower</a> federated learning algorithms.  <br>
 </p>
 
+<p align="center">
+
+  <a href="https://github.com/phrp720/flower-testbed/actions/workflows/docker-image.yml">
+    <img title="Docker Build" src="https://github.com/phrp720/flower-testbed/actions/workflows/agent-docker-image.yml/badge.svg" alt="docker build">
+  </a>
+
+  <a href="https://github.com/phrp720/flower-testbed/releases">
+    <img title="Latest release" src="https://img.shields.io/github/v/release/phrp720/flower-testbed" alt="Latest release">
+  </a>
+</p>
 
 <details>
 <summary>📑 Table of Contents</summary>
