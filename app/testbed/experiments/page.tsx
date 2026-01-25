@@ -140,7 +140,10 @@ export default function ExperimentsPage() {
         <div className="mb-8">
           <Navigation />
           <div className="flex items-center justify-between mt-4">
-            <h2 className="text-2xl font-bold text-gray-900">Experiments</h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Experiments</h2>
+              <p className="text-gray-600 text-sm mt-1">Execution History of your federated learning experiments</p>
+            </div>
           </div>
         </div>
 
