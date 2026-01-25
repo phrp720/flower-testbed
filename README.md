@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-A Testbed environment for testing <a href="https://flower.ai/docs/framework/index.html">Flower</a> federated learning algorithms that, when integrated into a potential application, will enable the management and monitoring of used models, algorithms, and metrics.   <br>
+A Testbed Experiment Platform for testing <a href="https://flower.ai/docs/framework/index.html">Flower</a> federated learning algorithms.  <br>
 </p>
 
 
@@ -15,7 +15,6 @@ A Testbed environment for testing <a href="https://flower.ai/docs/framework/inde
 - [About](#about)
 - [Getting Started](#getting-started)
 - [Usage](#usage)
-- [Project Structure](#project-structure)
 - [Roadmap](#roadmap)
 
 </details>
@@ -73,6 +72,9 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 
    Navigate to [http://localhost:3000/](http://localhost:3000/) in your web browser.
 
+   The default credentials are `admin:admin`
+
+
 ## Usage
 
 ### Creating an Experiment
@@ -94,50 +96,19 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 
 4. **Start Experiment**: Click "Start Experiment" to begin
 
-
-## Project Structure
-
-```
-flower-testbed/
-├── app/
-│   ├── api/                    # API routes
-│   │   ├── upload/            # File upload endpoint
-│   │   └── experiments/       # Experiment CRUD & control
-│   ├── components/            # React components
-│   │   ├── FileUploader.tsx   # File upload with drag-drop
-│   │   └── FileCard.tsx       # Card container
-│   ├── testbed/
-│   │   └── dashboard/         # Main dashboard page
-│   └── layout.tsx
-├── lib/
-│   └── db/                    # Database layer
-│       ├── schema.ts          # Drizzle schema
-│       └── index.ts           # DB connection
-├── uploads/                   # Uploaded files
-│   ├── algorithms/
-│   ├── models/
-│   ├── datasets/
-│   └── configs/
-├── checkpoints/               # Model checkpoints per experiment
-├── docker-compose.yml         # PostgreSQL container
-└── drizzle.config.ts         # Drizzle configuration
-```
-
 ## Roadmap
 - [x] Database setup with PostgreSQL & Drizzle
 - [x] File upload API
 - [x] Experiment CRUD API
 - [x] Dashboard UI with configuration
-- [ ] Python runner for Flower experiments
+- [x] Real-time experiment monitoring page
+- [x] Metrics visualization (charts)
+- [x] Experiment history page
+- [x] Real-time metrics collection
+- [x] Model checkpointing per round
+- [ ] Python runner for Flower experiments - In Progress
 - [ ] Dynamic experiment execution
-- [ ] Real-time metrics collection
-- [ ] Model checkpointing per round
-- [ ] Real-time experiment monitoring page
-- [ ] Metrics visualization (charts)
-- [ ] Experiment history page
-- [ ] Export results (CSV, JSON)
-- [ ] Unit tests
-- [ ] Sample applications
+- [ ] Export results (CSV, JSON) - Maybe
 - [ ] User guide
 
 ## Contributing
