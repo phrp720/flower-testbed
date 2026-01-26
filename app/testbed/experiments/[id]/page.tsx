@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ChevronLeft, Trash2, Terminal, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, ChevronLeft, Trash2, Terminal, X } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -246,6 +246,15 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">Status:</span>
                 {getStatusBadge(experiment.status)}
+                {experiment.logs && (experiment.status === 'completed' || experiment.status === 'failed') && (
+                  <button
+                    onClick={() => setShowLogs(true)}
+                    className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="View Execution Logs"
+                  >
+                    <Terminal className="w-5 h-5" />
+                  </button>
+                )}
               </div>
               <button
                 onClick={handleDeleteClick}
@@ -402,33 +411,6 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
           <CheckpointsList checkpoints={checkpoints} />
         </div>
 
-        {/* Execution Logs */}
-        {experiment.logs && (
-          <div className="bg-white rounded-lg shadow mt-6">
-            <button
-              onClick={() => setShowLogs(!showLogs)}
-              className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors rounded-lg"
-            >
-              <div className="flex items-center gap-2">
-                <Terminal className="w-5 h-5 text-gray-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Execution Logs</h2>
-              </div>
-              {showLogs ? (
-                <ChevronUp className="w-5 h-5 text-gray-500" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-              )}
-            </button>
-            {showLogs && (
-              <div className="px-6 pb-6">
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono max-h-[500px] overflow-y-auto">
-                  {experiment.logs}
-                </pre>
-              </div>
-            )}
-          </div>
-        )}
-
         <Footer />
       </div>
 
@@ -452,6 +434,56 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         message={dialog.message}
         type={dialog.type}
       />
+
+      {/* Logs Modal */}
+      {showLogs && experiment.logs && (
+        <div
+          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowLogs(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-200 rounded-lg">
+                  <Terminal className="w-5 h-5 text-gray-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Execution Logs</h2>
+                  <p className="text-xs text-gray-500">{experiment.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLogs(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Modal Body */}
+            <div className="flex-1 overflow-auto p-4 bg-gray-100">
+              <pre className="bg-white border border-gray-200 rounded-lg p-4 text-gray-800 text-sm font-mono leading-relaxed whitespace-pre-wrap shadow-sm">
+                {experiment.logs}
+              </pre>
+            </div>
+            {/* Modal Footer */}
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-sm text-gray-500">
+                {experiment.logs.split('\n').length} lines
+              </span>
+              <button
+                onClick={() => setShowLogs(false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
