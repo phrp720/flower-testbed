@@ -254,6 +254,31 @@ export default function DashboardPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Learning Rate
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.001"
+                                        value={learningRate}
+                                        onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) setLearningRate(v); }}
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+                                        min="0"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Local Epochs
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={localEpochs}
+                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setLocalEpochs(v); }}
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+                                        min="1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Client Fraction
                                     </label>
                                     <div className="flex items-center gap-3">
@@ -270,31 +295,6 @@ export default function DashboardPage() {
                                             {(clientFraction * 100).toFixed(0)}%
                                         </span>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Local Epochs
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={localEpochs}
-                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setLocalEpochs(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                        min="1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Learning Rate
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.001"
-                                        value={learningRate}
-                                        onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) setLearningRate(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                        min="0"
-                                    />
                                 </div>
                             </div>
                         </div>
