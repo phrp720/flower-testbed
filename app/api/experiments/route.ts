@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
       localEpochs = 1,
       learningRate = 0.01,
       useGpu = false,
+      cpusPerClient = 1,
+      gpuFractionPerClient = 0.1,
       customConfig,
     } = body;
 
@@ -74,6 +76,8 @@ export async function POST(request: NextRequest) {
         localEpochs,
         learningRate,
         useGpu,
+        cpusPerClient,
+        gpuFractionPerClient,
         customConfig,
         status: 'pending',
       })

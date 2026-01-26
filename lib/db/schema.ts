@@ -23,6 +23,8 @@ export const experiments = pgTable('experiments', {
 
   // Resource configuration
   useGpu: boolean('use_gpu').notNull().default(false),
+  cpusPerClient: integer('cpus_per_client').notNull().default(1),
+  gpuFractionPerClient: real('gpu_fraction_per_client').notNull().default(0.1), // 0.1 = 10 clients per GPU
 
   // Additional config (stored as JSON)
   customConfig: jsonb('custom_config'),

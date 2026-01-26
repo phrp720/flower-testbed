@@ -26,7 +26,7 @@ from .defaults.config import DEFAULT_CONFIG
 
 
 class LogCapture:
-    """Captures stdout and stderr while still printing to console."""
+    """Captures stdout and stderr without printing to terminal (silent mode)."""
 
     def __init__(self):
         self.logs = io.StringIO()
@@ -43,11 +43,11 @@ class LogCapture:
         sys.stderr = self._stderr
 
     def write(self, text):
-        self._stdout.write(text)
+        # Capture to logs for storage, but don't print to terminal
         self.logs.write(text)
 
     def flush(self):
-        self._stdout.flush()
+        pass  # No-op since we're not printing
 
     def fileno(self):
         """Return the file descriptor of the underlying stdout.
@@ -101,7 +101,7 @@ class SimulationOrchestrator:
 
     def run(self):
         """Execute the complete simulation workflow."""
-        # Start capturing logs
+        # Start capturing logs (silent mode - saves to DB, no terminal output)
         self.log_capture = LogCapture()
 
         try:
@@ -125,11 +125,11 @@ class SimulationOrchestrator:
 
                 # 6. Mark as completed
                 self.experiment_manager.update_status("completed")
-                print("\n[Orchestrator] Experiment completed successfully!")
+                print("[Orchestrator] Experiment completed successfully!")
 
         except Exception as e:
             error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"\n[Orchestrator] Experiment failed: {error_msg}")
+            print(f"[Orchestrator] Experiment failed: {error_msg}")
             self.experiment_manager.update_status("failed", error_msg)
             raise
 
@@ -257,18 +257,30 @@ class SimulationOrchestrator:
             [val.cpu().numpy() for _, val in initial_model.state_dict().items()]
         )
 
-        # Configure resources - always specify num_cpus to avoid deprecation warning
-        client_resources = {"num_cpus": 1}
+        # Configure resources from experiment config (or use defaults)
+        cpus_per_client = self.config.get('cpus_per_client', 1)
+        gpu_fraction = self.config.get('gpu_fraction_per_client', 0.1)
+
+        client_resources = {"num_cpus": cpus_per_client}
         if self.device.type == "cuda":
-            client_resources = {"num_cpus": 1, "num_gpus": 0.1}  # Allow 10 clients per GPU
+            client_resources["num_gpus"] = gpu_fraction
 
         # Run simulation
+        # Configure Ray to reduce noise (logs are captured and saved anyway)
+        ray_init_args = {
+            "include_dashboard": False,  # Disable dashboard to reduce overhead
+            "configure_logging": True,
+            "logging_level": "error",  # Only show errors, not warnings/info
+            "log_to_driver": False,  # Suppress actor output from appearing in terminal
+        }
+
         history = fl.simulation.start_simulation(
             client_fn=client_fn,
             num_clients=num_clients,
             config=fl.server.ServerConfig(num_rounds=num_rounds),
             strategy=strategy,
             client_resources=client_resources,
+            ray_init_args=ray_init_args,
         )
 
         # Process history
