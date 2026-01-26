@@ -200,55 +200,58 @@ export default function DashboardPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Performance Summary</h2>
               <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Average Accuracy</span>
-                    <span className="text-lg font-bold text-green-600">
-                      {completedExperiments > 0
-                        ? (
-                            (experiments
-                              .filter(e => e.status === 'completed' && e.finalAccuracy !== null)
-                              .reduce((sum, e) => sum + (e.finalAccuracy || 0), 0) /
-                              experiments.filter(e => e.status === 'completed' && e.finalAccuracy !== null).length) * 100
-                          ).toFixed(2)
-                        : '0.00'}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{
-                        width: `${
-                          completedExperiments > 0
-                            ? (experiments
-                                .filter(e => e.status === 'completed' && e.finalAccuracy !== null)
-                                .reduce((sum, e) => sum + (e.finalAccuracy || 0), 0) /
-                                experiments.filter(e => e.status === 'completed' && e.finalAccuracy !== null).length) * 100
-                            : 0
-                        }%`,
-                      }}
-                    />
-                  </div>
-                </div>
+                {(() => {
+                  const completedWithAccuracy = experiments.filter(e => e.status === 'completed' && e.finalAccuracy !== null);
+                  const avgAccuracy = completedWithAccuracy.length > 0
+                    ? (completedWithAccuracy.reduce((sum, e) => sum + (e.finalAccuracy || 0), 0) / completedWithAccuracy.length) * 100
+                    : 0;
+                  const getBarColor = (pct: number) => {
+                    if (pct >= 70) return 'bg-green-500';
+                    if (pct >= 40) return 'bg-yellow-500';
+                    return 'bg-red-500';
+                  };
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">Average Accuracy</span>
+                        <span className="text-lg font-bold text-black-600">
+                          {avgAccuracy.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`${getBarColor(avgAccuracy)} h-2 rounded-full`}
+                          style={{ width: `${avgAccuracy}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Success Rate</span>
-                    <span className="text-lg font-bold text-gray-800">
-                      {totalExperiments > 0
-                        ? ((completedExperiments / totalExperiments) * 100).toFixed(1)
-                        : '0.0'}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-gray-600 h-2 rounded-full"
-                      style={{
-                        width: `${totalExperiments > 0 ? (completedExperiments / totalExperiments) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                </div>
+                {(() => {
+                  const successRate = totalExperiments > 0 ? (completedExperiments / totalExperiments) * 100 : 0;
+                  const getBarColor = (pct: number) => {
+                    if (pct >= 70) return 'bg-green-500';
+                    if (pct >= 40) return 'bg-yellow-500';
+                    return 'bg-red-500';
+                  };
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">Success Rate</span>
+                        <span className="text-lg font-bold text-gray-800">
+                          {successRate.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`${getBarColor(successRate)} h-2 rounded-full`}
+                          style={{ width: `${successRate}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="pt-4 border-t">
                   <div className="grid grid-cols-2 gap-4 text-sm">
