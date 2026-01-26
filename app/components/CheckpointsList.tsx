@@ -14,10 +14,11 @@ type Checkpoint = {
 
 type CheckpointsListProps = {
   checkpoints: Checkpoint[];
+  totalRounds?: number;
   itemsPerPage?: number;
 };
 
-export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: CheckpointsListProps) {
+export default function CheckpointsList({ checkpoints, totalRounds, itemsPerPage = 6 }: CheckpointsListProps) {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(checkpoints.length / itemsPerPage);
 
@@ -78,7 +79,8 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: Check
         ) : (
           <div className="space-y-2">
             {paginatedCheckpoints.map((cp) => {
-              const isFinal = cp.id === checkpoints[checkpoints.length - 1]?.id;
+              // Only mark as final if this checkpoint's round equals the total rounds
+              const isFinal = totalRounds !== undefined && cp.round === totalRounds;
               return (
                 <div
                   key={cp.id}

@@ -423,7 +423,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <MetricsTable metrics={metrics} />
-          <CheckpointsList checkpoints={checkpoints} />
+          <CheckpointsList checkpoints={checkpoints} totalRounds={experiment.numRounds} />
         </div>
 
         <Footer />
