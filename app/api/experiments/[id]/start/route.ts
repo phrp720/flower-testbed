@@ -77,7 +77,6 @@ export async function POST(
 
 // Background function to run Flower experiment
 function startFlowerExperiment(experimentId: number) {
-  console.log(`[Experiment ${experimentId}] Starting Flower experiment...`);
 
   const projectRoot = process.cwd();
   const pythonScript = path.join(projectRoot, 'runner', 'flower_runner.py');
@@ -87,30 +86,6 @@ function startFlowerExperiment(experimentId: number) {
     cwd: projectRoot,
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-  // Log stdout
-  pythonProcess.stdout?.on('data', (data) => {
-    console.log(`[Experiment ${experimentId}] ${data.toString().trim()}`);
-  });
-
-  // Log stderr
-  pythonProcess.stderr?.on('data', (data) => {
-    console.error(`[Experiment ${experimentId}] ERROR: ${data.toString().trim()}`);
-  });
-
-  // Handle completion
-  pythonProcess.on('close', (code) => {
-    if (code === 0) {
-      console.log(`[Experiment ${experimentId}] ✓ Completed successfully`);
-    } else {
-      console.error(`[Experiment ${experimentId}] ✗ Failed with exit code ${code}`);
-    }
-  });
-
-  // Handle errors
-  pythonProcess.on('error', (error) => {
-    console.error(`[Experiment ${experimentId}] ✗ Process error:`, error);
   });
 
   // Detach the process so it continues running after API response

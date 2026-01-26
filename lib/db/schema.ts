@@ -12,6 +12,7 @@ export const experiments = pgTable('experiments', {
   algorithmPath: text('algorithm_path'),
   modelPath: text('model_path'),
   configPath: text('config_path'),
+  datasetPath: text('dataset_path'),
 
   // Configuration
   numClients: integer('num_clients').notNull().default(10),
@@ -22,6 +23,8 @@ export const experiments = pgTable('experiments', {
 
   // Resource configuration
   useGpu: boolean('use_gpu').notNull().default(false),
+  cpusPerClient: integer('cpus_per_client').notNull().default(1),
+  gpuFractionPerClient: real('gpu_fraction_per_client').notNull().default(0.1), // 0.1 = 10 clients per GPU
 
   // Additional config (stored as JSON)
   customConfig: jsonb('custom_config'),
@@ -35,6 +38,9 @@ export const experiments = pgTable('experiments', {
   finalAccuracy: real('final_accuracy'),
   finalLoss: real('final_loss'),
   errorMessage: text('error_message'),
+
+  // Execution logs
+  logs: text('logs'),
 });
 
 // Model checkpoints - stores model states after each round

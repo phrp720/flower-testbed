@@ -14,10 +14,11 @@ type Checkpoint = {
 
 type CheckpointsListProps = {
   checkpoints: Checkpoint[];
+  totalRounds?: number;
   itemsPerPage?: number;
 };
 
-export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: CheckpointsListProps) {
+export default function CheckpointsList({ checkpoints, totalRounds, itemsPerPage = 6 }: CheckpointsListProps) {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(checkpoints.length / itemsPerPage);
 
@@ -57,8 +58,8 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: Check
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-purple-50 rounded-lg">
-            <HardDrive className="w-5 h-5 text-purple-600" />
+          <div className="p-2 bg-gray-50 rounded-lg">
+            <HardDrive className="w-5 h-5 text-gray-600" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Model Checkpoints</h2>
@@ -78,7 +79,8 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: Check
         ) : (
           <div className="space-y-2">
             {paginatedCheckpoints.map((cp) => {
-              const isFinal = cp.id === checkpoints[checkpoints.length - 1]?.id;
+              // Only mark as final if this checkpoint's round equals the total rounds
+              const isFinal = totalRounds !== undefined && cp.round === totalRounds;
               return (
                 <div
                   key={cp.id}
@@ -133,7 +135,7 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: Check
                     className={`flex-shrink-0 p-2.5 rounded-lg transition-all ${
                       isFinal
                         ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-blue-600'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                     }`}
                     title={isFinal ? "Download Final Model" : "Download Checkpoint"}
                   >
@@ -178,7 +180,7 @@ export default function CheckpointsList({ checkpoints, itemsPerPage = 6 }: Check
                     onClick={() => setPage(pageNum)}
                     className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
                       page === pageNum
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-gray-800 text-white'
                         : 'hover:bg-gray-200 text-gray-600'
                     }`}
                   >

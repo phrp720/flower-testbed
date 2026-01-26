@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ChevronLeft, Trash2 } from "lucide-react";
+import { Download, ChevronLeft, Trash2, Terminal, X } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -27,6 +27,7 @@ type Experiment = {
   finalAccuracy: number | null;
   finalLoss: number | null;
   errorMessage: string | null;
+  logs: string | null;
 };
 
 type Metric = {
@@ -48,6 +49,14 @@ type Checkpoint = {
   createdAt: string;
 };
 
+type LatestMetrics = {
+  round: number;
+  trainLoss: number;
+  trainAccuracy: number;
+  evalLoss: number;
+  evalAccuracy: number;
+};
+
 type StreamUpdate = {
   experiment: {
     id: number;
@@ -56,13 +65,9 @@ type StreamUpdate = {
     currentRound: number;
     totalRounds: number;
   };
-  metrics: {
-    round: number;
-    trainLoss: number;
-    trainAccuracy: number;
-    evalLoss: number;
-    evalAccuracy: number;
-  } | null;
+  metrics: Metric[];
+  checkpoints: Checkpoint[];
+  latestMetrics: LatestMetrics | null;
   status?: string;
   final?: boolean;
 };
@@ -75,8 +80,9 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentMetrics, setCurrentMetrics] = useState<StreamUpdate['metrics'] | null>(null);
+  const [currentMetrics, setCurrentMetrics] = useState<LatestMetrics | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -112,8 +118,19 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         return;
       }
 
-      if (data.metrics) {
-        setCurrentMetrics(data.metrics);
+      // Update metrics array
+      if (data.metrics && data.metrics.length > 0) {
+        setMetrics(data.metrics);
+      }
+
+      // Update checkpoints array
+      if (data.checkpoints && data.checkpoints.length > 0) {
+        setCheckpoints(data.checkpoints);
+      }
+
+      // Update current metrics for progress display
+      if (data.latestMetrics) {
+        setCurrentMetrics(data.latestMetrics);
       }
 
       // Update experiment status
@@ -151,7 +168,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading experiment...</p>
         </div>
       </div>
@@ -177,7 +194,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-gray-100 text-gray-800',
-      running: 'bg-blue-100 text-blue-800',
+      running: 'bg-gray-200 text-gray-800',
       completed: 'bg-green-100 text-green-800',
       failed: 'bg-red-100 text-red-800',
     };
@@ -244,6 +261,15 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">Status:</span>
                 {getStatusBadge(experiment.status)}
+                {experiment.logs && (experiment.status === 'completed' || experiment.status === 'failed') && (
+                  <button
+                    onClick={() => setShowLogs(true)}
+                    className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="View Execution Logs"
+                  >
+                    <Terminal className="w-5 h-5" />
+                  </button>
+                )}
               </div>
               <button
                 onClick={handleDeleteClick}
@@ -267,7 +293,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div
-                className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+                className="bg-gray-700 h-3 rounded-full transition-all duration-500"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -397,7 +423,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <MetricsTable metrics={metrics} />
-          <CheckpointsList checkpoints={checkpoints} />
+          <CheckpointsList checkpoints={checkpoints} totalRounds={experiment.numRounds} />
         </div>
 
         <Footer />
@@ -423,6 +449,56 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         message={dialog.message}
         type={dialog.type}
       />
+
+      {/* Logs Modal */}
+      {showLogs && experiment.logs && (
+        <div
+          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowLogs(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-200 rounded-lg">
+                  <Terminal className="w-5 h-5 text-gray-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Execution Logs</h2>
+                  <p className="text-xs text-gray-500">{experiment.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLogs(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Modal Body */}
+            <div className="flex-1 overflow-auto p-4 bg-gray-100">
+              <pre className="bg-white border border-gray-200 rounded-lg p-4 text-gray-800 text-sm font-mono leading-relaxed whitespace-pre-wrap shadow-sm">
+                {experiment.logs}
+              </pre>
+            </div>
+            {/* Modal Footer */}
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-sm text-gray-500">
+                {experiment.logs.split('\n').length} lines
+              </span>
+              <button
+                onClick={() => setShowLogs(false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

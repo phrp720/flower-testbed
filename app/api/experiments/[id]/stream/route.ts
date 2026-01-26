@@ -45,15 +45,21 @@ export async function GET(
             return;
           }
 
-          // Fetch latest metrics
+          // Fetch all metrics
           const metrics = await db
             .select()
             .from(schema.metrics)
             .where(eq(schema.metrics.experimentId, experimentId))
-            .orderBy(desc(schema.metrics.round))
-            .limit(1);
+            .orderBy(schema.metrics.round);
 
-          const latestMetrics = metrics[0] || null;
+          // Fetch all checkpoints
+          const checkpoints = await db
+            .select()
+            .from(schema.modelCheckpoints)
+            .where(eq(schema.modelCheckpoints.experimentId, experimentId))
+            .orderBy(schema.modelCheckpoints.round);
+
+          const latestMetrics = metrics[metrics.length - 1] || null;
 
           // Send update
           sendEvent({
@@ -64,7 +70,24 @@ export async function GET(
               currentRound: latestMetrics?.round || 0,
               totalRounds: experiment.numRounds,
             },
-            metrics: latestMetrics ? {
+            metrics: metrics.map(m => ({
+              id: m.id,
+              round: m.round,
+              trainLoss: m.trainLoss,
+              trainAccuracy: m.trainAccuracy,
+              evalLoss: m.evalLoss,
+              evalAccuracy: m.evalAccuracy,
+              createdAt: m.createdAt,
+            })),
+            checkpoints: checkpoints.map(c => ({
+              id: c.id,
+              round: c.round,
+              filePath: c.filePath,
+              accuracy: c.accuracy,
+              loss: c.loss,
+              createdAt: c.createdAt,
+            })),
+            latestMetrics: latestMetrics ? {
               round: latestMetrics.round,
               trainLoss: latestMetrics.trainLoss,
               trainAccuracy: latestMetrics.trainAccuracy,
