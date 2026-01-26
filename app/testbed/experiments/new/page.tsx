@@ -60,10 +60,7 @@ export default function DashboardPage() {
                 if (response.ok) {
                     const data = await response.json();
                     setResources(data);
-                    // Auto-enable GPU if available
-                    if (data.gpu?.available) {
-                        setUseGpu(true);
-                    }
+
                 }
             } catch (error) {
                 console.error('Failed to fetch resources:', error);

@@ -340,6 +340,13 @@ class SimulationOrchestrator:
                             loss=metrics.get("train_loss") if metrics else None,
                         )
 
+                    # Store train metrics for combining with eval metrics later
+                    if metrics:
+                        self._last_fit_metrics = {
+                            "train_loss": metrics.get("train_loss"),
+                            "train_accuracy": metrics.get("train_accuracy"),
+                        }
+
                     print(f"\n[Round {server_round}] Fit completed")
                     if metrics:
                         for k, v in metrics.items():
