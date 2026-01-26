@@ -265,6 +265,13 @@ class SimulationOrchestrator:
         if self.device.type == "cuda":
             client_resources["num_gpus"] = gpu_fraction
 
+        # Log resource configuration
+        print(f"\n[Orchestrator] Resource Configuration:")
+        print(f"  Device: {self.device.type.upper()}")
+        print(f"  CPUs per client: {cpus_per_client}")
+        if self.device.type == "cuda":
+            print(f"  GPU fraction per client: {gpu_fraction} ({int(1/gpu_fraction)} clients per GPU)")
+
         # Run simulation
         # Configure Ray to reduce noise (logs are captured and saved anyway)
         ray_init_args = {
