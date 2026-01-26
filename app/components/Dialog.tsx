@@ -73,14 +73,14 @@ export default function Dialog({
                 );
             case 'confirm':
                 return (
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                        <HelpCircle className="h-6 w-6 text-blue-600" strokeWidth={1.5} />
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                        <HelpCircle className="h-6 w-6 text-gray-600" strokeWidth={1.5} />
                     </div>
                 );
             default:
                 return (
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                        <Info className="h-6 w-6 text-blue-600" strokeWidth={1.5} />
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                        <Info className="h-6 w-6 text-gray-600" strokeWidth={1.5} />
                     </div>
                 );
         }
@@ -143,7 +143,7 @@ export default function Dialog({
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                className="px-4 py-2 text-sm font-semibold text-white bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
                             >
                                 {confirmText}
                             </button>

@@ -88,7 +88,7 @@ export default function DashboardPage() {
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-gray-100 text-gray-800',
-      running: 'bg-blue-100 text-blue-800 animate-pulse',
+      running: 'bg-gray-200 text-gray-800 animate-pulse',
       completed: 'bg-green-100 text-green-800',
       failed: 'bg-red-100 text-red-800',
     };
@@ -103,7 +103,7 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -132,8 +132,8 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600 mb-1">Total Experiments</p>
                 <p className="text-3xl font-bold text-gray-900">{totalExperiments}</p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-blue-600" />
+              <div className="bg-gray-100 p-3 rounded-lg">
+                <BarChart3 className="w-6 h-6 text-gray-600" />
               </div>
             </div>
           </div>
@@ -142,10 +142,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Running</p>
-                <p className="text-3xl font-bold text-blue-600">{runningExperiments}</p>
+                <p className="text-3xl font-bold text-gray-800">{runningExperiments}</p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Zap className="w-6 h-6 text-blue-600" />
+              <div className="bg-gray-100 p-3 rounded-lg">
+                <Zap className="w-6 h-6 text-gray-600" />
               </div>
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600">Success Rate</span>
-                    <span className="text-lg font-bold text-blue-600">
+                    <span className="text-lg font-bold text-gray-800">
                       {totalExperiments > 0
                         ? ((completedExperiments / totalExperiments) * 100).toFixed(1)
                         : '0.0'}%
@@ -242,7 +242,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className="bg-blue-500 h-2 rounded-full"
+                      className="bg-gray-600 h-2 rounded-full"
                       style={{
                         width: `${totalExperiments > 0 ? (completedExperiments / totalExperiments) * 100 : 0}%`,
                       }}
@@ -278,7 +278,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-gray-900">Recent Experiments</h2>
               <Link
                 href="/testbed/experiments"
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="text-gray-600 hover:text-gray-800 text-sm font-medium"
               >
                 View All
               </Link>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
               <p className="text-gray-500 mb-4">No experiments yet</p>
               <Link
                 href="/testbed/experiments/new"
-                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
+                className="inline-block bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition font-medium"
               >
                 Create Your First Experiment
               </Link>
@@ -306,7 +306,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600">
+                        <h3 className="text-lg font-semibold text-gray-900 hover:text-gray-600">
                           {exp.name}
                         </h3>
                         {getStatusBadge(exp.status)}
@@ -333,8 +333,8 @@ export default function DashboardPage() {
             className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
           >
             <div className="flex items-center gap-4">
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Plus className="w-6 h-6 text-blue-600" />
+              <div className="bg-gray-100 p-3 rounded-lg">
+                <Plus className="w-6 h-6 text-gray-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">New Experiment</h3>

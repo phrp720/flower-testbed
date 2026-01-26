@@ -59,7 +59,7 @@ export default function SingleFileUploader({id = "single-uploader", accept = "*"
             <label
                 htmlFor={id}
                 className={`group relative flex flex-col items-center justify-center gap-2 rounded-md border p-3 text-sm transition
-          ${isDragOver ? "border-blue-400 bg-blue-50" : "border-gray-200 bg-white"}
+          ${isDragOver ? "border-gray-400 bg-gray-50" : "border-gray-200 bg-white"}
           hover:border-gray-300 cursor-pointer`}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
@@ -86,7 +86,7 @@ export default function SingleFileUploader({id = "single-uploader", accept = "*"
                         e.preventDefault();
                         inputRef.current?.click();
                     }}
-                    className="pointer-events-auto mt-2 rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                    className="pointer-events-auto mt-2 rounded-md bg-gray-800 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
                 >
                     Choose file
                 </button>

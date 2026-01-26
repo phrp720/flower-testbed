@@ -92,7 +92,7 @@ export default function ExperimentsPage() {
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-gray-100 text-gray-800',
-      running: 'bg-blue-100 text-blue-800 animate-pulse',
+      running: 'bg-gray-200 text-gray-800 animate-pulse',
       completed: 'bg-green-100 text-green-800',
       failed: 'bg-red-100 text-red-800',
     };
@@ -126,7 +126,7 @@ export default function ExperimentsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading experiments...</p>
         </div>
       </div>
@@ -159,7 +159,7 @@ export default function ExperimentsPage() {
                   placeholder="Search experiments..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                 />
               </div>
             </div>
@@ -169,7 +169,7 @@ export default function ExperimentsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -184,7 +184,7 @@ export default function ExperimentsPage() {
               <select
                 value={platformFilter}
                 onChange={(e) => setPlatformFilter(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
               >
                 <option value="all">All Platforms</option>
                 <option value="pytorch">PyTorch</option>
@@ -208,7 +208,7 @@ export default function ExperimentsPage() {
             <p className="text-gray-500 mb-4">No experiments yet</p>
               <Link
                   href="/testbed/experiments/new"
-                  className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
+                  className="inline-block bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition font-medium"
               >
                   Create Your First Experiment
               </Link>
@@ -222,7 +222,7 @@ export default function ExperimentsPage() {
                 setStatusFilter('all');
                 setPlatformFilter('all');
               }}
-              className="text-blue-600 hover:text-blue-800 font-medium"
+              className="text-gray-600 hover:text-gray-800 font-medium"
             >
               Clear filters
             </button>
@@ -239,7 +239,7 @@ export default function ExperimentsPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <Link
                         href={`/testbed/experiments/${exp.id}`}
-                        className="text-xl font-semibold text-gray-900 hover:text-blue-600"
+                        className="text-xl font-semibold text-gray-900 hover:text-gray-600"
                       >
                         {exp.name}
                       </Link>
@@ -261,7 +261,7 @@ export default function ExperimentsPage() {
                   <div className="flex gap-1 ml-4">
                     <Link
                       href={`/testbed/experiments/${exp.id}`}
-                      className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                      className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors"
                       title="View experiment"
                     >
                       <Eye className="w-5 h-5" />
@@ -312,7 +312,7 @@ export default function ExperimentsPage() {
                       onClick={() => setPage(pageNum)}
                       className={`w-9 h-9 text-sm font-medium rounded-lg transition-colors ${
                         page === pageNum
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-gray-800 text-white'
                           : 'hover:bg-gray-100 text-gray-600'
                       }`}
                     >

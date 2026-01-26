@@ -168,7 +168,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading experiment...</p>
         </div>
       </div>
@@ -194,7 +194,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-gray-100 text-gray-800',
-      running: 'bg-blue-100 text-blue-800',
+      running: 'bg-gray-200 text-gray-800',
       completed: 'bg-green-100 text-green-800',
       failed: 'bg-red-100 text-red-800',
     };
@@ -293,7 +293,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div
-                className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+                className="bg-gray-700 h-3 rounded-full transition-all duration-500"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>

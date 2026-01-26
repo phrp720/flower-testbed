@@ -135,7 +135,7 @@ export default function CheckpointsList({ checkpoints, totalRounds, itemsPerPage
                     className={`flex-shrink-0 p-2.5 rounded-lg transition-all ${
                       isFinal
                         ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-blue-600'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                     }`}
                     title={isFinal ? "Download Final Model" : "Download Checkpoint"}
                   >
@@ -180,7 +180,7 @@ export default function CheckpointsList({ checkpoints, totalRounds, itemsPerPage
                     onClick={() => setPage(pageNum)}
                     className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
                       page === pageNum
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-gray-800 text-white'
                         : 'hover:bg-gray-200 text-gray-600'
                     }`}
                   >

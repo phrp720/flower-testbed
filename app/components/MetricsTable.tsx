@@ -74,8 +74,8 @@ export default function MetricsTable({ metrics, itemsPerPage = 8 }: MetricsTable
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <BarChart3 className="w-5 h-5 text-blue-600" />
+          <div className="p-2 bg-gray-100 rounded-lg">
+            <BarChart3 className="w-5 h-5 text-gray-600" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Metrics by Round</h2>
@@ -116,7 +116,7 @@ export default function MetricsTable({ metrics, itemsPerPage = 8 }: MetricsTable
                 return (
                   <tr key={m.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-semibold text-sm">
                         {m.round}
                       </span>
                     </td>
@@ -177,7 +177,7 @@ export default function MetricsTable({ metrics, itemsPerPage = 8 }: MetricsTable
                     onClick={() => setPage(pageNum)}
                     className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
                       page === pageNum
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-gray-800 text-white'
                         : 'hover:bg-gray-200 text-gray-600'
                     }`}
                   >

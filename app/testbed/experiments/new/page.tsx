@@ -200,7 +200,7 @@ export default function DashboardPage() {
                                         value={experimentName}
                                         onChange={(e) => setExperimentName(e.target.value)}
                                         placeholder="My Federated Learning Experiment"
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                                     />
                                 </div>
                                 <div>
@@ -210,7 +210,7 @@ export default function DashboardPage() {
                                     <select
                                         value={preset}
                                         onChange={(e) => setPreset(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
+                                        className="w-full rounded-lg border border-gray-300 pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
                                     >
                                         <option value="pytorch">PyTorch</option>
                                         <option value="tensorflow">TensorFlow</option>
@@ -239,7 +239,7 @@ export default function DashboardPage() {
                                         type="number"
                                         value={numClients}
                                         onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setNumClients(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                                         min="1"
                                     />
                                 </div>
@@ -251,7 +251,7 @@ export default function DashboardPage() {
                                         type="number"
                                         value={numRounds}
                                         onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setNumRounds(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                                         min="1"
                                     />
                                 </div>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
                                             step="0.1"
                                             value={clientFraction}
                                             onChange={(e) => setClientFraction(parseFloat(e.target.value))}
-                                            className="flex-1"
+                                            className="flex-1 accent-gray-800"
                                         />
                                         <span className="text-sm font-medium text-gray-900 w-12 text-right">
                                             {(clientFraction * 100).toFixed(0)}%
@@ -282,7 +282,7 @@ export default function DashboardPage() {
                                         type="number"
                                         value={localEpochs}
                                         onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setLocalEpochs(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                                         min="1"
                                     />
                                 </div>
@@ -295,7 +295,7 @@ export default function DashboardPage() {
                                         step="0.001"
                                         value={learningRate}
                                         onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) setLearningRate(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                                         min="0"
                                     />
                                 </div>
@@ -317,7 +317,7 @@ export default function DashboardPage() {
                                 ) : resources ? (
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div className="flex items-center gap-2">
-                                            <Cpu className="w-4 h-4 text-blue-600" />
+                                            <Cpu className="w-4 h-4 text-gray-600" />
                                             <span className="text-gray-700">
                                                 <strong>{resources.cpu.count}</strong> CPU cores
                                             </span>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
                                                 name="device"
                                                 checked={!useGpu}
                                                 onChange={() => setUseGpu(false)}
-                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 accent-gray-800 focus:ring-gray-500"
                                             />
                                             <span className="text-sm text-gray-700">CPU</span>
                                         </label>
@@ -372,7 +372,7 @@ export default function DashboardPage() {
                                                 checked={useGpu}
                                                 onChange={() => setUseGpu(true)}
                                                 disabled={!resources?.gpu.available}
-                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 accent-gray-800 focus:ring-gray-500"
                                             />
                                             <span className="text-sm text-gray-700">GPU</span>
                                         </label>
@@ -388,7 +388,7 @@ export default function DashboardPage() {
                                         type="number"
                                         value={cpusPerClient}
                                         onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 1) setCpusPerClient(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                                         min="1"
                                         max={resources?.cpu.count || 8}
                                     />
@@ -411,7 +411,7 @@ export default function DashboardPage() {
                                                 step="0.05"
                                                 value={gpuFractionPerClient}
                                                 onChange={(e) => setGpuFractionPerClient(parseFloat(e.target.value))}
-                                                className="flex-1"
+                                                className="flex-1 accent-gray-800"
                                             />
                                             <span className="text-sm font-medium text-gray-900 w-16 text-right">
                                                 {(gpuFractionPerClient * 100).toFixed(0)}%
@@ -429,12 +429,12 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Action Button */}
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
+                        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">Ready to Start?</h3>
                                     <p className="text-sm text-gray-600 mt-1 flex items-center gap-1.5">
-                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                        <CheckCircle2 className="w-4 h-4 text-gray-600" />
                                         {modelFile || datasetFile || algorithmFile
                                             ? `Custom files: ${[modelFile && 'model', datasetFile && 'dataset', algorithmFile && 'strategy'].filter(Boolean).join(', ')}`
                                             : 'Using defaults (CIFAR-10 CNN with FedAvg)'
@@ -444,7 +444,7 @@ export default function DashboardPage() {
                                 <button
                                     onClick={handleStartExperiment}
                                     disabled={isCreating}
-                                    className="bg-gradient-to-r bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600"
+                                    className="bg-gray-800 text-white px-6 py-3 rounded-lg font-semibold shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isCreating ? (
                                         <span className="flex items-center gap-2">
@@ -473,7 +473,7 @@ export default function DashboardPage() {
                                         </label>
                                         <button
                                             onClick={() => downloadTemplate('model')}
-                                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                            className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
                                         >
                                             <Download className="w-3 h-3" />
                                             Template
@@ -497,7 +497,7 @@ export default function DashboardPage() {
                                         </label>
                                         <button
                                             onClick={() => downloadTemplate('dataset')}
-                                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                            className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
                                         >
                                             <Download className="w-3 h-3" />
                                             Template
@@ -521,7 +521,7 @@ export default function DashboardPage() {
                                         </label>
                                         <button
                                             onClick={() => downloadTemplate('strategy')}
-                                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                            className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
                                         >
                                             <Download className="w-3 h-3" />
                                             Template
@@ -545,7 +545,7 @@ export default function DashboardPage() {
                                         </label>
                                         <button
                                             onClick={() => downloadTemplate('config')}
-                                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                            className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
                                         >
                                             <Download className="w-3 h-3" />
                                             Template
@@ -563,12 +563,12 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Quick Start Guide */}
-                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                            <h3 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-1.5">
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
                                 <Info className="w-4 h-4" />
                                 Quick Start
                             </h3>
-                            <ol className="text-xs text-blue-800 space-y-1.5 list-decimal list-inside">
+                            <ol className="text-xs text-gray-600 space-y-1.5 list-decimal list-inside">
                                 <li>Configure training parameters</li>
                                 <li>Optionally upload custom files</li>
                                 <li>Click &quot;Start Experiment&quot;</li>

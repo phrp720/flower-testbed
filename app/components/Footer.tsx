@@ -10,7 +10,7 @@ export default function Footer() {
                         href="https://github.com/phrp720"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-gray-500 hover:text-blue-600 transition"
+                        className="text-gray-500 hover:text-gray-800 transition"
                     >
                         phrp720
                     </a>
