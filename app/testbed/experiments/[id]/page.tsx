@@ -49,6 +49,14 @@ type Checkpoint = {
   createdAt: string;
 };
 
+type LatestMetrics = {
+  round: number;
+  trainLoss: number;
+  trainAccuracy: number;
+  evalLoss: number;
+  evalAccuracy: number;
+};
+
 type StreamUpdate = {
   experiment: {
     id: number;
@@ -57,13 +65,9 @@ type StreamUpdate = {
     currentRound: number;
     totalRounds: number;
   };
-  metrics: {
-    round: number;
-    trainLoss: number;
-    trainAccuracy: number;
-    evalLoss: number;
-    evalAccuracy: number;
-  } | null;
+  metrics: Metric[];
+  checkpoints: Checkpoint[];
+  latestMetrics: LatestMetrics | null;
   status?: string;
   final?: boolean;
 };
@@ -76,7 +80,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentMetrics, setCurrentMetrics] = useState<StreamUpdate['metrics'] | null>(null);
+  const [currentMetrics, setCurrentMetrics] = useState<LatestMetrics | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [dialog, setDialog] = useState<{
@@ -114,8 +118,19 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         return;
       }
 
-      if (data.metrics) {
-        setCurrentMetrics(data.metrics);
+      // Update metrics array
+      if (data.metrics && data.metrics.length > 0) {
+        setMetrics(data.metrics);
+      }
+
+      // Update checkpoints array
+      if (data.checkpoints && data.checkpoints.length > 0) {
+        setCheckpoints(data.checkpoints);
+      }
+
+      // Update current metrics for progress display
+      if (data.latestMetrics) {
+        setCurrentMetrics(data.latestMetrics);
       }
 
       // Update experiment status
