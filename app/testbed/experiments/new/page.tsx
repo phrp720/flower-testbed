@@ -320,7 +320,7 @@ export default function DashboardPage() {
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <MonitorDot className="w-4 h-4 text-green-600" />
+                                            <MonitorDot className="w-4 h-4 text-gray-600" />
                                             {resources.gpu.available ? (
                                                 <span className="text-gray-700">
                                                     <strong>{resources.gpu.count}</strong> GPU{resources.gpu.count > 1 ? 's' : ''}
