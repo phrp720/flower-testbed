@@ -276,12 +276,6 @@ export default function DashboardPage() {
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Recent Experiments</h2>
-              <Link
-                href="/testbed/experiments"
-                className="text-gray-600 hover:text-gray-800 text-sm font-medium"
-              >
-                View All
-              </Link>
             </div>
           </div>
 
@@ -348,11 +342,11 @@ export default function DashboardPage() {
             className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
           >
             <div className="flex items-center gap-4">
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <ClipboardList className="w-6 h-6 text-purple-600" />
+              <div className="bg-gray-100 p-3 rounded-lg">
+                <ClipboardList className="w-6 h-6 text-gray-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">View All</h3>
+                <h3 className="font-semibold text-gray-900">Execution History</h3>
                 <p className="text-sm text-gray-600">Browse all experiments</p>
               </div>
             </div>
@@ -365,8 +359,8 @@ export default function DashboardPage() {
             className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
           >
             <div className="flex items-center gap-4">
-              <div className="bg-green-100 p-3 rounded-lg">
-                <BookOpen className="w-6 h-6 text-green-600" />
+              <div className="bg-gray-100 p-3 rounded-lg">
+                <BookOpen className="w-6 h-6 text-gray-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Documentation</h3>

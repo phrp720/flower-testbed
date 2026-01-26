@@ -222,7 +222,7 @@ export default function ExperimentsPage() {
                 setStatusFilter('all');
                 setPlatformFilter('all');
               }}
-              className="text-gray-600 hover:text-gray-800 font-medium"
+              className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition font-medium"
             >
               Clear filters
             </button>
