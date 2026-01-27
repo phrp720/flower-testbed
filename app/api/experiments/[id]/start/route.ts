@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import { spawn } from 'child_process';
+import {spawn, SpawnOptions} from 'child_process';
 import path from 'path';
 import { mkdir } from 'fs/promises';
 import { getSession, unauthorized } from '@/lib/auth';
@@ -82,12 +82,18 @@ function startFlowerExperiment(experimentId: number) {
   const pythonScript = path.join(projectRoot, 'runner', 'flower_runner.py');
 
   const pythonPath = path.join(projectRoot, 'venv', 'bin', 'python');
-  const pythonProcess = spawn(pythonPath, [pythonScript, experimentId.toString()], {
+
+  const showLogs = process.env.SHOW_FLWR_LOGS === 'true';
+
+  const spawnOptions: SpawnOptions = {
     cwd: projectRoot,
     detached: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+    stdio: showLogs ? 'inherit' : ['ignore', 'pipe', 'pipe'],
+  };
 
-  // Detach the process so it continues running after API response
+  const pythonProcess = spawn(pythonPath, [pythonScript, experimentId.toString()], spawnOptions);
+
+// Detach so it can continue running after API response
   pythonProcess.unref();
+
 }
