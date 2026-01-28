@@ -21,6 +21,20 @@ jobs:
           cp -r ./deployments/production/* ./release/deployment/
           cp -r ./deployments/production/.* ./release/deployment/
 
+      - name: Set Image version in .env.example
+        run: |
+          FILE=release/deployment/.env.example
+          if [ -f "$FILE" ]; then
+            if grep -q '^IMAGE_VERSION=' "$FILE"; then
+              sed -i "s/^IMAGE_VERSION=.*/IMAGE_VERSION=${{ github.event.release.tag_name }}/" "$FILE"
+            else
+              echo "IMAGE_VERSION=${{ github.event.release.tag_name }}" >> "$FILE"
+            fi
+          else
+            echo "Warning: $FILE not found"
+          fi
+        shell: bash
+
       - name: Create ZIP file
         run: |
           cd release
