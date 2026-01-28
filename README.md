@@ -140,6 +140,7 @@ Steps:
 
 > [!TIP]
 > You can download templates for Algorithm, Config,Strategy and  Dataset files to get started quickly.
+
 > [!NOTE]
 > The application supports only Pytorch for now. Support for TensorFlow is coming soon.
 
