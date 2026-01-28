@@ -64,6 +64,7 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 - Docker & Docker Compose
 - Python 3.9+ (for Flower experiments)
 
+Steps: 
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
