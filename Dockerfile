@@ -34,11 +34,10 @@ RUN pnpm build
 
 FROM node:20-bookworm-slim AS runner
 
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    python3 \
+RUN apt-get update && apt-get install -y --no-install-recommends python3 \
  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 
 ENV VENV_PATH=/opt/venv
 ENV PATH="$VENV_PATH/bin:$PATH"
