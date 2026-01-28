@@ -28,9 +28,9 @@ A Testbed Experiment Platform for testing <a href="https://flower.ai/docs/framew
 
 - [About](#about)
 - [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites) 
   - [Installation](#installation)
     - [Development Setup](#development-setup)
+      - [Prerequisites](#prerequisites)
     - [Production Setup](#production-setup)
 - [Usage](#usage)
 - [Contributing](#contributing)
@@ -52,16 +52,17 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 
 ## Getting Started
 
-### Prerequisites
+
+### Installation
+
+#### Development Setup
+
+##### Prerequisites
 
 - Node.js 20+
 - pnpm
 - Docker & Docker Compose
 - Python 3.9+ (for Flower experiments)
-
-### Installation
-
-#### Development Setup
 
 1. **Clone the repository**
    ```bash
