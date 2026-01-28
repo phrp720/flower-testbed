@@ -12,7 +12,7 @@ FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-venv \
     python3-pip \
@@ -22,11 +22,12 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY --from=deps /app/node_modules ./node_modules
 
-COPY . .
-
+COPY requirements.txt ./
 ENV VENV_PATH=/opt/venv
-RUN python3 -m venv $VENV_PATH && \
-    $VENV_PATH/bin/pip install --no-cache-dir -r requirements.txt
+RUN python3 -m venv $VENV_PATH \
+ && $VENV_PATH/bin/pip install --no-cache-dir -r requirements.txt
+
+COPY . .
 
 ENV NODE_ENV=production
 RUN pnpm build
@@ -34,10 +35,10 @@ RUN pnpm build
 
 FROM node:20-bookworm-slim AS runner
 
+WORKDIR /app
+
 RUN apt-get update && apt-get install -y --no-install-recommends python3 \
  && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
 
 ENV VENV_PATH=/opt/venv
 ENV PATH="$VENV_PATH/bin:$PATH"
