@@ -99,7 +99,7 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 
    * The Flower application
    * PostgreSQL
-   * A `.env` file for configuration
+   * A `.env.example` example file for configuration
 
 2. Download and unzip the `deployment.zip` file.
 
