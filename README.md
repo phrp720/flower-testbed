@@ -11,7 +11,7 @@ A Testbed Experiment Platform for testing <a href="https://flower.ai/docs/framew
 <p align="center">
 
   <a href="https://github.com/phrp720/flower-testbed/actions/workflows/docker-image.yml">
-    <img title="Docker Build" src="https://github.com/phrp720/flower-testbed/actions/workflows/agent-docker-image.yml/badge.svg" alt="docker build">
+    <img title="Docker Build" src="https://github.com/phrp720/flower-testbed/actions/workflows/docker-image.yml/badge.svg" alt="docker build">
   </a>
 
   <a href="https://github.com/phrp720/flower-testbed/actions/workflows/release.yml">
