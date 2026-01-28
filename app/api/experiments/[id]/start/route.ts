@@ -83,9 +83,11 @@ function startFlowerExperiment(experimentId: number) {
   const projectRoot = process.cwd();
   const pythonScript = path.join(projectRoot, 'runner', 'flower_runner.py');
 
-  const venvEnv = process.env.VENV_PATH;
-  const isProduction = process.env.NODE_ENV === 'production';
-  const pythonPath = (venvEnv && isProduction) ? path.join(venvEnv, 'bin', 'python') : path.join(projectRoot, 'venv', 'bin', 'python');
+  const pythonPath = path.join(
+      process.env.VENV_PATH ?? path.join(projectRoot, 'venv'),
+      'bin',
+      'python'
+  );
 
   const showLogs = process.env.SHOW_FLWR_LOGS === 'true';
 
