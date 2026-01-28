@@ -24,6 +24,10 @@ A Testbed Experiment Platform for testing <a href="https://flower.ai/docs/framew
 
 - [About](#about)
 - [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites) 
+  - [Installation](#installation)
+    - [Development Setup](#development-setup)
+    - [Production Setup](#production-setup)
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
@@ -52,6 +56,8 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 - Python 3.9+ (for Flower experiments)
 
 ### Installation
+
+#### Development Setup
 
 1. **Clone the repository**
    ```bash
@@ -85,6 +91,25 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 
    The default credentials are `admin:admin`
 
+#### Production Setup
+
+1. For each release, a `deployment.zip` file is provided.You can find it in the [Releases](https://github.com/phrp720/flower-testbed/releases)
+
+   This archive contains everything required to deploy the application, including:
+
+   * The Flower application
+   * PostgreSQL
+   * A `.env` file for configuration
+
+2. Download and unzip the `deployment.zip` file.
+
+3. Open the `.env` file and update the configuration values as needed.
+
+4. Start the application using Docker Compose:
+
+   ```bash
+   docker compose up -d
+   ```
 
 ## Usage
 
@@ -106,6 +131,11 @@ Flower Testbed is an open-source platform for experimenting with federated learn
    - Learning rate
 
 4. **Start Experiment**: Click "Start Experiment" to begin
+
+> [!TIP]
+> You can download templates for Algorithm, Config,Strategy and  Dataset files to get started quickly.
+> [!NOTE]
+> The application supports only Pytorch for now. Support for TensorFlow is coming soon.
 
 ## Contributing
 
