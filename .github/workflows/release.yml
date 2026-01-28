@@ -18,7 +18,8 @@ jobs:
           mkdir -p ./release/deployment  
           mkdir -p ./release/deployment/scripts
           cp -r ./scripts/schema ./release/deployment/scripts/
-          cp -r ./deployments/production/ ./release/deployment/
+          cp -r ./deployments/production/* ./release/deployment/
+          cp -r ./deployments/production/.* ./release/deployment/
 
       - name: Create ZIP file
         run: |
