@@ -5,8 +5,8 @@ on:
     types: [created]
 
 jobs:
-  build-and-package:
-    name: Build and Package Release
+  package-release:
+    name: Package Release
     runs-on: ubuntu-latest
 
     steps:
