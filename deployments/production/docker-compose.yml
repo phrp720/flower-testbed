@@ -6,7 +6,7 @@ services:
     container_name: flower-testbed-app
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "3000:3000"
     environment:
       DATABASE_URL: '${DATABASE_URL:-postgresql://floweruser:flowerpass@postgres:5432/flowertestbed?schema=public}'
       NEXTAUTH_URL: '${NEXTAUTH_URL:-http://0.0.0.0:3000}'
