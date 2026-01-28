@@ -27,7 +27,7 @@ jobs:
 
       - name: Upload artifacts
         run: |
-          gh release upload ${{ github.event.release.tag_name }}" release/deployment.zip
+          gh release upload ${{ github.event.release.tag_name }} release/deployment.zip
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         shell: bash
