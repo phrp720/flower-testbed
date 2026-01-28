@@ -25,7 +25,8 @@ A Testbed Experiment Platform for testing <a href="https://flower.ai/docs/framew
 - [About](#about)
 - [Getting Started](#getting-started)
 - [Usage](#usage)
-- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 </details>
 
@@ -105,21 +106,6 @@ Flower Testbed is an open-source platform for experimenting with federated learn
    - Learning rate
 
 4. **Start Experiment**: Click "Start Experiment" to begin
-
-## Roadmap
-- [x] Database setup with PostgreSQL & Drizzle
-- [x] File upload API
-- [x] Experiment CRUD API
-- [x] Dashboard UI with configuration
-- [x] Real-time experiment monitoring page
-- [x] Metrics visualization (charts)
-- [x] Experiment history page
-- [x] Real-time metrics collection
-- [x] Model checkpointing per round
-- [ ] Python runner for Flower experiments - In Progress
-- [ ] Dynamic experiment execution
-- [ ] Export results (CSV, JSON) - Maybe
-- [ ] User guide
 
 ## Contributing
 
