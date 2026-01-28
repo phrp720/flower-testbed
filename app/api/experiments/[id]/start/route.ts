@@ -5,6 +5,7 @@ import {spawn, SpawnOptions} from 'child_process';
 import path from 'path';
 import { mkdir } from 'fs/promises';
 import { getSession, unauthorized } from '@/lib/auth';
+import * as fs from "node:fs";
 
 // POST /api/experiments/[id]/start - Start an experiment
 export async function POST(
@@ -75,13 +76,29 @@ export async function POST(
   }
 }
 
+export function getPythonPath(projectRoot: string): string {
+  const nodeEnv = process.env.NODE_ENV || 'production';
+
+  if (nodeEnv === 'development') {
+    const devPath =
+    if (fs.existsSync(devPath)) return devPath;
+  } else {
+  if (fs.existsSync(prodPath)) return prodPath;
+  }
+
+  // Final fallback to system python3
+  return 'python3';
+}
+
+
 // Background function to run Flower experiment
 function startFlowerExperiment(experimentId: number) {
 
   const projectRoot = process.cwd();
   const pythonScript = path.join(projectRoot, 'runner', 'flower_runner.py');
 
-  const pythonPath = path.join(projectRoot, 'venv', 'bin', 'python');
+  const venvEnv = process.env.VENV_PATH;
+  const pythonPath = venvEnv ? path.join(venvEnv, 'bin', 'python') : path.join(projectRoot, 'venv', 'bin', 'python');
 
   const showLogs = process.env.SHOW_FLWR_LOGS === 'true';
 
