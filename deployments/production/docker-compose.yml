@@ -2,7 +2,7 @@ name: flower-testbed
 
 services:
   flower-testbed:
-    image: phrp5/flower-testbed:'${IMAGE_VERSION:-latest}'
+    image: phrp5/flower-testbed:${IMAGE_VERSION:-latest}
     container_name: flower-testbed-app
     restart: unless-stopped
     ports:
