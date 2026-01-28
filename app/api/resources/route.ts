@@ -31,9 +31,13 @@ function getSystemResources(): Promise<{
 }> {
   return new Promise((resolve, reject) => {
     const projectRoot = process.cwd();
-    const pythonPath = path.join(projectRoot, 'venv', 'bin', 'python');
     const scriptPath = path.join(projectRoot, 'runner', 'core', 'resources.py');
 
+    const pythonPath = path.join(
+        process.env.VENV_PATH ?? path.join(projectRoot, 'venv'),
+        'bin',
+        'python'
+    );
     const pythonProcess = spawn(pythonPath, [scriptPath], {
       cwd: projectRoot,
     });
