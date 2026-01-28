@@ -7,7 +7,6 @@
     "build": "next build --turbopack",
     "start": "next start",
     "deps": "./scripts/deps.sh",
-    "deps-prod": "./scripts/prod_deps.sh",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
