@@ -188,15 +188,15 @@ export default function ExperimentsPage() {
               >
                 <option value="all">All Platforms</option>
                 <option value="pytorch">PyTorch</option>
-                <option value="tensorflow">TensorFlow</option>
-                <option value="sklearn">scikit-learn</option>
-                <option value="huggingface">Hugging Face</option>
-                <option value="jax">JAX</option>
-                <option value="mlx">MLX</option>
-                <option value="numpy">NumPy</option>
-                <option value="xgboost">XGBoost</option>
-                <option value="flowertune">FlowerTune</option>
-                <option value="flower-baseline">Flower Baseline</option>
+                <option value="tensorflow" disabled={true}>TensorFlow</option>
+                {/*<option value="sklearn">scikit-learn</option>*/}
+                {/*<option value="huggingface">Hugging Face</option>*/}
+                {/*<option value="jax">JAX</option>*/}
+                {/*<option value="mlx">MLX</option>*/}
+                {/*<option value="numpy">NumPy</option>*/}
+                {/*<option value="xgboost">XGBoost</option>*/}
+                {/*<option value="flowertune">FlowerTune</option>*/}
+                {/*<option value="flower-baseline">Flower Baseline</option>*/}
               </select>
             </div>
           </div>
