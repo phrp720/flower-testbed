@@ -109,7 +109,7 @@ Steps:
 
 2. Download and unzip the `deployment.zip` file.
 
-3. Open the `.env` file and update the configuration values as needed.
+3. Open the `.env.example` file, update the configuration values as needed and rename it to `.env`.
 
 4. Start the application using Docker Compose:
 
