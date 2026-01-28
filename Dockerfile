@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
+ENV VENV_PATH=/opt/venv
+ENV PATH="$VENV_PATH/bin:$PATH"
+
 WORKDIR /app
 
 FROM base AS deps
@@ -34,24 +37,11 @@ COPY . .
 
 RUN pnpm build
 
-FROM node:20-bookworm AS runner
-
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-venv \
-    python3-pip \
-    bash \
- && rm -rf /var/lib/apt/lists/*
-
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+FROM base AS runner
 
 WORKDIR /app
 
-ENV VENV_PATH=/opt/venv
-ENV PATH="$VENV_PATH/bin:$PATH"
 COPY --from=deps /opt/venv /opt/venv
-
 COPY --from=builder /app ./
 
 ENV NODE_ENV=production
