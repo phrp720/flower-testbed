@@ -1,10 +1,10 @@
 # Flower Federated Learning
-flwr[simulation]>=1.11.0
-flwr-datasets[vision]>=0.3.0
+flwr[simulation]>=1.22.0
+flwr-datasets[vision]>=0.5.0
 
 # Deep Learning Frameworks
-torch>=2.0.0
-torchvision>=0.15.0
+torch>=2.7.1
+torchvision>=0.22.1
 
 # Database
 psycopg2-binary>=2.9.0
