@@ -1,8 +1,40 @@
-venv
-node_modules
-.pnpm-store
+# VCS
 .git
 .gitignore
+
+# Node / pnpm
+node_modules
+.pnpm-store
+npm-debug.log
+pnpm-debug.log
+
+# Next.js
+.next
+.next/cache
+
+# Python
+venv
+.venv
+__pycache__
+*.pyc
+
+# Environment / secrets
 .env
+.env.*
+
+# Build output
 dist
+build
 coverage
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+
+# Docker / CI
+Dockerfile
+docker-compose.yml
+
+# Logs
+*.log
