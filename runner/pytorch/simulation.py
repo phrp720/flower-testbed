@@ -153,7 +153,11 @@ class SimulationOrchestrator:
         model_path = self.config.get('model_path')
         if model_path and model_path.endswith('.py'):
             model_module = self.module_loader.load_module(model_path, 'user_model')
+            if model_module is None:
+                raise RuntimeError("Failed to load model module. Please check your file and upload again.")
             self.model_fn = self.module_loader.extract_model(model_module)
+            if self.model_fn is None:
+                raise RuntimeError("No valid model found. Expected get_model() function or Net/Model class. Please check your file and upload again.")
 
         if self.model_fn is None:
             print("[Orchestrator] Using default CIFAR-10 CNN model")
@@ -163,7 +167,11 @@ class SimulationOrchestrator:
         dataset_path = self.config.get('dataset_path')
         if dataset_path:
             dataset_module = self.module_loader.load_module(dataset_path, 'user_dataset')
+            if dataset_module is None:
+                raise RuntimeError("Failed to load dataset module. Please check your file and upload again.")
             self.load_data_fn = self.module_loader.extract_dataset_loader(dataset_module)
+            if self.load_data_fn is None:
+                raise RuntimeError("No valid dataset loader found. Expected load_data() function. Please check your file and upload again.")
 
         if self.load_data_fn is None:
             print("[Orchestrator] Using default CIFAR-10 dataset")
@@ -173,7 +181,11 @@ class SimulationOrchestrator:
         algorithm_path = self.config.get('algorithm_path')
         if algorithm_path:
             algorithm_module = self.module_loader.load_module(algorithm_path, 'user_algorithm')
+            if algorithm_module is None:
+                raise RuntimeError("Failed to load algorithm module. Please check your file and upload again.")
             self.strategy_fn = self.module_loader.extract_strategy(algorithm_module)
+            if self.strategy_fn is None:
+                raise RuntimeError("No valid strategy found. Expected get_strategy() function. Please check your file and upload again.")
 
         # Load additional config
         config_path = self.config.get('config_path')
