@@ -2,6 +2,7 @@
 CheckpointManager - Handles saving and loading model checkpoints.
 """
 
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from collections import OrderedDict
@@ -16,7 +17,14 @@ class CheckpointManager:
     def __init__(self, experiment_id: int, project_root: Path):
         self.experiment_id = experiment_id
         self.project_root = project_root
-        self.checkpoint_dir = project_root / "checkpoints-data" / f"exp_{experiment_id}"
+
+        # Use CHECKPOINTS_DIR env var if set, otherwise default to 'checkpoints-data'
+        checkpoints_base = os.environ.get('CHECKPOINTS_DIR')
+        if checkpoints_base:
+            self.checkpoint_dir = Path(checkpoints_base) / f"exp_{experiment_id}"
+        else:
+            self.checkpoint_dir = project_root / "checkpoints-data" / f"exp_{experiment_id}"
+
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     def save_checkpoint(
