@@ -102,8 +102,11 @@ class CheckpointManager:
         return torch.load(latest, map_location='cpu')
 
     def get_relative_path(self, checkpoint_path: Path) -> str:
-        """Get path relative to project root for database storage."""
-        return str(checkpoint_path.relative_to(self.project_root))
+        """Get path relative to project root for database storage, or absolute if outside project root."""
+        try:
+            return str(checkpoint_path.relative_to(self.project_root))
+        except ValueError:
+            return str(checkpoint_path)
 
     def list_checkpoints(self) -> List[Path]:
         """List all checkpoints for this experiment."""
