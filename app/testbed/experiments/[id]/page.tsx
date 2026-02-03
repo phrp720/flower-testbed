@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ChevronLeft, Trash2, Terminal, X } from "lucide-react";
+import { Download, ChevronLeft, Trash2, Terminal, X, Copy, Check } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -83,6 +83,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const [currentMetrics, setCurrentMetrics] = useState<LatestMetrics | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [logsCopied, setLogsCopied] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -471,12 +472,25 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                   <p className="text-xs text-gray-500">{experiment.name}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowLogs(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(experiment.logs!);
+                    setLogsCopied(true);
+                    setTimeout(() => setLogsCopied(false), 2000);
+                  }}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                  title="Copy logs"
+                >
+                  {logsCopied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={() => setShowLogs(false)}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             {/* Modal Body */}
             <div className="flex-1 overflow-auto p-4 bg-gray-100">
