@@ -44,6 +44,11 @@ export default function ExperimentsPage() {
 
   useEffect(() => {
     fetchExperiments();
+    const interval = setInterval(() => {
+      fetchExperiments();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchExperiments = async () => {

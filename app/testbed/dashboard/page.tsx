@@ -25,6 +25,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchExperiments();
+    const interval = setInterval(() => {
+      fetchExperiments();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchExperiments = async () => {
