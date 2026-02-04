@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, HardDrive, Clock, FileDown, ChevronLeft, ChevronRight, Flag } from "lucide-react";
+import { Download, HardDrive, Clock, FileDown, ChevronLeft, ChevronRight, Flag, Archive } from "lucide-react";
 
 type Checkpoint = {
   id: number;
@@ -14,11 +14,13 @@ type Checkpoint = {
 
 type CheckpointsListProps = {
   checkpoints: Checkpoint[];
+  experimentId: string | number;
+  experimentStatus?: string;
   totalRounds?: number;
   itemsPerPage?: number;
 };
 
-export default function CheckpointsList({ checkpoints, totalRounds, itemsPerPage = 6 }: CheckpointsListProps) {
+export default function CheckpointsList({ checkpoints, experimentId, experimentStatus, totalRounds, itemsPerPage = 6 }: CheckpointsListProps) {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(checkpoints.length / itemsPerPage);
 
@@ -66,6 +68,28 @@ export default function CheckpointsList({ checkpoints, totalRounds, itemsPerPage
             <p className="text-xs text-gray-500">{checkpoints.length} checkpoints saved</p>
           </div>
         </div>
+        {(() => {
+          const canDownload = checkpoints.length > 0 && (experimentStatus === 'completed' || experimentStatus === 'failed');
+          return canDownload ? (
+            <a
+              href={`/api/experiments/${experimentId}/checkpoints/download`}
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
+              title="Download all checkpoints as ZIP"
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Download All
+            </a>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-400 bg-gray-50 border border-gray-100 rounded-lg cursor-not-allowed"
+              title="Available after experiment finishes with checkpoints"
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Download All
+            </span>
+          );
+        })()}
       </div>
 
       {/* List */}
@@ -130,7 +154,7 @@ export default function CheckpointsList({ checkpoints, totalRounds, itemsPerPage
 
                   {/* Download Button */}
                   <a
-                    href={`/api/checkpoints/${cp.filePath.replace('checkpoints-data/', '')}`}
+                    href={`/api/checkpoints/${cp.filePath}`}
                     download
                     className={`flex-shrink-0 p-2.5 rounded-lg transition-all ${
                       isFinal

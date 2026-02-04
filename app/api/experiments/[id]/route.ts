@@ -5,6 +5,10 @@ import { getSession, unauthorized } from '@/lib/auth';
 import { unlink, rm } from 'fs/promises';
 import path from 'path';
 
+function getCheckpointsDir(): string {
+  return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
+}
+
 // GET /api/experiments/[id] - Get single experiment with metrics
 export async function GET(
   request: NextRequest,
@@ -69,7 +73,7 @@ export async function GET(
 async function safeDeleteFile(filePath: string | null) {
   if (!filePath) return;
   try {
-    const fullPath = path.join(process.cwd(), filePath);
+    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
     await unlink(fullPath);
   } catch (error) {
     console.log(`Could not delete file: ${filePath}`);
@@ -123,7 +127,7 @@ export async function DELETE(
     await safeDeleteFile(experiment.configPath);
 
     // Delete the experiment's checkpoint directory
-    const checkpointDir = path.join(process.cwd(), 'checkpoints-data', `exp_${experimentId}`);
+    const checkpointDir = path.join(getCheckpointsDir(), `exp_${experimentId}`);
     await safeDeleteDir(checkpointDir);
 
     // Delete experiment from database (cascades to metrics and checkpoints)

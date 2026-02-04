@@ -2,6 +2,7 @@
 CheckpointManager - Handles saving and loading model checkpoints.
 """
 
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from collections import OrderedDict
@@ -16,7 +17,15 @@ class CheckpointManager:
     def __init__(self, experiment_id: int, project_root: Path):
         self.experiment_id = experiment_id
         self.project_root = project_root
-        self.checkpoint_dir = project_root / "checkpoints-data" / f"exp_{experiment_id}"
+
+        # Use CHECKPOINTS_DIR env var if set, otherwise default to 'checkpoints-data'
+        checkpoints_base = os.environ.get('CHECKPOINTS_DIR')
+        if checkpoints_base:
+            self.checkpoints_base = Path(checkpoints_base)
+        else:
+            self.checkpoints_base = project_root / "checkpoints-data"
+        self.checkpoint_dir = self.checkpoints_base / f"exp_{experiment_id}"
+
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     def save_checkpoint(
@@ -94,8 +103,8 @@ class CheckpointManager:
         return torch.load(latest, map_location='cpu')
 
     def get_relative_path(self, checkpoint_path: Path) -> str:
-        """Get path relative to project root for database storage."""
-        return str(checkpoint_path.relative_to(self.project_root))
+        """Get path relative to checkpoints base dir for database storage (e.g. 'exp_5/round_1.pt')."""
+        return str(checkpoint_path.relative_to(self.checkpoints_base))
 
     def list_checkpoints(self) -> List[Path]:
         """List all checkpoints for this experiment."""

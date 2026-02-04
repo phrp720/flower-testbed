@@ -3,9 +3,13 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { getSession, unauthorized } from '@/lib/auth';
 
+function getDataDir(): string {
+  return process.env.DATA_DIR || path.join(process.cwd(), 'uploads');
+}
+
 // Create upload directories if they don't exist
 async function ensureUploadDir(subdir: string) {
-  const uploadPath = path.join(process.cwd(), 'uploads', subdir);
+  const uploadPath = path.join(getDataDir(), subdir);
   await mkdir(uploadPath, { recursive: true });
   return uploadPath;
 }
@@ -65,7 +69,11 @@ export async function POST(request: NextRequest) {
     await writeFile(filepath, buffer);
 
     // Return relative path
-    const relativePath = path.join('uploads', type === 'dataset' ? 'datasets' : `${type}s`, filename);
+    const dataDir = getDataDir();
+    const isDefaultPath = dataDir === path.join(process.cwd(), 'uploads');
+    const relativePath = isDefaultPath
+      ? path.join('uploads', type === 'dataset' ? 'datasets' : `${type}s`, filename)
+      : path.join(dataDir, type === 'dataset' ? 'datasets' : `${type}s`, filename);
 
     return NextResponse.json({
       success: true,

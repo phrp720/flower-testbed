@@ -12,6 +12,7 @@ venv
 uploads/
 checkpoints-data/
 data/
+.module_cache/
 
 # Database
 lib/db/migrations/

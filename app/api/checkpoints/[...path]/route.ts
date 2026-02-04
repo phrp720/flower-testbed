@@ -3,6 +3,10 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { getSession, unauthorized } from '@/lib/auth';
 
+function getCheckpointsDir(): string {
+  return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
+}
+
 // GET /api/checkpoints/[...path] - Download checkpoint file
 export async function GET(
   request: NextRequest,
@@ -13,12 +17,12 @@ export async function GET(
 
   try {
     const { path: filePath } = await params;
+    const checkpointsDir = getCheckpointsDir();
 
     // Construct full path
-    const fullPath = path.join(process.cwd(), 'checkpoints-data', ...filePath);
+    const fullPath = path.join(checkpointsDir, ...filePath);
 
     // Security check - ensure path is within checkpoints directory
-    const checkpointsDir = path.join(process.cwd(), 'checkpoints-data');
     if (!fullPath.startsWith(checkpointsDir)) {
       return NextResponse.json(
         { error: 'Invalid file path' },

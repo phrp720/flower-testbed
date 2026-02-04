@@ -6,6 +6,10 @@ import path from 'path';
 import { mkdir } from 'fs/promises';
 import { getSession, unauthorized } from '@/lib/auth';
 
+function getCheckpointsDir(): string {
+  return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
+}
+
 // POST /api/experiments/[id]/start - Start an experiment
 export async function POST(
   request: NextRequest,
@@ -55,7 +59,7 @@ export async function POST(
       .where(eq(schema.experiments.id, experimentId));
 
     // Create checkpoint directory for this experiment
-    const checkpointDir = path.join(process.cwd(), 'checkpoints-data', `exp_${experimentId}`);
+    const checkpointDir = path.join(getCheckpointsDir(), `exp_${experimentId}`);
     await mkdir(checkpointDir, { recursive: true });
 
     // Start the experiment in the background

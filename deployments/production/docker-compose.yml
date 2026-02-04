@@ -14,6 +14,11 @@ services:
       AUTH_USERNAME: '${AUTH_USERNAME:-admin}'
       AUTH_PASSWORD: '${AUTH_PASSWORD:-admin}'
       SHOW_FLWR_LOGS: '${SHOW_FLWR_LOGS:-false}'
+      CHECKPOINTS_DIR: '${CHECKPOINTS_DIR:-/app/checkpoints-data}'
+      DATA_DIR: '${DATA_DIR:-/app/uploads}'
+    volumes:
+      - ${CHECKPOINTS_DIR:-./checkpoints-data}:/app/checkpoints-data
+      - ${DATA_DIR:-./uploads}:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
