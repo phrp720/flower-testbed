@@ -67,7 +67,7 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 Steps: 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/phrp720/flower-testbed.git
    cd flower-testbed
    ```
 
