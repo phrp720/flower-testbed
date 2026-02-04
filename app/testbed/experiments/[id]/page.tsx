@@ -400,7 +400,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                   <span className="text-green-700">Final Model:</span>
                   <p>
                     <a
-                        href={`/api/checkpoints/${checkpoints[checkpoints.length - 1]?.filePath.replace('checkpoints-data/', '')}`}
+                        href={`/api/checkpoints/${checkpoints[checkpoints.length - 1]?.filePath}`}
                         download
                         className="mt-1 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                     >

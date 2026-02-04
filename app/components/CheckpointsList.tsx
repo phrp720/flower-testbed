@@ -130,7 +130,7 @@ export default function CheckpointsList({ checkpoints, totalRounds, itemsPerPage
 
                   {/* Download Button */}
                   <a
-                    href={`/api/checkpoints/${cp.filePath.replace('checkpoints-data/', '')}`}
+                    href={`/api/checkpoints/${cp.filePath}`}
                     download
                     className={`flex-shrink-0 p-2.5 rounded-lg transition-all ${
                       isFinal

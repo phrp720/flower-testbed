@@ -21,9 +21,10 @@ class CheckpointManager:
         # Use CHECKPOINTS_DIR env var if set, otherwise default to 'checkpoints-data'
         checkpoints_base = os.environ.get('CHECKPOINTS_DIR')
         if checkpoints_base:
-            self.checkpoint_dir = Path(checkpoints_base) / f"exp_{experiment_id}"
+            self.checkpoints_base = Path(checkpoints_base)
         else:
-            self.checkpoint_dir = project_root / "checkpoints-data" / f"exp_{experiment_id}"
+            self.checkpoints_base = project_root / "checkpoints-data"
+        self.checkpoint_dir = self.checkpoints_base / f"exp_{experiment_id}"
 
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
@@ -102,11 +103,8 @@ class CheckpointManager:
         return torch.load(latest, map_location='cpu')
 
     def get_relative_path(self, checkpoint_path: Path) -> str:
-        """Get path relative to project root for database storage, or absolute if outside project root."""
-        try:
-            return str(checkpoint_path.relative_to(self.project_root))
-        except ValueError:
-            return str(checkpoint_path)
+        """Get path relative to checkpoints base dir for database storage (e.g. 'exp_5/round_1.pt')."""
+        return str(checkpoint_path.relative_to(self.checkpoints_base))
 
     def list_checkpoints(self) -> List[Path]:
         """List all checkpoints for this experiment."""
