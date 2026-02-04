@@ -291,6 +291,7 @@ class SimulationOrchestrator:
             "configure_logging": True,
             "logging_level": "error",  # Only show errors, not warnings/info
             "log_to_driver": False,  # Suppress actor output from appearing in terminal
+            "object_store_memory": 100 * 1024 * 1024,  # 100MB - prevent Ray from claiming 30% of system RAM
         }
 
         history = fl.simulation.start_simulation(
@@ -300,6 +301,7 @@ class SimulationOrchestrator:
             strategy=strategy,
             client_resources=client_resources,
             ray_init_args=ray_init_args,
+            actor_kwargs={"max_restarts": 0},
         )
 
         # Process history
