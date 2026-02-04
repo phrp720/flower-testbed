@@ -76,22 +76,27 @@ Steps:
    pnpm deps
    ```
 
-3. **Start PostgreSQL database**
+3. **Copy environment configuration**
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Start PostgreSQL database**
    ```bash
    docker compose -f deployments/development/docker-compose.yml up -d
    ```
 
-4. **Push database schema**
+5. **Push database schema**
    ```bash
    pnpm db:push
    ```
 
-5. **Start the development server**
+6. **Start the development server**
    ```bash
    pnpm dev
    ```
 
-6. **Open the dashboard**
+7. **Open the dashboard**
 
    Navigate to [http://localhost:3000/](http://localhost:3000/) in your web browser.
 
