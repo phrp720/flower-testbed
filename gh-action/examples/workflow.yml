@@ -25,7 +25,7 @@ jobs:
 
       - name: Trigger Flower Testbed simulation
         id: simulation
-        uses: phrp720/flower-testbed/github-action@main
+        uses: phrp720/flower-testbed/gh-action@main
         with:
           # ── Required ─────────────────────────────────────────────────────
           testbed_url:      ${{ secrets.TESTBED_URL }}
