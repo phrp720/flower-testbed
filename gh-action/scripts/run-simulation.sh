@@ -179,7 +179,7 @@ while IFS= read -r -d '' filepath; do
 done < <(find "$SIMULATION_FOLDER" -maxdepth 1 -type f -print0 | sort -z)
 
 missing=()
-[ -z "$ALGORITHM_PATH" ] && missing+=("algorithm*.py")
+[ -z "$ALGORITHM_PATH" ] && missing+=("strategy*.py")
 [ -z "$MODEL_PATH" ]     && missing+=("model*.py/pt/pth")
 [ -z "$CONFIG_PATH" ]    && missing+=("config*.py/json/yaml")
 [ -z "$DATASET_PATH" ]   && missing+=("dataset*.py")
