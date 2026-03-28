@@ -177,8 +177,15 @@ while IFS= read -r -d '' filepath; do
   esac
 done < <(find "$SIMULATION_FOLDER" -maxdepth 1 -type f -print0 | sort -z)
 
-if [ -z "$ALGORITHM_PATH" ] && [ -z "$MODEL_PATH" ] && [ -z "$CONFIG_PATH" ] && [ -z "$DATASET_PATH" ]; then
-  fail "No simulation files found in '${SIMULATION_FOLDER}'. Expected files matching: algorithm*.py, model*.pt/py, config*.json/py/yaml, dataset*.py"
+missing=()
+[ -z "$ALGORITHM_PATH" ] && missing+=("algorithm*.py")
+[ -z "$MODEL_PATH" ]     && missing+=("model*.py/pt/pth")
+[ -z "$CONFIG_PATH" ]    && missing+=("config*.py/json/yaml")
+[ -z "$DATASET_PATH" ]   && missing+=("dataset*.py")
+
+if [ "${#missing[@]}" -gt 0 ]; then
+  log "Skipping simulation: missing required files in '${SIMULATION_FOLDER}': ${missing[*]}"
+  exit 0
 fi
 
 # ─── Step 4: Create experiment ───────────────────────────────────────────────
