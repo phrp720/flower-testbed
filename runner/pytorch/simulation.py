@@ -4,6 +4,7 @@ SimulationOrchestrator - Main orchestrator for running Flower simulations.
 
 import sys
 import io
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List
 
@@ -267,6 +268,7 @@ class SimulationOrchestrator:
         # Configure resources from experiment config (or use defaults)
         cpus_per_client = self.config.get('cpus_per_client', 1)
         gpu_fraction = self.config.get('gpu_fraction_per_client', 0.1)
+        ray_num_cpus = self._get_ray_num_cpus(cpus_per_client, num_clients)
 
         client_resources = {"num_cpus": cpus_per_client}
         if self.device.type == "cuda":
@@ -276,6 +278,7 @@ class SimulationOrchestrator:
         print(f"\n[Orchestrator] Resource Configuration:")
         print(f"  Device: {self.device.type.upper()}")
         print(f"  CPUs per client: {cpus_per_client}")
+        print(f"  Ray num_cpus: {ray_num_cpus}")
         if self.device.type == "cuda":
             print(f"  GPU fraction per client: {gpu_fraction} ({int(1/gpu_fraction)} clients per GPU)")
 
@@ -290,10 +293,11 @@ class SimulationOrchestrator:
         # Configure Ray backend to reduce noise (logs are captured and saved anyway)
         backend_config = {
             "init_args": {
-            "include_dashboard": False,  # Disable dashboard to reduce overhead
-            "configure_logging": True,
-            "logging_level": "error",  # Only show errors, not warnings/info
-            "log_to_driver": False,  # Suppress actor output from appearing in terminal
+                "include_dashboard": False,  # Disable dashboard to reduce overhead
+                "configure_logging": True,
+                "logging_level": "error",  # Only show errors, not warnings/info
+                "log_to_driver": False,  # Suppress actor output from appearing in terminal
+                "num_cpus": ray_num_cpus,
             },
             "client_resources": client_resources,
             "actor": {
@@ -309,6 +313,21 @@ class SimulationOrchestrator:
             backend_config=backend_config,
             verbose_logging=False,
         )
+
+    def _get_ray_num_cpus(self, cpus_per_client: int, num_clients: int) -> int:
+        """Cap Ray CPU discovery so a single container does not overcommit the host."""
+        configured = os.environ.get("RAY_NUM_CPUS")
+        if configured:
+            try:
+                value = int(configured)
+                if value > 0:
+                    return value
+            except ValueError:
+                pass
+
+        available_cpus = os.cpu_count() or 1
+        requested_cpus = max(1, cpus_per_client * max(1, num_clients))
+        return max(1, min(available_cpus, requested_cpus, 8))
 
     def _wrap_strategy_with_callbacks(self, strategy: Strategy) -> Strategy:
         """

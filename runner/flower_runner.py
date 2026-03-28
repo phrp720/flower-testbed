@@ -32,6 +32,11 @@ os.environ["PYTHONWARNINGS"] = "ignore"
 # Suppress HuggingFace Hub warnings in worker processes
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
 
 # Suppress deprecation warnings from datasets/dill (co_lnotab deprecation)
 warnings.filterwarnings("ignore", message="co_lnotab is deprecated", category=DeprecationWarning)
