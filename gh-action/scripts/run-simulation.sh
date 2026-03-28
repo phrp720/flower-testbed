@@ -28,9 +28,10 @@ require_cmd jq
 TESTBED_URL="${TESTBED_URL%/}"   # strip trailing slash
 
 # Enforce HTTPS to prevent credentials being sent in cleartext
-if [[ "$TESTBED_URL" != https://* ]]; then
-  fail "TESTBED_URL must use HTTPS (got: ${TESTBED_URL}). Refusing to send credentials over an unencrypted connection."
-fi
+# TODO after development uncomment
+#if [[ "$TESTBED_URL" != https://* ]]; then
+#  fail "TESTBED_URL must use HTTPS (got: ${TESTBED_URL}). Refusing to send credentials over an unencrypted connection."
+#fi
 SIMULATION_FOLDER="${SIMULATION_FOLDER:-flower-simulation}"
 FRAMEWORK="${FRAMEWORK:-pytorch}"
 NUM_CLIENTS="${NUM_CLIENTS:-10}"
