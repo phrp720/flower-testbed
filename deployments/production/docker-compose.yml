@@ -5,6 +5,7 @@ services:
     image: phrp5/flower-testbed:${IMAGE_VERSION:-latest}
     container_name: flower-testbed-app
     restart: unless-stopped
+    shm_size: 1gb
     ports:
       - "3000:3000"
     environment:
@@ -16,9 +17,11 @@ services:
       SHOW_FLWR_LOGS: '${SHOW_FLWR_LOGS:-false}'
       CHECKPOINTS_DIR: '${CHECKPOINTS_DIR:-/app/checkpoints-data}'
       DATA_DIR: '${DATA_DIR:-/app/uploads}'
+      HF_HOME: '${HF_HOME:-/app/.cache/huggingface}'
     volumes:
       - ${CHECKPOINTS_DIR:-./checkpoints-data}:/app/checkpoints-data
       - ${DATA_DIR:-./uploads}:/app/uploads
+      - hf_cache:/app/.cache/huggingface
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,3 +46,4 @@ services:
 
 volumes:
   postgres_data:
+  hf_cache:

@@ -5,20 +5,20 @@ SimulationOrchestrator - Main orchestrator for running Flower simulations.
 import sys
 import io
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable, List, Tuple
+from typing import Dict, Any, Optional, Callable, List
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
 
 import flwr as fl
-from flwr.common import ndarrays_to_parameters
+from flwr.clientapp import ClientApp
+from flwr.server import ServerApp, ServerAppComponents
 from flwr.server.strategy import Strategy
 
 from ..core.experiment import ExperimentManager
 from ..core.module_loader import ModuleLoader
 from ..core.checkpoint_manager import CheckpointManager
-from .client import FlowerClient, create_client_fn
+from .client import create_client_fn
 from .server import create_strategy
 from .defaults.model import get_model as get_default_model
 from .defaults.dataset import load_data as load_default_data
@@ -95,6 +95,7 @@ class SimulationOrchestrator:
 
         # Metrics storage
         self.round_metrics: List[Dict[str, Any]] = []
+        self.latest_fit_metrics: Dict[str, Any] = {}
 
         # Log capture
         self.log_capture: Optional[LogCapture] = None
@@ -263,12 +264,6 @@ class SimulationOrchestrator:
         # Wrap strategy to capture metrics
         strategy = self._wrap_strategy_with_callbacks(strategy)
 
-        # Get initial parameters from a model instance
-        initial_model = self.model_fn()
-        initial_parameters = ndarrays_to_parameters(
-            [val.cpu().numpy() for _, val in initial_model.state_dict().items()]
-        )
-
         # Configure resources from experiment config (or use defaults)
         cpus_per_client = self.config.get('cpus_per_client', 1)
         gpu_fraction = self.config.get('gpu_fraction_per_client', 0.1)
@@ -284,28 +279,36 @@ class SimulationOrchestrator:
         if self.device.type == "cuda":
             print(f"  GPU fraction per client: {gpu_fraction} ({int(1/gpu_fraction)} clients per GPU)")
 
-        # Run simulation
-        # Configure Ray to reduce noise (logs are captured and saved anyway)
-        ray_init_args = {
+        server_app = ServerApp(
+            server_fn=lambda context: ServerAppComponents(
+                strategy=strategy,
+                config=fl.server.ServerConfig(num_rounds=num_rounds),
+            )
+        )
+        client_app = ClientApp(client_fn=client_fn)
+
+        # Configure Ray backend to reduce noise (logs are captured and saved anyway)
+        backend_config = {
+            "init_args": {
             "include_dashboard": False,  # Disable dashboard to reduce overhead
             "configure_logging": True,
             "logging_level": "error",  # Only show errors, not warnings/info
             "log_to_driver": False,  # Suppress actor output from appearing in terminal
-            "object_store_memory": 100 * 1024 * 1024,  # 100MB - prevent Ray from claiming 30% of system RAM
+            },
+            "client_resources": client_resources,
+            "actor": {
+                "max_restarts": 0,
+            },
         }
 
-        history = fl.simulation.start_simulation(
-            client_fn=client_fn,
-            num_clients=num_clients,
-            config=fl.server.ServerConfig(num_rounds=num_rounds),
-            strategy=strategy,
-            client_resources=client_resources,
-            ray_init_args=ray_init_args,
-            actor_kwargs={"max_restarts": 0},
+        fl.simulation.run_simulation(
+            server_app=server_app,
+            client_app=client_app,
+            num_supernodes=num_clients,
+            backend_name="ray",
+            backend_config=backend_config,
+            verbose_logging=False,
         )
-
-        # Process history
-        self._process_history(history)
 
     def _wrap_strategy_with_callbacks(self, strategy: Strategy) -> Strategy:
         """
@@ -360,6 +363,7 @@ class SimulationOrchestrator:
                             "train_loss": metrics.get("train_loss"),
                             "train_accuracy": metrics.get("train_accuracy"),
                         }
+                        orchestrator.latest_fit_metrics = dict(self._last_fit_metrics)
 
                     print(f"\n[Round {server_round}] Fit completed")
                     if metrics:
@@ -407,48 +411,21 @@ class SimulationOrchestrator:
 
         return StrategyWrapper(strategy)
 
-    def _process_history(self, history):
-        """Process simulation history and extract final metrics."""
-        self.history = history
-
-        # Extract metrics from history
-        if history.metrics_distributed:
-            print("\n[Orchestrator] Distributed metrics:")
-            for key, values in history.metrics_distributed.items():
-                if values:
-                    print(f"  {key}: {values[-1][1]:.4f} (final)")
-
-        if history.losses_distributed:
-            print("[Orchestrator] Distributed losses:")
-            for round_num, loss in history.losses_distributed:
-                print(f"  Round {round_num}: {loss:.4f}")
-
     def _save_final_results(self):
         """Save final experiment results."""
-        # Get final metrics
         final_accuracy = None
         final_loss = None
 
-        # Try to get from history
-        if hasattr(self, 'history'):
-            if self.history.metrics_distributed:
-                for key, values in self.history.metrics_distributed.items():
-                    if 'accuracy' in key.lower() and values:
-                        final_accuracy = values[-1][1]
-                        break
-
-            if self.history.losses_distributed:
-                final_loss = self.history.losses_distributed[-1][1]
-
-        # Fallback to round metrics
         if self.round_metrics:
             last_round = self.round_metrics[-1]
-            if final_accuracy is None:
-                final_accuracy = last_round.get('eval_accuracy')
-            if final_loss is None:
-                final_loss = last_round.get('eval_loss')
+            final_accuracy = last_round.get('eval_accuracy')
+            final_loss = last_round.get('eval_loss')
 
-        # Save to database
+        if final_accuracy is None:
+            final_accuracy = self.latest_fit_metrics.get('train_accuracy')
+        if final_loss is None:
+            final_loss = self.latest_fit_metrics.get('train_loss')
+
         if final_accuracy is not None or final_loss is not None:
             self.experiment_manager.save_final_results(
                 accuracy=final_accuracy or 0.0,

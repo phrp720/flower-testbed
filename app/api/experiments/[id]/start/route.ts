@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import {spawn, SpawnOptions} from 'child_process';
+import { spawn, SpawnOptions } from 'child_process';
 import path from 'path';
 import { mkdir } from 'fs/promises';
 import { getSession, unauthorized } from '@/lib/auth';
@@ -62,8 +62,20 @@ export async function POST(
     const checkpointDir = path.join(getCheckpointsDir(), `exp_${experimentId}`);
     await mkdir(checkpointDir, { recursive: true });
 
-    // Start the experiment in the background
-    startFlowerExperiment(experimentId);
+    // Start the experiment in the background and fail fast on startup errors
+    try {
+      await startFlowerExperiment(experimentId);
+    } catch (startupError) {
+      await db
+        .update(schema.experiments)
+        .set({
+          status: 'failed',
+          errorMessage: startupError instanceof Error ? startupError.message : 'Flower runner failed to start',
+          completedAt: new Date(),
+        })
+        .where(eq(schema.experiments.id, experimentId));
+      throw startupError;
+    }
 
     return NextResponse.json({
       success: true,
@@ -82,15 +94,14 @@ export async function POST(
 
 
 // Background function to run Flower experiment
-function startFlowerExperiment(experimentId: number) {
-
+async function startFlowerExperiment(experimentId: number): Promise<void> {
   const projectRoot = process.cwd();
   const pythonScript = path.join(projectRoot, 'runner', 'flower_runner.py');
 
   const pythonPath = path.join(
-      process.env.VENV_PATH ?? path.join(projectRoot, 'venv'),
-      'bin',
-      'python'
+    process.env.VENV_PATH ?? path.join(projectRoot, 'venv'),
+    'bin',
+    'python'
   );
 
   const showLogs = process.env.SHOW_FLWR_LOGS === 'true';
@@ -98,12 +109,41 @@ function startFlowerExperiment(experimentId: number) {
   const spawnOptions: SpawnOptions = {
     cwd: projectRoot,
     detached: true,
-    stdio: showLogs ? 'inherit' : ['ignore', 'pipe', 'pipe'],
+    stdio: showLogs ? 'inherit' : 'ignore',
   };
 
   const pythonProcess = spawn(pythonPath, [pythonScript, experimentId.toString()], spawnOptions);
+  const startupGraceMs = 1500;
 
-// Detach so it can continue running after API response
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(startupTimer);
+      callback();
+    };
+
+    const startupTimer = setTimeout(() => {
+      settle(resolve);
+    }, startupGraceMs);
+
+    pythonProcess.once('error', (error) => {
+      settle(() => reject(error));
+    });
+
+    pythonProcess.once('exit', (code, signal) => {
+      settle(() => {
+        reject(
+          new Error(
+            `Flower runner exited during startup (code=${code ?? 'null'}, signal=${signal ?? 'null'})`
+          )
+        );
+      });
+    });
+  });
+
+  // Detach so it can continue running after API response
   pythonProcess.unref();
-
 }

@@ -44,12 +44,17 @@ ENV VENV_PATH=/opt/venv
 ENV PATH="$VENV_PATH/bin:$PATH"
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HF_HOME=/app/.cache/huggingface
 
 COPY --from=builder /opt/venv /opt/venv
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/runner ./runner
+COPY --from=builder /app/requirements.txt ./requirements.txt
+
+RUN mkdir -p /app/.cache/huggingface
 
 EXPOSE 3000
 
