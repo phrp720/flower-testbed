@@ -109,7 +109,7 @@ if [[ "$SIMULATION_FOLDER" != "$WORKSPACE"* ]]; then
 fi
 [ -d "$SIMULATION_FOLDER" ] || fail "Simulation folder not found: ${SIMULATION_FOLDER}"
 
-ALGORITHM_PATH=""
+STRATEGY_PATH=""
 MODEL_PATH=""
 CONFIG_PATH=""
 DATASET_PATH=""
@@ -147,11 +147,11 @@ while IFS= read -r -d '' filepath; do
   name_lower="${filename,,}"
 
   case "$name_lower" in
-    algorithm*.py)
-      if [ -z "$ALGORITHM_PATH" ]; then
-        ALGORITHM_PATH="$(upload_file "$filepath" algorithm)"
+    strategy*.py)
+      if [ -z "$STRATEGY_PATH" ]; then
+        STRATEGY_PATH="$(upload_file "$filepath" algorithm)"
       else
-        info "Skipping extra algorithm file: ${filename}"
+        info "Skipping extra strategy file: ${filename}"
       fi
       ;;
     model*.py|model*.pt|model*.pth)
@@ -179,7 +179,7 @@ while IFS= read -r -d '' filepath; do
 done < <(find "$SIMULATION_FOLDER" -maxdepth 1 -type f -print0 | sort -z)
 
 missing=()
-[ -z "$ALGORITHM_PATH" ] && missing+=("strategy*.py")
+[ -z "$STRATEGY_PATH" ]   && missing+=("strategy*.py")
 [ -z "$MODEL_PATH" ]     && missing+=("model*.py/pt/pth")
 [ -z "$CONFIG_PATH" ]    && missing+=("config*.py/json/yaml")
 [ -z "$DATASET_PATH" ]   && missing+=("dataset*.py")
@@ -197,7 +197,7 @@ info "Creating experiment '${EXPERIMENT_NAME}' ..."
 PAYLOAD=$(jq -n \
   --arg name          "$EXPERIMENT_NAME" \
   --arg framework     "$FRAMEWORK" \
-  --arg algorithmPath "$ALGORITHM_PATH" \
+  --arg algorithmPath "$STRATEGY_PATH" \
   --arg modelPath     "$MODEL_PATH" \
   --arg configPath    "$CONFIG_PATH" \
   --arg datasetPath   "$DATASET_PATH" \
