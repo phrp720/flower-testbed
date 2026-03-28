@@ -120,7 +120,7 @@ upload_file() {
   local filename
   filename="$(basename "$filepath")"
 
-  info "Uploading ${file_type}: ${filename} ..."
+  info "Uploading ${file_type}: ${filename} ..." >&2
 
   UPLOAD_RESPONSE=$(curl -s \
     --cookie "$COOKIE_JAR" \
