@@ -44,8 +44,8 @@ jobs:
           learning_rate:    '0.01'
           timeout_minutes:     '60'
 
-      - name: Print results
-        if: always()
+      - name: Results
+        if: success()
         run: |
           echo "Experiment ID  : ${{ steps.simulation.outputs.experiment_id }}"
           echo "Dashboard URL  : ${{ steps.simulation.outputs.experiment_url }}"

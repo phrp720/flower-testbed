@@ -185,7 +185,7 @@ missing=()
 [ -z "$DATASET_PATH" ]   && missing+=("dataset*.py")
 
 if [ "${#missing[@]}" -gt 0 ]; then
-  log "Skipping simulation: missing required files in '${SIMULATION_FOLDER}': ${missing[*]}"
+  log "Skipping simulation: missing required files: ${missing[*]}"
   exit 0
 fi
 
