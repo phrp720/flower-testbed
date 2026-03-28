@@ -33,6 +33,7 @@ A Testbed Experiment Platform for testing <a href="https://flower.ai/docs/framew
       - [Prerequisites](#prerequisites)
     - [Production Setup](#production-setup)
 - [Usage](#usage)
+- [GitHub Action](#github-action)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -148,6 +149,80 @@ Steps:
 
 > [!NOTE]
 > The application supports only Pytorch for now. Support for TensorFlow is coming soon.
+
+## GitHub Action
+
+The `gh-action/` directory contains a reusable GitHub Action that lets any repository trigger a simulation on a running Flower Testbed instance whenever files are pushed to a designated folder.
+
+### Quick Start
+
+1. **Add secrets** to your repository (`Settings → Secrets and variables → Actions`):
+
+   | Secret | Description |
+   | --- | --- |
+   | `TESTBED_URL` | URL of your testbed instance (must be `https://`) |
+   | `TESTBED_USERNAME` | Login username |
+   | `TESTBED_PASSWORD` | Login password |
+
+2. **Create a simulation folder** in your repo (default: `flower-simulation/`) and add your files following the naming convention:
+
+   | File pattern | Type |
+   | --- | --- |
+   | `algorithm*.py` | FL strategy implementation |
+   | `model*.py` / `model*.pt` / `model*.pth` | Model definition or checkpoint |
+   | `config*.py` / `config*.json` / `config*.yaml` | Training configuration |
+   | `dataset*.py` | Custom dataset loader |
+
+3. **Add the workflow** — copy [`gh-action/examples/workflow.yml`](gh-action/examples/workflow.yml) to `.github/workflows/flower-simulation.yml` in your repo:
+
+   ```yaml
+   on:
+     push:
+       paths:
+         - 'flower-simulation/**'
+
+   jobs:
+     simulate:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+         - uses: phrp720/flower-testbed/gh-action@main
+           with:
+             testbed_url:      ${{ secrets.TESTBED_URL }}
+             testbed_username: ${{ secrets.TESTBED_USERNAME }}
+             testbed_password: ${{ secrets.TESTBED_PASSWORD }}
+             num_rounds:       '5'
+   ```
+
+4. **Push** — every push touching `flower-simulation/` will trigger a new experiment automatically.
+
+### Inputs
+
+| Input | Default | Description |
+| --- | --- | --- |
+| `testbed_url` | — | Testbed instance URL **(required)** |
+| `testbed_username` | — | Auth username **(required)** |
+| `testbed_password` | — | Auth password **(required)** |
+| `simulation_folder` | `flower-simulation` | Folder to scan for simulation files |
+| `experiment_name` | `<repo>@<sha>` | Display name for the experiment |
+| `framework` | `pytorch` | ML framework |
+| `num_clients` | `10` | Number of federated clients |
+| `num_rounds` | `3` | Number of federated rounds |
+| `client_fraction` | `0.5` | Fraction of clients selected per round |
+| `local_epochs` | `1` | Local training epochs per client |
+| `learning_rate` | `0.01` | Client optimizer learning rate |
+| `wait_for_completion` | `false` | Block the job until the experiment finishes |
+| `timeout_minutes` | `60` | Max wait time when `wait_for_completion` is true |
+
+### Outputs
+
+| Output | Description |
+| --- | --- |
+| `experiment_id` | ID of the created experiment |
+| `experiment_url` | Direct link to the experiment on the dashboard |
+| `status` | Final status: `pending` / `running` / `completed` / `failed` |
+| `final_accuracy` | Final accuracy (set only when `wait_for_completion: true`) |
+| `final_loss` | Final loss (set only when `wait_for_completion: true`) |
 
 ## Contributing
 

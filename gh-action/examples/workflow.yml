@@ -1,0 +1,52 @@
+# Example: Flower Testbed Simulation Workflow
+#
+# Copy this file to .github/workflows/flower-simulation.yml in your repository.
+#
+# Required repository secrets:
+#   TESTBED_URL       — URL of your flower-testbed instance (e.g. https://testbed.example.com)
+#   TESTBED_USERNAME  — Login username (default: admin)
+#   TESTBED_PASSWORD  — Login password
+
+name: Flower Simulation
+
+on:
+  push:
+    paths:
+      - 'flower-simulation/**'   # change to match your simulation_folder input
+
+jobs:
+  simulate:
+    name: Run FL Simulation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Trigger Flower Testbed simulation
+        id: simulation
+        uses: phrp720/flower-testbed/gh-action@main
+        with:
+          # ── Required ─────────────────────────────────────────────────────
+          testbed_url:      ${{ secrets.TESTBED_URL }}
+          testbed_username: ${{ secrets.TESTBED_USERNAME }}
+          testbed_password: ${{ secrets.TESTBED_PASSWORD }}
+
+          # ── Folder to scan (must match the paths filter above) ───────────
+          simulation_folder: 'flower-simulation'
+
+          # ── Experiment parameters (all optional, shown with defaults) ────
+          framework:        'pytorch'
+          num_clients:      '10'
+          num_rounds:       '5'
+          client_fraction:  '0.5'
+          local_epochs:     '1'
+          learning_rate:    '0.01'
+          timeout_minutes:     '60'
+
+      - name: Print results
+        if: always()
+        run: |
+          echo "Experiment ID  : ${{ steps.simulation.outputs.experiment_id }}"
+          echo "Dashboard URL  : ${{ steps.simulation.outputs.experiment_url }}"
+          echo "Status         : ${{ steps.simulation.outputs.status }}"

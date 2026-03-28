@@ -1,0 +1,99 @@
+name: 'Flower Testbed Simulation'
+description: 'Trigger a Flower federated learning simulation on a running flower-testbed instance'
+author: 'phrp720'
+
+branding:
+  icon: 'play-circle'
+  color: 'green'
+
+inputs:
+  testbed_url:
+    description: 'URL of the flower-testbed instance (e.g. https://my-testbed.example.com)'
+    required: true
+  testbed_username:
+    description: 'Username for flower-testbed authentication'
+    required: true
+  testbed_password:
+    description: 'Password for flower-testbed authentication'
+    required: true
+  simulation_folder:
+    description: 'Folder in the repository to scan for simulation files'
+    required: false
+    default: 'flower-simulation'
+  experiment_name:
+    description: 'Name for the experiment. Defaults to "<repo>@<short-sha>"'
+    required: false
+    default: ''
+  framework:
+    description: 'ML framework to use (currently only pytorch is supported)'
+    required: false
+    default: 'pytorch'
+  num_clients:
+    description: 'Number of federated learning clients'
+    required: false
+    default: '10'
+  num_rounds:
+    description: 'Number of federated learning rounds'
+    required: false
+    default: '3'
+  client_fraction:
+    description: 'Fraction of clients selected each round (0.0–1.0)'
+    required: false
+    default: '0.5'
+  local_epochs:
+    description: 'Number of local training epochs per client per round'
+    required: false
+    default: '1'
+  learning_rate:
+    description: 'Learning rate for client optimizers'
+    required: false
+    default: '0.01'
+  wait_for_completion:
+    description: 'Block the job until the experiment finishes (true/false)'
+    required: false
+    default: 'false'
+  timeout_minutes:
+    description: 'Maximum minutes to wait when wait_for_completion is true'
+    required: false
+    default: '60'
+
+outputs:
+  experiment_id:
+    description: 'ID of the created experiment in the testbed database'
+    value: ${{ steps.run.outputs.experiment_id }}
+  experiment_url:
+    description: 'Direct URL to the experiment page on the testbed dashboard'
+    value: ${{ steps.run.outputs.experiment_url }}
+  status:
+    description: 'Final experiment status: pending | running | completed | failed'
+    value: ${{ steps.run.outputs.status }}
+  final_accuracy:
+    description: 'Final accuracy reported by the experiment (only set when wait_for_completion=true)'
+    value: ${{ steps.run.outputs.final_accuracy }}
+  final_loss:
+    description: 'Final loss reported by the experiment (only set when wait_for_completion=true)'
+    value: ${{ steps.run.outputs.final_loss }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run Flower simulation
+      id: run
+      shell: bash
+      run: ${{ github.action_path }}/scripts/run-simulation.sh
+      env:
+        TESTBED_URL: ${{ inputs.testbed_url }}
+        TESTBED_USERNAME: ${{ inputs.testbed_username }}
+        TESTBED_PASSWORD: ${{ inputs.testbed_password }}
+        SIMULATION_FOLDER: ${{ inputs.simulation_folder }}
+        EXPERIMENT_NAME: ${{ inputs.experiment_name }}
+        FRAMEWORK: ${{ inputs.framework }}
+        NUM_CLIENTS: ${{ inputs.num_clients }}
+        NUM_ROUNDS: ${{ inputs.num_rounds }}
+        CLIENT_FRACTION: ${{ inputs.client_fraction }}
+        LOCAL_EPOCHS: ${{ inputs.local_epochs }}
+        LEARNING_RATE: ${{ inputs.learning_rate }}
+        WAIT_FOR_COMPLETION: ${{ inputs.wait_for_completion }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_SHA: ${{ github.sha }}
