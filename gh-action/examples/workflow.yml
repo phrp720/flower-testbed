@@ -28,7 +28,7 @@ jobs:
         uses: phrp720/flower-testbed/gh-action@main
         with:
           # ── Required ─────────────────────────────────────────────────────
-          testbed_url:      ${{ secrets.TESTBED_URL }}
+          testbed_url:      ${{ vars.TESTBED_URL }}
           testbed_username: ${{ secrets.TESTBED_USERNAME }}
           testbed_password: ${{ secrets.TESTBED_PASSWORD }}
 
