@@ -5,12 +5,25 @@ Detects available CPU and GPU resources on the system.
 
 import os
 import json
-import sys
 
 
 def get_cpu_count() -> int:
     """Get the number of available CPU cores."""
     return os.cpu_count() or 1
+
+
+def get_effective_ray_cpu_count() -> int:
+    """Get the effective Ray CPU budget for this runtime."""
+    configured = os.environ.get("RAY_NUM_CPUS")
+    if configured:
+        try:
+            value = int(configured)
+            if value > 0:
+                return min(get_cpu_count(), value)
+        except ValueError:
+            pass
+
+    return get_cpu_count()
 
 
 def get_gpu_info() -> dict:
@@ -67,6 +80,7 @@ def get_system_resources() -> dict:
     return {
         "cpu": {
             "count": get_cpu_count(),
+            "ray_count": get_effective_ray_cpu_count(),
         },
         "gpu": get_gpu_info(),
     }

@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { desc } from 'drizzle-orm';
 import { getSession, unauthorized } from '@/lib/auth';
+import os from 'os';
+
+function getEffectiveRayCpuCount(): number {
+  const visibleCpus = os.cpus().length || 1;
+  const configured = process.env.RAY_NUM_CPUS;
+
+  if (!configured) return visibleCpus;
+
+  const parsed = Number.parseInt(configured, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) return visibleCpus;
+
+  return Math.min(visibleCpus, parsed);
+}
 
 // GET /api/experiments - List all experiments
 export async function GET() {
@@ -55,6 +68,16 @@ export async function POST(request: NextRequest) {
     if (!name || !framework) {
       return NextResponse.json(
         { error: 'Name and framework are required' },
+        { status: 400 }
+      );
+    }
+
+    const effectiveRayCpus = getEffectiveRayCpuCount();
+    if (cpusPerClient > effectiveRayCpus) {
+      return NextResponse.json(
+        {
+          error: `CPUs per client (${cpusPerClient}) cannot exceed the available Ray CPU budget (${effectiveRayCpus}).`,
+        },
         { status: 400 }
       );
     }

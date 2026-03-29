@@ -8,7 +8,7 @@ import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
 
 interface SystemResources {
-    cpu: { count: number };
+    cpu: { count: number; ray_count: number };
     gpu: {
         available: boolean;
         count: number;
@@ -70,6 +70,11 @@ export default function DashboardPage() {
         };
         fetchResources();
     }, []);
+
+    useEffect(() => {
+        if (!resources) return;
+        setCpusPerClient((current) => Math.min(current, resources.cpu.ray_count));
+    }, [resources]);
 
     // Dialog state
     const [dialog, setDialog] = useState<{
@@ -168,6 +173,8 @@ export default function DashboardPage() {
     const downloadTemplate = (templateKey: keyof typeof TEMPLATES) => {
         window.open(TEMPLATES[templateKey], '_blank');
     };
+
+    const maxCpusPerClient = resources?.cpu.ray_count || 8;
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
@@ -316,7 +323,8 @@ export default function DashboardPage() {
                                         <div className="flex items-center gap-2">
                                             <Cpu className="w-4 h-4 text-gray-600" />
                                             <span className="text-gray-700">
-                                                <strong>{resources.cpu.count}</strong> CPU cores
+                                                <strong>{resources.cpu.ray_count}</strong> Ray CPU budget
+                                                <span className="text-gray-500 ml-1">(host: {resources.cpu.count})</span>
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -384,13 +392,16 @@ export default function DashboardPage() {
                                     <input
                                         type="number"
                                         value={cpusPerClient}
-                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 1) setCpusPerClient(v); }}
+                                        onChange={(e) => {
+                                            const v = parseInt(e.target.value);
+                                            if (!isNaN(v) && v >= 1) setCpusPerClient(Math.min(v, maxCpusPerClient));
+                                        }}
                                         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                                         min="1"
-                                        max={resources?.cpu.count || 8}
+                                        max={maxCpusPerClient}
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Max parallel clients: {resources ? Math.floor(resources.cpu.count / cpusPerClient) : '...'}
+                                        Max per client: {maxCpusPerClient}. Parallel clients at this setting: {resources ? Math.max(1, Math.floor(resources.cpu.ray_count / cpusPerClient)) : '...'}
                                     </p>
                                 </div>
 

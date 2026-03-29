@@ -21,7 +21,7 @@ export async function GET() {
 }
 
 function getSystemResources(): Promise<{
-  cpu: { count: number };
+  cpu: { count: number; ray_count: number };
   gpu: {
     available: boolean;
     count: number;
