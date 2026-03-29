@@ -204,7 +204,7 @@ The `gh-action/` directory contains a reusable GitHub Action that lets any repos
 | `testbed_username` | — | Auth username **(required)** |
 | `testbed_password` | — | Auth password **(required)** |
 | `simulation_folder` | `flower-simulation` | Folder to scan for simulation files |
-| `experiment_name` | `<repo>@<sha>` | Display name for the experiment |
+| `experiment_name` | `<repo>@<sha>` | Optional base name for the experiment. When set, the action uses `<experiment_name>-<shortSHA>` |
 | `framework` | `pytorch` | ML framework |
 | `num_clients` | `10` | Number of federated clients |
 | `num_rounds` | `3` | Number of federated rounds |

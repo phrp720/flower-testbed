@@ -21,7 +21,7 @@ inputs:
     required: false
     default: 'flower-simulation'
   experiment_name:
-    description: 'Name for the experiment. Defaults to "<repo>@<short-sha>"'
+    description: 'Optional base name for the experiment. If set, the action uses "<name>-<short-sha>"; otherwise it defaults to "<repo>@<short-sha>"'
     required: false
     default: ''
   framework:
