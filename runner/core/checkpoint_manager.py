@@ -14,7 +14,7 @@ import torch.nn as nn
 class CheckpointManager:
     """Manages model checkpoint saving and loading."""
 
-    def __init__(self, experiment_id: int, project_root: Path):
+    def __init__(self, experiment_id: str, project_root: Path):
         self.experiment_id = experiment_id
         self.project_root = project_root
 
@@ -103,7 +103,7 @@ class CheckpointManager:
         return torch.load(latest, map_location='cpu')
 
     def get_relative_path(self, checkpoint_path: Path) -> str:
-        """Get path relative to checkpoints base dir for database storage (e.g. 'exp_5/round_1.pt')."""
+        """Get path relative to checkpoints base dir for database storage (e.g. 'exp_<uuid>/round_1.pt')."""
         return str(checkpoint_path.relative_to(self.checkpoints_base))
 
     def list_checkpoints(self) -> List[Path]:

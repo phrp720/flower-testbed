@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ChevronLeft, Trash2, Terminal, X, Copy, Check } from "lucide-react";
+import { Download, ChevronLeft, Trash2, Terminal, X, Copy, Check, Square, Loader2 } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -11,7 +11,7 @@ import MetricsTable from "@/app/components/MetricsTable";
 import CheckpointsList from "@/app/components/CheckpointsList";
 
 type Experiment = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   framework: string;
@@ -31,7 +31,7 @@ type Experiment = {
 };
 
 type Metric = {
-  id: number;
+  id: string;
   round: number;
   trainLoss: number | null;
   trainAccuracy: number | null;
@@ -41,7 +41,7 @@ type Metric = {
 };
 
 type Checkpoint = {
-  id: number;
+  id: string;
   round: number;
   filePath: string;
   accuracy: number | null;
@@ -59,7 +59,7 @@ type LatestMetrics = {
 
 type StreamUpdate = {
   experiment: {
-    id: number;
+    id: string;
     name: string;
     status: string;
     currentRound: number;
@@ -84,6 +84,8 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [logsCopied, setLogsCopied] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -208,12 +210,39 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
 
   const currentRound = currentMetrics?.round || metrics[metrics.length - 1]?.round || 0;
   const progress = (currentRound / experiment.numRounds) * 100;
+  const canShowStopButton = process.env.NODE_ENV === 'production';
 
   const handleDeleteClick = () => {
     setShowDeleteDialog(true);
   };
 
+  const handleStopExperiment = async () => {
+    setIsStopping(true);
+    try {
+      const response = await fetch(`/api/experiments/${id}/stop`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to stop experiment');
+      }
+
+      await fetchExperimentData();
+    } catch (error) {
+      console.error('Error stopping experiment:', error);
+      setDialog({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to stop experiment. Please try again.',
+        type: 'error',
+      });
+    } finally {
+      setIsStopping(false);
+    }
+  };
+
   const confirmDelete = async () => {
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/experiments/${id}`, {
         method: 'DELETE',
@@ -232,7 +261,8 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         message: 'Failed to delete experiment. Please try again.',
         type: 'error',
       });
-      setShowDeleteDialog(false);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -272,12 +302,37 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                   </button>
                 )}
               </div>
+              {canShowStopButton && (experiment.status === 'running' || experiment.status === 'pending') && (
+                <button
+                  onClick={handleStopExperiment}
+                  disabled={isStopping || isDeleting}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  title="Stop Experiment"
+                >
+                  {isStopping ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Stopping...
+                    </>
+                  ) : (
+                    <>
+                      <Square className="w-4 h-4" />
+                      Stop
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 onClick={handleDeleteClick}
-                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                disabled={isStopping || isDeleting}
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 title="Delete Experiment"
               >
-                <Trash2 className="w-5 h-5" />
+                {isDeleting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
@@ -433,13 +488,17 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
       {/* Delete Confirmation Dialog */}
       <Dialog
         isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
+        onClose={() => {
+          if (!isDeleting) setShowDeleteDialog(false);
+        }}
         title="Delete Experiment"
         message="Are you sure you want to delete this experiment? This action cannot be undone."
         type="confirm"
         onConfirm={confirmDelete}
         confirmText="Delete"
         cancelText="Cancel"
+        isLoading={isDeleting}
+        loadingText="Deleting..."
       />
 
       {/* Error Dialog */}

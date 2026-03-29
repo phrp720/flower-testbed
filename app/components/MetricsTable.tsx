@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, BarChart3 } from "lucide-react";
 
 type Metric = {
-  id: number;
+  id: string;
   round: number;
   trainLoss: number | null;
   trainAccuracy: number | null;

@@ -6,6 +6,7 @@ import { PassThrough } from 'stream';
 import { getSession, unauthorized } from '@/lib/auth';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
+import { parseExperimentIdParam } from '@/lib/experiment-id';
 
 function getCheckpointsDir(): string {
   return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
@@ -21,9 +22,9 @@ export async function GET(
 
   try {
     const { id } = await params;
-    const experimentId = parseInt(id, 10);
+    const experimentId = parseExperimentIdParam(id);
 
-    if (isNaN(experimentId)) {
+    if (!experimentId) {
       return NextResponse.json(
         { error: 'Invalid experiment ID' },
         { status: 400 }

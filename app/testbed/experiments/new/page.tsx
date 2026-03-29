@@ -15,6 +15,12 @@ interface SystemResources {
         devices: Array<{ id: number; name: string; memory_gb: number | null }>;
         backend: string | null;
     };
+    concurrency: {
+        max: number | null;
+        active: number;
+        available: number | null;
+        canCreate: boolean;
+    };
 }
 
 // Template download links
@@ -75,6 +81,8 @@ export default function DashboardPage() {
         if (!resources) return;
         setCpusPerClient((current) => Math.min(current, resources.cpu.ray_count));
     }, [resources]);
+
+    const concurrencyLimitReached = resources ? !resources.concurrency.canCreate : false;
 
     // Dialog state
     const [dialog, setDialog] = useState<{
@@ -141,7 +149,8 @@ export default function DashboardPage() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to create experiment');
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.error || 'Failed to create experiment');
             }
 
             const { experiment } = await response.json();
@@ -152,7 +161,8 @@ export default function DashboardPage() {
             });
 
             if (!startResponse.ok) {
-                throw new Error('Failed to start experiment');
+                const error = await startResponse.json().catch(() => null);
+                throw new Error(error?.error || 'Failed to start experiment');
             }
 
             // Navigate to experiment monitoring page
@@ -338,6 +348,18 @@ export default function DashboardPage() {
                                                 <span className="text-gray-500">No GPU available</span>
                                             )}
                                         </div>
+                                        <div className="col-span-2 text-xs text-gray-500">
+                                            {resources.concurrency.max === null ? (
+                                                <span>Worker slots: unlimited</span>
+                                            ) : (
+                                                <span>
+                                                    Worker slots: {resources.concurrency.active}/{resources.concurrency.max} in use
+                                                    {resources.concurrency.available !== null && (
+                                                        <span className="ml-1">({resources.concurrency.available} available)</span>
+                                                    )}
+                                                </span>
+                                            )}
+                                        </div>
                                         {resources.gpu.available && resources.gpu.devices.length > 0 && (
                                             <div className="col-span-2 text-xs text-gray-500 mt-1">
                                                 {resources.gpu.devices.map(d => (
@@ -448,10 +470,15 @@ export default function DashboardPage() {
                                             : 'Using defaults (CIFAR-10 CNN with FedAvg)'
                                         }
                                     </p>
+                                    {resources && concurrencyLimitReached && resources.concurrency.max !== null && (
+                                        <p className="text-sm text-red-600 mt-2">
+                                            All worker slots are busy ({resources.concurrency.active}/{resources.concurrency.max}). Creation is disabled until a slot is free.
+                                        </p>
+                                    )}
                                 </div>
                                 <button
                                     onClick={handleStartExperiment}
-                                    disabled={isCreating}
+                                    disabled={isCreating || concurrencyLimitReached}
                                     className="bg-gray-800 text-white px-6 py-3 rounded-lg font-semibold shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isCreating ? (
@@ -459,7 +486,7 @@ export default function DashboardPage() {
                                             <Loader2 className="animate-spin h-5 w-5" />
                                             Creating...
                                         </span>
-                                    ) : 'Start Experiment'}
+                                    ) : concurrencyLimitReached ? 'No Worker Slots Available' : 'Start Experiment'}
                                 </button>
                             </div>
                         </div>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Download, HardDrive, Clock, FileDown, ChevronLeft, ChevronRight, Flag, Archive } from "lucide-react";
 
 type Checkpoint = {
-  id: number;
+  id: string;
   round: number;
   filePath: string;
   accuracy: number | null;

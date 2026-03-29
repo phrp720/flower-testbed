@@ -71,7 +71,7 @@ class SimulationOrchestrator:
     running the simulation, and collecting metrics.
     """
 
-    def __init__(self, experiment_id: int, project_root: Path):
+    def __init__(self, experiment_id: str, project_root: Path):
         """
         Initialize the orchestrator.
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, HelpCircle, Info, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, HelpCircle, Info, Loader2, X } from 'lucide-react';
 
 type DialogProps = {
     isOpen: boolean;
@@ -12,6 +12,8 @@ type DialogProps = {
     onConfirm?: () => void;
     confirmText?: string;
     cancelText?: string;
+    isLoading?: boolean;
+    loadingText?: string;
 };
 
 export default function Dialog({
@@ -23,6 +25,8 @@ export default function Dialog({
     onConfirm,
     confirmText = 'OK',
     cancelText = 'Cancel',
+    isLoading = false,
+    loadingText = 'Processing...',
 }: DialogProps) {
     // Lock body scroll when modal is open
     useEffect(() => {
@@ -40,14 +44,14 @@ export default function Dialog({
     // Close on Escape key
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isOpen) {
+            if (e.key === 'Escape' && isOpen && !isLoading) {
                 onClose();
             }
         };
 
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
+    }, [isOpen, isLoading, onClose]);
 
     if (!isOpen) return null;
 
@@ -90,11 +94,13 @@ export default function Dialog({
         if (onConfirm) {
             onConfirm();
         }
-        onClose();
+        if (type !== 'confirm') {
+            onClose();
+        }
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] overflow-y-auto" onClick={onClose}>
+        <div className="fixed inset-0 z-[9999] overflow-y-auto" onClick={isLoading ? undefined : onClose}>
             {/* Backdrop with fade animation */}
             <div
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
@@ -127,14 +133,21 @@ export default function Dialog({
                                 <button
                                     type="button"
                                     onClick={handleConfirm}
-                                    className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                    disabled={isLoading}
+                                    className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
-                                    {confirmText}
+                                    {isLoading ? (
+                                        <span className="inline-flex items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            {loadingText}
+                                        </span>
+                                    ) : confirmText}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                                    disabled={isLoading}
+                                    className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
                                     {cancelText}
                                 </button>

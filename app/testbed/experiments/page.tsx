@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Eye, Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
 
 type Experiment = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   framework: string;
@@ -27,7 +27,8 @@ export default function ExperimentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -65,13 +66,14 @@ export default function ExperimentsPage() {
     }
   };
 
-  const handleDeleteClick = (id: number) => {
+  const handleDeleteClick = (id: string) => {
     setDeleteId(id);
   };
 
   const confirmDelete = async () => {
     if (deleteId === null) return;
 
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/experiments/${deleteId}`, {
         method: 'DELETE',
@@ -90,7 +92,8 @@ export default function ExperimentsPage() {
         message: 'Failed to delete experiment. Please try again.',
         type: 'error',
       });
-      setDeleteId(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -273,10 +276,15 @@ export default function ExperimentsPage() {
                     </Link>
                     <button
                       onClick={() => handleDeleteClick(exp.id)}
-                      className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition-colors"
+                      disabled={isDeleting}
+                      className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       title="Delete experiment"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      {isDeleting && deleteId === exp.id ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -343,13 +351,17 @@ export default function ExperimentsPage() {
       {/* Delete Confirmation Dialog */}
       <Dialog
         isOpen={deleteId !== null}
-        onClose={() => setDeleteId(null)}
+        onClose={() => {
+          if (!isDeleting) setDeleteId(null);
+        }}
         title="Delete Experiment"
         message="Are you sure you want to delete this experiment? This action cannot be undone."
         type="confirm"
         onConfirm={confirmDelete}
         confirmText="Delete"
         cancelText="Cancel"
+        isLoading={isDeleting}
+        loadingText="Deleting..."
       />
 
       {/* Error Dialog */}

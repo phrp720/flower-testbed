@@ -76,7 +76,7 @@ def main():
     )
     parser.add_argument(
         "experiment_id",
-        type=int,
+        type=str,
         help="Experiment ID from database"
     )
     args = parser.parse_args()

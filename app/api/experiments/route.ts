@@ -3,6 +3,7 @@ import { db, schema } from '@/lib/db';
 import { desc } from 'drizzle-orm';
 import { getSession, unauthorized } from '@/lib/auth';
 import os from 'os';
+import { getExperimentCapacity } from '@/lib/experiment-runtime';
 
 function getEffectiveRayCpuCount(): number {
   const visibleCpus = os.cpus().length || 1;
@@ -79,6 +80,16 @@ export async function POST(request: NextRequest) {
           error: `CPUs per client (${cpusPerClient}) cannot exceed the available Ray CPU budget (${effectiveRayCpus}).`,
         },
         { status: 400 }
+      );
+    }
+
+    const capacity = await getExperimentCapacity();
+    if (!capacity.canCreateExperiment) {
+      return NextResponse.json(
+        {
+          error: `All experiment worker slots are busy (${capacity.activeExperiments}/${capacity.maxConcurrentExperiments}). Try again when a slot is free.`,
+        },
+        { status: 409 }
       );
     }
 
