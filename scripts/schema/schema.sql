@@ -1,13 +1,13 @@
 CREATE TABLE "clients" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"experiment_id" integer NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"experiment_id" uuid NOT NULL,
 	"client_id" integer NOT NULL,
 	"data_partition_size" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "experiments" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"description" text,
 	"framework" text NOT NULL,
@@ -35,8 +35,8 @@ CREATE TABLE "experiments" (
 );
 --> statement-breakpoint
 CREATE TABLE "metrics" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"experiment_id" integer NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"experiment_id" uuid NOT NULL,
 	"round" integer NOT NULL,
 	"train_loss" real,
 	"train_accuracy" real,
@@ -47,8 +47,8 @@ CREATE TABLE "metrics" (
 );
 --> statement-breakpoint
 CREATE TABLE "model_checkpoints" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"experiment_id" integer NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"experiment_id" uuid NOT NULL,
 	"round" integer NOT NULL,
 	"file_path" text NOT NULL,
 	"accuracy" real,

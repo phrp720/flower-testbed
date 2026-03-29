@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ChevronLeft, Trash2, Terminal, X, Copy, Check } from "lucide-react";
+import { Download, ChevronLeft, Trash2, Terminal, X, Copy, Check, Square } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -11,7 +11,7 @@ import MetricsTable from "@/app/components/MetricsTable";
 import CheckpointsList from "@/app/components/CheckpointsList";
 
 type Experiment = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   framework: string;
@@ -31,7 +31,7 @@ type Experiment = {
 };
 
 type Metric = {
-  id: number;
+  id: string;
   round: number;
   trainLoss: number | null;
   trainAccuracy: number | null;
@@ -41,7 +41,7 @@ type Metric = {
 };
 
 type Checkpoint = {
-  id: number;
+  id: string;
   round: number;
   filePath: string;
   accuracy: number | null;
@@ -59,7 +59,7 @@ type LatestMetrics = {
 
 type StreamUpdate = {
   experiment: {
-    id: number;
+    id: string;
     name: string;
     status: string;
     currentRound: number;
@@ -208,9 +208,32 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
 
   const currentRound = currentMetrics?.round || metrics[metrics.length - 1]?.round || 0;
   const progress = (currentRound / experiment.numRounds) * 100;
+  const canShowStopButton = process.env.NODE_ENV === 'production';
 
   const handleDeleteClick = () => {
     setShowDeleteDialog(true);
+  };
+
+  const handleStopExperiment = async () => {
+    try {
+      const response = await fetch(`/api/experiments/${id}/stop`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to stop experiment');
+      }
+
+      await fetchExperimentData();
+    } catch (error) {
+      console.error('Error stopping experiment:', error);
+      setDialog({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to stop experiment. Please try again.',
+        type: 'error',
+      });
+    }
   };
 
   const confirmDelete = async () => {
@@ -272,6 +295,16 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                   </button>
                 )}
               </div>
+              {canShowStopButton && (experiment.status === 'running' || experiment.status === 'pending') && (
+                <button
+                  onClick={handleStopExperiment}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors text-sm font-medium"
+                  title="Stop Experiment"
+                >
+                  <Square className="w-4 h-4" />
+                  Stop
+                </button>
+              )}
               <button
                 onClick={handleDeleteClick}
                 className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"

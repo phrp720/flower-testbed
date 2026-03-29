@@ -1,8 +1,8 @@
-import { pgTable, serial, text, integer, timestamp, real, jsonb, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, real, jsonb, boolean } from 'drizzle-orm/pg-core';
 
 // Experiments table - stores metadata about each FL experiment
 export const experiments = pgTable('experiments', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   description: text('description'),
   framework: text('framework').notNull(), // 'pytorch', 'tensorflow', etc.
@@ -45,8 +45,8 @@ export const experiments = pgTable('experiments', {
 
 // Model checkpoints - stores model states after each round
 export const modelCheckpoints = pgTable('model_checkpoints', {
-  id: serial('id').primaryKey(),
-  experimentId: integer('experiment_id').notNull().references(() => experiments.id, { onDelete: 'cascade' }),
+  id: uuid('id').primaryKey().defaultRandom(),
+  experimentId: uuid('experiment_id').notNull().references(() => experiments.id, { onDelete: 'cascade' }),
   round: integer('round').notNull(),
   filePath: text('file_path').notNull(),
 
@@ -59,8 +59,8 @@ export const modelCheckpoints = pgTable('model_checkpoints', {
 
 // Metrics - stores per-round metrics during training
 export const metrics = pgTable('metrics', {
-  id: serial('id').primaryKey(),
-  experimentId: integer('experiment_id').notNull().references(() => experiments.id, { onDelete: 'cascade' }),
+  id: uuid('id').primaryKey().defaultRandom(),
+  experimentId: uuid('experiment_id').notNull().references(() => experiments.id, { onDelete: 'cascade' }),
   round: integer('round').notNull(),
 
   // Aggregated metrics
@@ -77,8 +77,8 @@ export const metrics = pgTable('metrics', {
 
 // Client info - stores information about virtual clients
 export const clients = pgTable('clients', {
-  id: serial('id').primaryKey(),
-  experimentId: integer('experiment_id').notNull().references(() => experiments.id, { onDelete: 'cascade' }),
+  id: uuid('id').primaryKey().defaultRandom(),
+  experimentId: uuid('experiment_id').notNull().references(() => experiments.id, { onDelete: 'cascade' }),
   clientId: integer('client_id').notNull(),
 
   // Client configuration

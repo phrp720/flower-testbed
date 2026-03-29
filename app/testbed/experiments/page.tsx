@@ -8,7 +8,7 @@ import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
 
 type Experiment = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   framework: string;
@@ -27,7 +27,7 @@ export default function ExperimentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -65,7 +65,7 @@ export default function ExperimentsPage() {
     }
   };
 
-  const handleDeleteClick = (id: number) => {
+  const handleDeleteClick = (id: string) => {
     setDeleteId(id);
   };
 

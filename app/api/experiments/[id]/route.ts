@@ -4,10 +4,8 @@ import { eq } from 'drizzle-orm';
 import { getSession, unauthorized } from '@/lib/auth';
 import { unlink, rm } from 'fs/promises';
 import path from 'path';
-
-function getCheckpointsDir(): string {
-  return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
-}
+import { getCheckpointsDir, stopExperimentExecution } from '@/lib/experiment-runtime';
+import { parseExperimentIdParam } from '@/lib/experiment-id';
 
 // GET /api/experiments/[id] - Get single experiment with metrics
 export async function GET(
@@ -19,9 +17,9 @@ export async function GET(
 
   try {
     const { id } = await params;
-    const experimentId = parseInt(id);
+    const experimentId = parseExperimentIdParam(id);
 
-    if (isNaN(experimentId)) {
+    if (!experimentId) {
       return NextResponse.json(
         { error: 'Invalid experiment ID' },
         { status: 400 }
@@ -99,9 +97,9 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    const experimentId = parseInt(id);
+    const experimentId = parseExperimentIdParam(id);
 
-    if (isNaN(experimentId)) {
+    if (!experimentId) {
       return NextResponse.json(
         { error: 'Invalid experiment ID' },
         { status: 400 }
@@ -119,6 +117,10 @@ export async function DELETE(
         { error: 'Experiment not found' },
         { status: 404 }
       );
+    }
+
+    if (experiment.status === 'running' || experiment.status === 'pending') {
+      await stopExperimentExecution(experimentId);
     }
 
     // Delete uploaded files (algorithm, model, config)

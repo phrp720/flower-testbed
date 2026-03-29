@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import { getSession, unauthorized } from '@/lib/auth';
+import { getExperimentCapacity } from '@/lib/experiment-runtime';
 
 // GET /api/resources - Get available system resources
 export async function GET() {
@@ -9,8 +10,20 @@ export async function GET() {
   if (!session) return unauthorized();
 
   try {
-    const resources = await getSystemResources();
-    return NextResponse.json(resources);
+    const [resources, concurrency] = await Promise.all([
+      getSystemResources(),
+      getExperimentCapacity(),
+    ]);
+
+    return NextResponse.json({
+      ...resources,
+      concurrency: {
+        max: concurrency.maxConcurrentExperiments,
+        active: concurrency.activeExperiments,
+        available: concurrency.availableSlots,
+        canCreate: concurrency.canCreateExperiment,
+      },
+    });
   } catch (error) {
     console.error('Error fetching resources:', error);
     return NextResponse.json(

@@ -14,7 +14,7 @@ from psycopg2.extras import RealDictCursor
 class ExperimentManager:
     """Manages database operations for a Flower federated learning experiment."""
 
-    def __init__(self, experiment_id: int, project_root: Path):
+    def __init__(self, experiment_id: str, project_root: Path):
         self.experiment_id = experiment_id
         self.project_root = project_root
         self.conn = None

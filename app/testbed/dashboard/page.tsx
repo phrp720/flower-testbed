@@ -8,7 +8,7 @@ import Footer from "@/app/components/Footer";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 type Experiment = {
-  id: number;
+  id: string;
   name: string;
   status: string;
   framework: string;

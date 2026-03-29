@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import { spawn, SpawnOptions } from 'child_process';
-import path from 'path';
-import { mkdir } from 'fs/promises';
 import { getSession, unauthorized } from '@/lib/auth';
-
-function getCheckpointsDir(): string {
-  return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
-}
+import { parseExperimentIdParam } from '@/lib/experiment-id';
+import {
+  ensureExperimentRuntimeDirs,
+  getExperimentCapacity,
+  startExperimentExecution,
+} from '@/lib/experiment-runtime';
 
 // POST /api/experiments/[id]/start - Start an experiment
 export async function POST(
@@ -20,9 +19,9 @@ export async function POST(
 
   try {
     const { id } = await params;
-    const experimentId = parseInt(id);
+    const experimentId = parseExperimentIdParam(id);
 
-    if (isNaN(experimentId)) {
+    if (!experimentId) {
       return NextResponse.json(
         { error: 'Invalid experiment ID' },
         { status: 400 }
@@ -49,6 +48,16 @@ export async function POST(
       );
     }
 
+    const capacity = await getExperimentCapacity({ excludeExperimentId: experimentId });
+    if (!capacity.canCreateExperiment) {
+      return NextResponse.json(
+        {
+          error: `All experiment worker slots are busy (${capacity.activeExperiments}/${capacity.maxConcurrentExperiments}). Try again when a slot is free.`,
+        },
+        { status: 409 }
+      );
+    }
+
     // Update status to running
     await db
       .update(schema.experiments)
@@ -59,12 +68,11 @@ export async function POST(
       .where(eq(schema.experiments.id, experimentId));
 
     // Create checkpoint directory for this experiment
-    const checkpointDir = path.join(getCheckpointsDir(), `exp_${experimentId}`);
-    await mkdir(checkpointDir, { recursive: true });
+    await ensureExperimentRuntimeDirs(experimentId);
 
     // Start the experiment in the background and fail fast on startup errors
     try {
-      await startFlowerExperiment(experimentId);
+      await startExperimentExecution(experimentId);
     } catch (startupError) {
       await db
         .update(schema.experiments)
@@ -89,61 +97,4 @@ export async function POST(
       { status: 500 }
     );
   }
-}
-
-
-
-// Background function to run Flower experiment
-async function startFlowerExperiment(experimentId: number): Promise<void> {
-  const projectRoot = process.cwd();
-  const pythonScript = path.join(projectRoot, 'runner', 'flower_runner.py');
-
-  const pythonPath = path.join(
-    process.env.VENV_PATH ?? path.join(projectRoot, 'venv'),
-    'bin',
-    'python'
-  );
-
-  const showLogs = process.env.SHOW_FLWR_LOGS === 'true';
-
-  const spawnOptions: SpawnOptions = {
-    cwd: projectRoot,
-    detached: true,
-    stdio: showLogs ? 'inherit' : 'ignore',
-  };
-
-  const pythonProcess = spawn(pythonPath, [pythonScript, experimentId.toString()], spawnOptions);
-  const startupGraceMs = 1500;
-
-  await new Promise<void>((resolve, reject) => {
-    let settled = false;
-
-    const settle = (callback: () => void) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(startupTimer);
-      callback();
-    };
-
-    const startupTimer = setTimeout(() => {
-      settle(resolve);
-    }, startupGraceMs);
-
-    pythonProcess.once('error', (error) => {
-      settle(() => reject(error));
-    });
-
-    pythonProcess.once('exit', (code, signal) => {
-      settle(() => {
-        reject(
-          new Error(
-            `Flower runner exited during startup (code=${code ?? 'null'}, signal=${signal ?? 'null'})`
-          )
-        );
-      });
-    });
-  });
-
-  // Detach so it can continue running after API response
-  pythonProcess.unref();
 }

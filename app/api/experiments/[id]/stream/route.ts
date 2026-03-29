@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq, desc } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
+import { parseExperimentIdParam } from '@/lib/experiment-id';
 
 // GET /api/experiments/:id/stream - Server-Sent Events for real-time updates
 export async function GET(
@@ -14,9 +15,9 @@ export async function GET(
   }
 
   const { id } = await params;
-  const experimentId = parseInt(id);
+  const experimentId = parseExperimentIdParam(id);
 
-  if (isNaN(experimentId)) {
+  if (!experimentId) {
     return new Response('Invalid experiment ID', { status: 400 });
   }
 
