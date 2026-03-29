@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ChevronLeft, Trash2, Terminal, X, Copy, Check, Square } from "lucide-react";
+import { Download, ChevronLeft, Trash2, Terminal, X, Copy, Check, Square, Loader2 } from "lucide-react";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
@@ -84,6 +84,8 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [logsCopied, setLogsCopied] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -215,6 +217,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleStopExperiment = async () => {
+    setIsStopping(true);
     try {
       const response = await fetch(`/api/experiments/${id}/stop`, {
         method: 'POST',
@@ -233,10 +236,13 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         message: 'Failed to stop experiment. Please try again.',
         type: 'error',
       });
+    } finally {
+      setIsStopping(false);
     }
   };
 
   const confirmDelete = async () => {
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/experiments/${id}`, {
         method: 'DELETE',
@@ -255,7 +261,8 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         message: 'Failed to delete experiment. Please try again.',
         type: 'error',
       });
-      setShowDeleteDialog(false);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -298,19 +305,34 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
               {canShowStopButton && (experiment.status === 'running' || experiment.status === 'pending') && (
                 <button
                   onClick={handleStopExperiment}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors text-sm font-medium"
+                  disabled={isStopping || isDeleting}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                   title="Stop Experiment"
                 >
-                  <Square className="w-4 h-4" />
-                  Stop
+                  {isStopping ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Stopping...
+                    </>
+                  ) : (
+                    <>
+                      <Square className="w-4 h-4" />
+                      Stop
+                    </>
+                  )}
                 </button>
               )}
               <button
                 onClick={handleDeleteClick}
-                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                disabled={isStopping || isDeleting}
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 title="Delete Experiment"
               >
-                <Trash2 className="w-5 h-5" />
+                {isDeleting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
@@ -466,13 +488,17 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
       {/* Delete Confirmation Dialog */}
       <Dialog
         isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
+        onClose={() => {
+          if (!isDeleting) setShowDeleteDialog(false);
+        }}
         title="Delete Experiment"
         message="Are you sure you want to delete this experiment? This action cannot be undone."
         type="confirm"
         onConfirm={confirmDelete}
         confirmText="Delete"
         cancelText="Cancel"
+        isLoading={isDeleting}
+        loadingText="Deleting..."
       />
 
       {/* Error Dialog */}
