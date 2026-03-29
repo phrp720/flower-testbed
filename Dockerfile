@@ -13,6 +13,7 @@ FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     python3 \
     python3-venv \
     python3-pip \
@@ -37,7 +38,9 @@ FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends python3 \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    python3 \
  && rm -rf /var/lib/apt/lists/*
 
 ENV VENV_PATH=/opt/venv
