@@ -7,7 +7,6 @@ import { promisify } from 'util';
 import { db, schema } from '@/lib/db';
 import { eq, or } from 'drizzle-orm';
 
-const DOCKER_SOCKET_PATH = '/var/run/docker.sock';
 const DOCKER_API_VERSION = 'v1.41';
 const execFileAsync = promisify(execFile);
 const WORKER_STARTUP_GRACE_MS = 1500;
@@ -22,6 +21,10 @@ export function getCheckpointsDir(): string {
   return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
 }
 
+function getContainerSocketPath(): string {
+  return process.env.CONTAINER_SOCKET_PATH || '/var/run/docker.sock';
+}
+
 export function getWorkerContainerName(experimentId: string): string {
   return `flower-testbed-exp-${experimentId}`;
 }
@@ -34,7 +37,7 @@ export function shouldUseDockerExecutor(): boolean {
   const isProduction = process.env.NODE_ENV === 'production';
   return isProduction
     && process.env.EXPERIMENT_EXECUTOR === 'docker'
-    && existsSync(DOCKER_SOCKET_PATH);
+    && existsSync(getContainerSocketPath());
 }
 
 export function getMaxConcurrentExperiments(): number | null {
@@ -357,7 +360,7 @@ async function dockerRequestText(method: string, apiPath: string, body?: unknown
 
     const request = http.request(
       {
-        socketPath: DOCKER_SOCKET_PATH,
+        socketPath: getContainerSocketPath(),
         path: `/${DOCKER_API_VERSION}${apiPath}`,
         method,
         headers: payload
