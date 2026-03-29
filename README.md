@@ -48,7 +48,6 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 - **Algorithm Management**: Upload and test custom FL algorithms
 - **Model Tracking**: Export model states at each federated round
 - **Metrics Monitoring**: Real-time tracking of training metrics
-- **Multi-Framework Support**: PyTorch, TensorFlow, sklearn, JAX, and more
 - **Resource Flexibility**: CPU/GPU support with configurable client resources
 
 ## Getting Started
@@ -111,7 +110,7 @@ Steps:
 
    * The Flower application
    * PostgreSQL
-   * A `.env.example` example file for configuration
+   * An `.env.example` example file for configuration
 
 2. Download and unzip the `deployment.zip` file.
 
@@ -131,7 +130,7 @@ Steps:
 
 2. **Upload Files**:
    - **Algorithm** (required): Your FL strategy implementation (.py)
-   - **Model** (optional): Pre-trained model checkpoint (.pt, .pth)
+   - **Model** (optional): Model definition (.py)
    - **Config** (optional): Training configuration (.py, .json, .yaml)
    - **Dataset** (optional): Custom dataset implementation (.py, .csv)
 
@@ -168,8 +167,8 @@ The `gh-action/` directory contains a reusable GitHub Action that lets any repos
 
    | File pattern | Type |
    | --- | --- |
-   | `algorithm*.py` | FL strategy implementation |
-   | `model*.py` / `model*.pt` / `model*.pth` | Model definition or checkpoint |
+   | `strategy*.py` | FL strategy implementation |
+   | `model*.py` | Model definition |
    | `config*.py` / `config*.json` / `config*.yaml` | Training configuration |
    | `dataset*.py` | Custom dataset loader |
 
