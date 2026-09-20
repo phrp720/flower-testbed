@@ -345,8 +345,8 @@ export default function DashboardPage() {
         <ShortcutCard
           href="/testbed/chat"
           icon="chat"
-          title="Ask the agent"
-          description="Analyse results, propose variants"
+          title="Open the agent"
+          description="Set up runs, analyse results"
         />
         <ShortcutCard
           href="https://flower.ai/docs"

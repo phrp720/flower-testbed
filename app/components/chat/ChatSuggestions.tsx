@@ -78,10 +78,14 @@ export default function ChatSuggestions({
             <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-surface-muted text-ink-subtle mb-3">
                 <Icon name="sparkle" size={18} />
             </span>
-            <p className="text-sm font-medium text-ink">Ask about your experiments</p>
+            {/* Not "ask": the agent configures and starts runs and writes code,
+                and the card beside this one creates and starts an experiment.
+                A heading that only promises answers undersells it and reads as
+                a contradiction the moment you look down. */}
+            <p className="text-sm font-medium text-ink">Build and analyse experiments</p>
             <p className="text-xs text-ink-muted mt-1">
-                The agent can read your runs, compare them, inspect saved checkpoints and
-                configure new ones.
+                Set up and start runs, compare the results, inspect saved checkpoints, or
+                have it write the model and strategy code.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6 text-left">

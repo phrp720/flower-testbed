@@ -111,7 +111,7 @@ export default function MessageComposer({
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onKeyDown={onKeyDown}
-                    placeholder={placeholder ?? "Ask about your experiments"}
+                    placeholder={placeholder ?? "Ask about a run, or describe one to set up"}
                     className={cn(
                         "block w-full resize-none bg-transparent text-ink text-sm leading-relaxed",
                         "px-3 py-2.5 placeholder:text-ink-subtle",
