@@ -1,6 +1,0 @@
-[mcp_servers.flower-testbed]
-url = "http://localhost:3000/api/mcp"
-http_headers = { Authorization = "Bearer ftb_hErVLmAq_FdmqFyIEVzG75CEZ-2cXadP4zfa9ZYlbEE" }
-
-[mcp_servers.flower-testbed.tools.create_experiment]
-approval_mode = "approve"
