@@ -38,8 +38,10 @@ const WITH_EXPERIMENTS: Suggestion[] = [
     {
         icon: "add",
         label: "Set up a new run",
-        prompt:
-            "Create an experiment on the 2D circle dataset with 4 clients, 20 rounds and a 0.01 learning rate, then start it.",
+        // Deliberately carries no parameters. Baking in "4 clients, 20 rounds,
+        // lr 0.01" decides the experiment on the user's behalf and turns a card
+        // meant to open a conversation into a one-click template.
+        prompt: "I'd like to set up a new experiment. What do you need to know?",
     },
 ];
 
@@ -49,7 +51,7 @@ const EMPTY: Suggestion[] = [
         icon: "add",
         label: "Run my first experiment",
         prompt:
-            "Create an experiment on the 2D circle dataset with 4 clients and 20 rounds, then start it.",
+            "I'd like to run my first experiment. Walk me through what to choose, then set it up.",
     },
     {
         icon: "docs",
