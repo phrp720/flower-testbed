@@ -6,6 +6,7 @@ export type PublicSettings = {
     effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
     temperature: number | null;
     disableParallelToolCalls: boolean;
+    defaultAutoRun: boolean;
     systemPromptOverride: string | null;
     embeddingProvider: 'none' | 'openai-compatible';
     embeddingBaseUrl: string | null;

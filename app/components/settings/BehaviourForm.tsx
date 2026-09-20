@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardHeader, Checkbox, Input, Select, Textarea } from "@/app/components/ui";
+import { Callout, Card, CardHeader, Checkbox, Input, Select, Textarea } from "@/app/components/ui";
 import type { PublicSettings } from "./types";
 
 type Props = {
@@ -70,6 +70,28 @@ export default function BehaviourForm({ settings, onChange }: Props) {
                         onChange={(e) => onChange({ disableParallelToolCalls: e.target.checked })}
                     />
                 </div>
+            </Card>
+
+            <Card>
+                <CardHeader
+                    title="Approvals"
+                    description="Actions that change experiments or write files are held for you to approve."
+                    className="mb-5"
+                />
+
+                <Checkbox
+                    label="Approve agent actions automatically"
+                    hint="New conversations skip the approval step. Existing ones keep whatever they were set to, and any conversation can still be switched either way from its header."
+                    checked={settings.defaultAutoRun}
+                    onChange={(e) => onChange({ defaultAutoRun: e.target.checked })}
+                />
+
+                {settings.defaultAutoRun && (
+                    <Callout tone="warn" className="mt-4">
+                        New conversations will start, stop and delete experiments and write
+                        files without asking first.
+                    </Callout>
+                )}
             </Card>
 
             <Card>

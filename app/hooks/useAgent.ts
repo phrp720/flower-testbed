@@ -195,9 +195,19 @@ export function useDecideAction(conversationId: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ id, decision }: { id: string; decision: "approve" | "reject" }) =>
+        mutationFn: ({
+            id,
+            decision,
+            approveAll,
+        }: {
+            id: string;
+            decision: "approve" | "reject";
+            /** Also grant the rest of this conversation. */
+            approveAll?: boolean;
+        }) =>
             apiPost<{ toolCall: ToolCall; resumed?: boolean }>(`/api/agent/actions/${id}`, {
                 decision,
+                ...(approveAll ? { approveAll: true } : {}),
             }),
         onSettled: () => {
             void queryClient.invalidateQueries({

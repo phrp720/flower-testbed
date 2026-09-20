@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
+import { loadAgentSettings } from '@/lib/llm/settings';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import type { LlmBlock, LlmMessage, LlmStopDetails, LlmUsage } from '@/lib/llm/types';
 
@@ -41,12 +42,17 @@ export async function createConversation(input: {
   experimentId?: string | null;
   autoRun?: boolean;
 } = {}): Promise<Conversation> {
+  // Seeded from the saved preference when the caller does not say. Copied onto
+  // the row rather than read through at approval time, so changing the default
+  // later never silently alters how an existing conversation behaves.
+  const settings = await loadAgentSettings();
+
   const [conversation] = await db
     .insert(schema.agentConversations)
     .values({
       title: input.title?.trim() || 'New conversation',
       experimentId: input.experimentId ?? null,
-      autoRun: input.autoRun ?? false,
+      autoRun: input.autoRun ?? settings.defaultAutoRun,
     })
     .returning();
 

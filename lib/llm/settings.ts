@@ -25,6 +25,8 @@ export interface AgentSettings {
   effort: LlmEffort;
   temperature: number | null;
   disableParallelToolCalls: boolean;
+  /** Seeds a new conversation's autoRun; the conversation's own flag still rules. */
+  defaultAutoRun: boolean;
   systemPromptOverride: string | null;
 
   embeddingProvider: 'none' | 'openai-compatible';
@@ -54,6 +56,7 @@ const DEFAULTS: AgentSettings = {
   effort: 'high',
   temperature: null,
   disableParallelToolCalls: false,
+  defaultAutoRun: false,
   systemPromptOverride: null,
   embeddingProvider: 'none',
   embeddingBaseUrl: null,
@@ -87,6 +90,7 @@ export async function loadAgentSettings(): Promise<AgentSettings> {
     effort: row.effort as LlmEffort,
     temperature: row.temperature,
     disableParallelToolCalls: row.disableParallelToolCalls,
+    defaultAutoRun: row.defaultAutoRun,
     systemPromptOverride: row.systemPromptOverride,
     embeddingProvider: row.embeddingProvider as 'none' | 'openai-compatible',
     embeddingBaseUrl: row.embeddingBaseUrl,
@@ -124,6 +128,7 @@ export async function loadPublicAgentSettings(): Promise<PublicAgentSettings> {
         effort: row.effort as LlmEffort,
         temperature: row.temperature,
         disableParallelToolCalls: row.disableParallelToolCalls,
+        defaultAutoRun: row.defaultAutoRun,
         systemPromptOverride: row.systemPromptOverride,
         embeddingProvider: row.embeddingProvider as 'none' | 'openai-compatible',
         embeddingBaseUrl: row.embeddingBaseUrl,
@@ -138,6 +143,7 @@ export async function loadPublicAgentSettings(): Promise<PublicAgentSettings> {
         effort: DEFAULTS.effort,
         temperature: DEFAULTS.temperature,
         disableParallelToolCalls: DEFAULTS.disableParallelToolCalls,
+        defaultAutoRun: DEFAULTS.defaultAutoRun,
         systemPromptOverride: DEFAULTS.systemPromptOverride,
         embeddingProvider: DEFAULTS.embeddingProvider,
         embeddingBaseUrl: DEFAULTS.embeddingBaseUrl,
@@ -166,6 +172,7 @@ export interface SaveAgentSettingsInput {
   effort?: string;
   temperature?: number | null;
   disableParallelToolCalls?: boolean;
+  defaultAutoRun?: boolean;
   systemPromptOverride?: string | null;
   embeddingProvider?: string;
   embeddingBaseUrl?: string | null;
@@ -254,6 +261,7 @@ export async function saveAgentSettings(
       input.temperature !== undefined ? input.temperature : (existing?.temperature ?? null),
     disableParallelToolCalls:
       input.disableParallelToolCalls ?? existing?.disableParallelToolCalls ?? false,
+    defaultAutoRun: input.defaultAutoRun ?? existing?.defaultAutoRun ?? false,
     systemPromptOverride:
       input.systemPromptOverride !== undefined
         ? input.systemPromptOverride

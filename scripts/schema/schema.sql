@@ -150,6 +150,7 @@ CREATE TABLE "agent_settings" (
 	"effort" text DEFAULT 'high' NOT NULL,
 	"temperature" real,
 	"disable_parallel_tool_calls" boolean DEFAULT false NOT NULL,
+	"default_auto_run" boolean DEFAULT false NOT NULL,
 	"system_prompt_override" text,
 	"embedding_provider" text DEFAULT 'none' NOT NULL,
 	"embedding_base_url" text,

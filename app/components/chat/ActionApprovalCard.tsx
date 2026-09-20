@@ -33,15 +33,19 @@ const RISK_TONE: Record<string, "neutral" | "warn" | "danger"> = {
  */
 export default function ActionApprovalCard({ toolCall, conversationId, onDecided }: Props) {
     const decideAction = useDecideAction(conversationId);
-    const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+    const [busy, setBusy] = useState<"approve" | "approveAll" | "reject" | null>(null);
     const [expanded, setExpanded] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const decide = (decision: "approve" | "reject") => {
-        setBusy(decision);
+    const decide = (choice: "approve" | "approveAll" | "reject") => {
+        setBusy(choice);
         setError(null);
         decideAction.mutate(
-            { id: toolCall.id, decision },
+            {
+                id: toolCall.id,
+                decision: choice === "reject" ? "reject" : "approve",
+                approveAll: choice === "approveAll",
+            },
             {
                 onSuccess: () => onDecided(),
                 onError: (e) =>
@@ -104,7 +108,7 @@ export default function ActionApprovalCard({ toolCall, conversationId, onDecided
 
             {/* A tinted footer separates the decision from the description, so
                 Approve is never a click away from the text being judged. */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-surface-muted border-t border-line">
+            <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-surface-muted border-t border-line">
                 <Button
                     size="sm"
                     variant="primary"
@@ -115,9 +119,22 @@ export default function ActionApprovalCard({ toolCall, conversationId, onDecided
                 >
                     Approve
                 </Button>
+                {/* The decision people actually want to make, offered where they
+                    can see what they are agreeing to. The standing toggle asks
+                    for the same consent before a single request exists. */}
                 <Button
                     size="sm"
                     variant="secondary"
+                    onClick={() => decide("approveAll")}
+                    loading={busy === "approveAll"}
+                    disabled={busy !== null}
+                    title="Approve this and stop asking for the rest of this conversation"
+                >
+                    Approve all
+                </Button>
+                <Button
+                    size="sm"
+                    variant="ghost"
                     icon="close"
                     onClick={() => decide("reject")}
                     loading={busy === "reject"}
@@ -126,7 +143,7 @@ export default function ActionApprovalCard({ toolCall, conversationId, onDecided
                     Decline
                 </Button>
                 <span className="ml-auto text-[11px] text-ink-subtle">
-                    Nothing runs until you choose
+                    &ldquo;Approve all&rdquo; covers this conversation only
                 </span>
             </div>
         </div>

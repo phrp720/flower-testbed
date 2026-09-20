@@ -52,6 +52,14 @@ export const agentSettings = pgTable(
     effort: text('effort').notNull().default('high'), // low|medium|high|xhigh|max
     temperature: real('temperature'), // dropped by the adapter on models that reject it
     disableParallelToolCalls: boolean('disable_parallel_tool_calls').notNull().default(false),
+    /**
+     * What a new conversation's autoRun starts as.
+     *
+     * Only a seed: agent_conversations.auto_run remains the value the approval
+     * gate actually reads, so one conversation can be granted or revoked
+     * without touching the default for every other.
+     */
+    defaultAutoRun: boolean('default_auto_run').notNull().default(false),
     systemPromptOverride: text('system_prompt_override'),
 
     // Embeddings. Independent because Anthropic has no embeddings endpoint.

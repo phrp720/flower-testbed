@@ -5,6 +5,7 @@ import {
   decideToolCall,
   getToolCall,
   getToolCallsForMessage,
+  updateConversation,
 } from '@/lib/agent/conversations';
 import { resumeAgentTurn } from '@/lib/agent/runtime';
 
@@ -16,6 +17,10 @@ export const runtime = 'nodejs';
  * The update is conditional on the row still being pending, so a double-click is
  * a no-op rather than a second execution. Once every call attached to the same
  * assistant message has been decided, the suspended turn resumes.
+ *
+ * `approveAll` additionally grants the rest of this conversation. It is scoped
+ * to the conversation and never to the saved default: consenting to a request
+ * you can see should not quietly change how every future conversation behaves.
  */
 export async function POST(
   request: NextRequest,
@@ -33,6 +38,8 @@ export async function POST(
       throw new ValidationError("decision must be 'approve' or 'reject'.");
     }
 
+    const approveAll = decision === 'approve' && body.approveAll === true;
+
     const updated = await decideToolCall(
       id,
       decision === 'approve' ? 'approved' : 'rejected',
@@ -44,6 +51,12 @@ export async function POST(
       // duplicate click from a second tab is harmless.
       const current = await getToolCall(id);
       return NextResponse.json({ toolCall: current, alreadyDecided: true });
+    }
+
+    // Set before the turn resumes, so the loop's re-read of autoRun already
+    // sees it and the remaining calls in this turn go straight through.
+    if (approveAll) {
+      await updateConversation(updated.conversationId, { autoRun: true });
     }
 
     const siblings = await getToolCallsForMessage(updated.messageId!);

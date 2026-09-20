@@ -131,6 +131,9 @@ async function runLoop(
   const conversation = await getConversation(conversationId);
   const tools = await listAgentTools('write');
 
+  // Built once, from the value the turn started with, and never rebuilt.
+  // The system prompt is the byte-exact prefix prompt caching matches on, so
+  // changing it mid-turn would throw the cache away for every later iteration.
   const system = buildSystemPrompt({
     role: roleName,
     override: settings.systemPromptOverride,
@@ -214,13 +217,18 @@ async function runLoop(
     const calls = toolUseBlocks(turn.blocks);
     if (calls.length === 0) return 'end_turn';
 
+    // Re-read rather than reusing the row loaded before the loop: approving a
+    // call with "Approve all" flips autoRun mid-turn, and a stale copy would
+    // keep prompting for every remaining call in the same turn.
+    const { autoRun } = await getConversation(conversationId);
+
     // Record every call first, so the approval queue is complete before any of
     // them runs. Otherwise a partially-executed batch is possible.
     const rows: AgentToolCall[] = [];
     for (const call of calls) {
       const descriptor = getTool(call.name);
       const risk = descriptor?.risk ?? 'execute';
-      const needsApproval = descriptor ? requiresApproval(descriptor) && !conversation.autoRun : true;
+      const needsApproval = descriptor ? requiresApproval(descriptor) && !autoRun : true;
 
       const row = await recordToolCall({
         conversationId,
