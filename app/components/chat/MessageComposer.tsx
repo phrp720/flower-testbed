@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Button } from "@/app/components/ui";
+import { Button, Icon, Spinner, cn } from "@/app/components/ui";
+import type { Attachment } from "@/app/hooks/useAgent";
 
 type Props = {
     value: string;
@@ -11,7 +12,20 @@ type Props = {
     disabled: boolean;
     isRunning: boolean;
     placeholder?: string;
+    attachments: Attachment[];
+    uploading: boolean;
+    onAttach: (files: FileList) => void;
+    onRemoveAttachment: (id: string) => void;
 };
+
+/** Beyond this the box stops growing and starts scrolling. */
+const MAX_HEIGHT = 200;
+
+function formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+}
 
 export default function MessageComposer({
     value,
@@ -21,15 +35,31 @@ export default function MessageComposer({
     disabled,
     isRunning,
     placeholder,
+    attachments,
+    uploading,
+    onAttach,
+    onRemoveAttachment,
 }: Props) {
-    const ref = useRef<HTMLTextAreaElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
 
-    // Grow with the content rather than scrolling inside a fixed-height box.
+    /**
+     * Grow with the content, and only scroll once there is too much of it.
+     *
+     * The height has to be reset before reading scrollHeight, or the box can
+     * only ever grow. Toggling overflow is the other half: a textarea whose
+     * height is set from scrollHeight still reserves a scrollbar gutter unless
+     * overflow is hidden, which is the stray scrollbar that showed on an empty
+     * composer.
+     */
     useEffect(() => {
-        const element = ref.current;
+        const element = textareaRef.current;
         if (!element) return;
+
         element.style.height = "auto";
-        element.style.height = `${Math.min(element.scrollHeight, 200)}px`;
+        const needed = element.scrollHeight;
+        element.style.height = `${Math.min(needed, MAX_HEIGHT)}px`;
+        element.style.overflowY = needed > MAX_HEIGHT ? "auto" : "hidden";
     }, [value]);
 
     const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -39,38 +69,102 @@ export default function MessageComposer({
         }
     };
 
+    const canSend = !disabled && (value.trim().length > 0 || attachments.length > 0);
+
     return (
         <div className="border-t border-line bg-surface px-4 py-3">
-            <div className="flex items-end gap-2">
+            {/* One bordered box holding the text and its controls, so the whole
+                thing reads as a single field rather than a box beside a button. */}
+            <div className="rounded-[var(--radius)] border border-line-strong bg-surface focus-within:ring-2 focus-within:ring-ring focus-within:border-transparent transition-shadow">
+                {(attachments.length > 0 || uploading) && (
+                    <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2.5">
+                        {attachments.map((attachment) => (
+                            <span
+                                key={attachment.id}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-muted pl-2.5 pr-1 py-1 text-xs"
+                                title={attachment.relativePath}
+                            >
+                                <Icon name="attach" size={12} className="text-ink-subtle shrink-0" />
+                                <span className="max-w-[12rem] truncate text-ink">
+                                    {attachment.filename}
+                                </span>
+                                <span className="text-ink-subtle tabular">
+                                    {formatSize(attachment.sizeBytes)}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => onRemoveAttachment(attachment.id)}
+                                    aria-label={`Remove ${attachment.filename}`}
+                                    className="flex items-center justify-center w-5 h-5 rounded-full text-ink-subtle hover:text-danger hover:bg-danger-surface transition-colors"
+                                >
+                                    <Icon name="close" size={11} />
+                                </button>
+                            </span>
+                        ))}
+                        {uploading && <Spinner size={13} label="Uploading" />}
+                    </div>
+                )}
+
                 <textarea
-                    ref={ref}
+                    ref={textareaRef}
                     rows={1}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onKeyDown={onKeyDown}
                     placeholder={placeholder ?? "Ask about your experiments"}
-                    className="flex-1 resize-none rounded-[var(--radius)] border border-line-strong bg-surface text-ink text-sm px-3 py-2 placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                    className={cn(
+                        "block w-full resize-none bg-transparent text-ink text-sm leading-relaxed",
+                        "px-3 py-2.5 placeholder:text-ink-subtle",
+                        "focus:outline-none",
+                        // Set by the effect above; declared here so the first
+                        // paint does not flash a scrollbar before it runs.
+                        "overflow-y-hidden"
+                    )}
                 />
 
-                {isRunning ? (
-                    <Button icon="stop" onClick={onCancel} className="shrink-0">
-                        Stop
-                    </Button>
-                ) : (
+                <div className="flex items-center gap-1 px-2 pb-2">
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        multiple
+                        className="sr-only"
+                        onChange={(e) => {
+                            if (e.target.files?.length) onAttach(e.target.files);
+                            // Cleared so re-picking the same file still fires.
+                            e.target.value = "";
+                        }}
+                    />
                     <Button
-                        variant="primary"
-                        icon="send"
-                        onClick={onSend}
-                        disabled={disabled || !value.trim()}
-                        className="shrink-0"
-                    >
-                        Send
-                    </Button>
-                )}
+                        size="sm"
+                        variant="ghost"
+                        icon="attach"
+                        title="Attach a file"
+                        aria-label="Attach a file"
+                        onClick={() => fileRef.current?.click()}
+                    />
+
+                    <span className="ml-auto flex items-center gap-2">
+                        <span className="hidden sm:inline text-[11px] text-ink-subtle">
+                            Enter to send · Shift+Enter for a new line
+                        </span>
+                        {isRunning ? (
+                            <Button size="sm" icon="stop" onClick={onCancel}>
+                                Stop
+                            </Button>
+                        ) : (
+                            <Button
+                                size="sm"
+                                variant="primary"
+                                icon="send"
+                                onClick={onSend}
+                                disabled={!canSend}
+                            >
+                                Send
+                            </Button>
+                        )}
+                    </span>
+                </div>
             </div>
-            <p className="text-[11px] text-ink-subtle mt-1.5">
-                Enter to send · Shift+Enter for a new line
-            </p>
         </div>
     );
 }

@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { isServiceError } from '@/lib/errors';
 import { getConversation, getMessages, updateConversation } from '@/lib/agent/conversations';
 import { generateConversationTitle, startAgentTurn } from '@/lib/agent/runtime';
+import { describeAttachments, type Attachment } from '@/lib/agent/attachments';
 import { SSE_HEADERS, createAgentEventStream } from '@/lib/agent/sse';
 
 export const runtime = 'nodejs';
@@ -31,6 +32,16 @@ export async function POST(
     const body = await request.json();
     text = String(body.text ?? '');
     role = body.role;
+
+    // Attachments are already on disk; what the turn needs is a sentence saying
+    // where. Appended to the message itself rather than injected somewhere the
+    // user cannot see, so the transcript shows exactly what the agent was told.
+    const attachments = Array.isArray(body.attachments)
+      ? (body.attachments as Attachment[])
+      : [];
+    if (attachments.length > 0) {
+      text = `${text}${describeAttachments(attachments)}`;
+    }
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

@@ -50,6 +50,7 @@ class LogCapture:
         self._on_flush = on_flush
         self._last_flush = time.monotonic()
         self._last_flushed_length = 0
+        self._flushing = False
 
     def __enter__(self):
         sys.stdout = self
@@ -63,6 +64,17 @@ class LogCapture:
     def write(self, text):
         # Capture to logs for storage, but don't print to terminal
         self.logs.write(text)
+
+        # Flush only on a completed line, and never from inside a flush.
+        #
+        # print() emits its text and its newline as two separate write() calls,
+        # and save_logs() prints a line of its own. Flushing on the first of
+        # those two calls therefore spliced that line into the middle of the one
+        # being written, producing runs like
+        #   [CheckpointManager] Saved checkpoint: round_3.pt[ExperimentManager] ...
+        if self._flushing or not text.endswith("\n"):
+            return
+
         self._maybe_flush()
 
     def _maybe_flush(self):
@@ -82,12 +94,15 @@ class LogCapture:
         self._last_flush = now
         self._last_flushed_length = len(current)
 
+        self._flushing = True
         try:
             self._on_flush(current)
         except Exception:
             # A failed log write must never interrupt training. The final write
             # in the run's `finally` block is the backstop.
             pass
+        finally:
+            self._flushing = False
 
     def flush(self):
         pass  # No-op since we're not printing

@@ -137,6 +137,38 @@ export function useDeleteConversation() {
     });
 }
 
+export type Attachment = {
+    id: string;
+    filename: string;
+    relativePath: string;
+    sizeBytes: number;
+};
+
+/**
+ * Upload a file the user attached to the composer.
+ *
+ * Sent as multipart rather than through apiPost, which serialises JSON: a
+ * FormData body must set its own boundary, so a Content-Type header here would
+ * break it.
+ */
+export function useUploadAttachment() {
+    return useMutation({
+        mutationFn: async ({ file, conversationId }: { file: File; conversationId?: string }) => {
+            const body = new FormData();
+            body.append("file", file);
+            if (conversationId) body.append("conversationId", conversationId);
+
+            const response = await fetch("/api/agent/uploads", { method: "POST", body });
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(payload.error ?? `Upload failed (${response.status})`);
+            }
+            return payload.attachment as Attachment;
+        },
+    });
+}
+
 export function useUpdateConversation(id: string) {
     const queryClient = useQueryClient();
 

@@ -16,6 +16,8 @@ import {
     useDeleteConversation,
     useThread,
     useUpdateConversation,
+    useUploadAttachment,
+    type Attachment,
     type Thread,
 } from "@/app/hooks/useAgent";
 import { queryKeys } from "@/lib/query-keys";
@@ -53,7 +55,11 @@ const CLOSED: DialogState = { isOpen: false, title: "", message: "", type: "info
  * Module scope rather than state for exactly that reason: it has to outlive the
  * component. Claimed once, by the mount that matches its id.
  */
-let pendingHandoff: { conversationId: string; text: string } | null = null;
+let pendingHandoff: {
+    conversationId: string;
+    text: string;
+    attachments: Attachment[];
+} | null = null;
 
 function optimisticMessage(text: string, seq: number): AgentMessage {
     return {
@@ -98,6 +104,24 @@ export default function ChatShell({ conversationId }: Props) {
     const [streamingText, setStreamingText] = useState("");
     const [streamingThinking, setStreamingThinking] = useState("");
     const [dialog, setDialog] = useState<DialogState>(CLOSED);
+
+    // Attachments are uploaded as soon as they are picked, so the file is on
+    // disk before the turn starts and the message only has to name it.
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const uploadAttachment = useUploadAttachment();
+
+    const handleAttach = (files: FileList) => {
+        for (const file of Array.from(files)) {
+            uploadAttachment.mutate(
+                { file, conversationId: conversationId ?? undefined },
+                {
+                    onSuccess: (attachment) =>
+                        setAttachments((current) => [...current, attachment]),
+                    onError: (error) => fail(error, "Could not attach that file"),
+                }
+            );
+        }
+    };
 
     const paneRef = useRef<HTMLDivElement>(null);
     /**
@@ -200,8 +224,9 @@ export default function ChatShell({ conversationId }: Props) {
     };
 
     /** Post a message and consume its stream. Assumes the conversation exists. */
-    const send = async (targetId: string, text: string) => {
+    const send = async (targetId: string, text: string, files: Attachment[] = []) => {
         setInput("");
+        setAttachments([]);
         setIsRunning(true);
         setStreamingText("");
         setStreamingThinking("");
@@ -215,7 +240,7 @@ export default function ChatShell({ conversationId }: Props) {
             const res = await fetch(`/api/agent/conversations/${targetId}/messages`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text }),
+                body: JSON.stringify({ text, attachments: files }),
             });
 
             if (!res.ok || !res.body) {
@@ -280,10 +305,10 @@ export default function ChatShell({ conversationId }: Props) {
 
     const handleSend = async () => {
         const text = input.trim();
-        if (!text) return;
+        if (!text && attachments.length === 0) return;
 
         if (conversationId) {
-            void send(conversationId, text);
+            void send(conversationId, text, attachments);
             return;
         }
 
@@ -291,8 +316,9 @@ export default function ChatShell({ conversationId }: Props) {
         // about to mount, and let it own the turn from the start.
         try {
             const { conversation: created } = await createConversation.mutateAsync();
-            pendingHandoff = { conversationId: created.id, text };
+            pendingHandoff = { conversationId: created.id, text, attachments };
             setInput("");
+            setAttachments([]);
             router.push(`/testbed/chat/${created.id}`);
         } catch (e) {
             fail(e);
@@ -302,9 +328,9 @@ export default function ChatShell({ conversationId }: Props) {
     // Claimed by the mount it was addressed to, exactly once.
     useEffect(() => {
         if (!conversationId || pendingHandoff?.conversationId !== conversationId) return;
-        const { text } = pendingHandoff;
+        const { text, attachments: files } = pendingHandoff;
         pendingHandoff = null;
-        void send(conversationId, text);
+        void send(conversationId, text, files);
         // `send` is recreated every render; re-running on that would send twice.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [conversationId]);
@@ -421,6 +447,12 @@ export default function ChatShell({ conversationId }: Props) {
                         onCancel={handleCancel}
                         disabled={isRunning}
                         isRunning={isRunning}
+                        attachments={attachments}
+                        uploading={uploadAttachment.isPending}
+                        onAttach={handleAttach}
+                        onRemoveAttachment={(id) =>
+                            setAttachments((current) => current.filter((a) => a.id !== id))
+                        }
                     />
                 </div>
             </Card>
