@@ -25,7 +25,11 @@ export const summariseExperimentTool = defineTool({
     'A computed digest of one experiment: configuration, convergence trend, best ' +
     'round, plateau and divergence detection, and notes about anything that would ' +
     'mislead a naive reading of the numbers. Prefer this over get_metrics or ' +
-    'read_experiment_logs -- it is far cheaper and the figures are computed, not inferred.',
+    'read_experiment_logs -- it is far cheaper and the figures are computed, not inferred. ' +
+    'This digest covers convergence only. If the user also asks what to change next, ' +
+    'follow it with describe_model_view: the per-class breakdown shows where the error ' +
+    'is actually concentrated, which is the difference between a specific ' +
+    'recommendation and a generic one.',
   group: 'results',
   risk: 'read',
   inputSchema: z.object({ experimentId: experimentIdSchema }),
