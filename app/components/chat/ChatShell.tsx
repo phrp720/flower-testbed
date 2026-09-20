@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Button, Callout, Card, Spinner } from "@/app/components/ui";
+import { Button, Card, Spinner } from "@/app/components/ui";
 import Dialog from "@/app/components/Dialog";
 import ConversationSidebar from "./ConversationSidebar";
 import MessageList from "./MessageList";
@@ -396,29 +396,7 @@ export default function ChatShell({ conversationId }: Props) {
                     </h1>
                 </div>
 
-                {conversation && (
-                    <Button
-                        size="sm"
-                        icon="energy"
-                        onClick={toggleAutoRun}
-                        title="When on, the agent runs actions without asking first"
-                        className={
-                            conversation.autoRun
-                                ? "border-warn-line bg-warn-surface text-warn hover:bg-warn-surface"
-                                : undefined
-                        }
-                    >
-                        Auto-run {conversation.autoRun ? "on" : "off"}
-                    </Button>
-                )}
             </div>
-
-            {conversation?.autoRun && (
-                <Callout tone="warn" className="mb-3 shrink-0">
-                    The agent will start experiments and write files without asking for approval
-                    first.
-                </Callout>
-            )}
 
             {/* Fills the space left over instead of subtracting a guessed
                 amount of chrome from the viewport. The old calc had to be kept
@@ -481,6 +459,8 @@ export default function ChatShell({ conversationId }: Props) {
                         onRemoveAttachment={(id) =>
                             setAttachments((current) => current.filter((a) => a.id !== id))
                         }
+                        autoRun={conversation ? conversation.autoRun : null}
+                        onToggleAutoRun={toggleAutoRun}
                     />
                 </div>
             </Card>

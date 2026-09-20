@@ -16,6 +16,9 @@ type Props = {
     uploading: boolean;
     onAttach: (files: FileList) => void;
     onRemoveAttachment: (id: string) => void;
+    /** Null before a conversation exists, when there is nothing to set it on. */
+    autoRun: boolean | null;
+    onToggleAutoRun: () => void;
 };
 
 /** Beyond this the box stops growing and starts scrolling. */
@@ -39,6 +42,8 @@ export default function MessageComposer({
     uploading,
     onAttach,
     onRemoveAttachment,
+    autoRun,
+    onToggleAutoRun,
 }: Props) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileRef = useRef<HTMLInputElement>(null);
@@ -143,8 +148,34 @@ export default function MessageComposer({
                         onClick={() => fileRef.current?.click()}
                     />
 
+                    {/* The approval mode sits here rather than in the page
+                        header: it does not describe the conversation, it
+                        describes what happens when this button is pressed. */}
+                    {autoRun !== null && (
+                        <button
+                            type="button"
+                            onClick={onToggleAutoRun}
+                            aria-pressed={autoRun}
+                            title={
+                                autoRun
+                                    ? "The agent acts immediately. Click to require approval."
+                                    : "Actions wait for your approval. Click to let them run."
+                            }
+                            className={cn(
+                                "inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border text-[11px] transition-colors",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                autoRun
+                                    ? "border-warn-line bg-warn-surface text-warn"
+                                    : "border-line text-ink-subtle hover:text-ink hover:bg-surface-hover"
+                            )}
+                        >
+                            <Icon name={autoRun ? "energy" : "check"} size={12} />
+                            {autoRun ? "Runs without asking" : "Asks before acting"}
+                        </button>
+                    )}
+
                     <span className="ml-auto flex items-center gap-2">
-                        <span className="hidden sm:inline text-[11px] text-ink-subtle">
+                        <span className="hidden lg:inline text-[11px] text-ink-subtle">
                             Enter to send · Shift+Enter for a new line
                         </span>
                         {isRunning ? (
