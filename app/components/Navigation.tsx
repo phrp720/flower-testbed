@@ -40,9 +40,9 @@ export default function Navigation() {
             <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-6">
                 <Link
                     href="/testbed/dashboard"
-                    className="flex items-center gap-2.5 shrink-0 hover:opacity-70 transition-opacity"
+                    className="flex items-center gap-0.5 shrink-0 hover:opacity-70 transition-opacity"
                 >
-                    <Image src="/testbed-icon-v2.png" alt="" width={26} height={26} priority />
+                    <Image src="/testbed-icon-v2.png" alt="" width={40} height={40} priority />
                     <span className="text-sm font-semibold text-ink tracking-tight">
                         Flower Testbed
                     </span>
