@@ -33,6 +33,7 @@ class FlowerClient(fl.client.NumPyClient):
         device: torch.device,
         local_epochs: int = 1,
         learning_rate: float = 0.01,
+        partition_id: Optional[int] = None,
     ):
         """
         Initialize the Flower client.
@@ -51,6 +52,10 @@ class FlowerClient(fl.client.NumPyClient):
         self.device = device
         self.local_epochs = local_epochs
         self.learning_rate = learning_rate
+        # Flower's client id is a random node identifier, not the data partition.
+        # Reporting the partition explicitly is what lets analysis line a client's
+        # model up with the data it actually trained on.
+        self.partition_id = partition_id
 
     def get_parameters(self, config: Dict[str, Scalar]) -> NDArrays:
         """Return model parameters as a list of NumPy arrays."""
@@ -92,6 +97,10 @@ class FlowerClient(fl.client.NumPyClient):
             {
                 "train_loss": float(train_loss),
                 "train_accuracy": float(train_acc),
+                # Reported so analysis can tie this client's model back to the
+                # data it trained on. Flower's client id is a random node
+                # identifier and carries no partition information.
+                **({"partition_id": int(self.partition_id)} if self.partition_id is not None else {}),
             },
         )
 
@@ -115,7 +124,10 @@ class FlowerClient(fl.client.NumPyClient):
         return (
             float(loss),
             len(self.testloader.dataset),
-            {"eval_accuracy": float(accuracy)},
+            {
+                "eval_accuracy": float(accuracy),
+                **({"partition_id": int(self.partition_id)} if self.partition_id is not None else {}),
+            },
         )
 
     def _train(self, epochs: int, learning_rate: float) -> Tuple[float, float]:
@@ -236,6 +248,7 @@ def create_client_fn(
             device=device,
             local_epochs=node_epochs,
             learning_rate=node_lr,
+            partition_id=int(partition_id),
         )
 
         # Convert NumPyClient to Client (required by modern Flower API)

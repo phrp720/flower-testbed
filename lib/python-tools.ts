@@ -89,11 +89,14 @@ export interface CheckpointInspection {
   round?: number | null;
   metrics?: Record<string, number> | null;
   totalParameters?: number;
+  /** Size of the parameters themselves, excluding the file's pickle envelope. */
+  parameterBytes?: number;
   layerCount?: number;
   layers?: Array<{
     name: string;
     shape: number[] | null;
     params: number | null;
+    bytes?: number;
     dtype?: string;
     absMean?: number;
   }>;
@@ -167,4 +170,84 @@ export function evaluateCheckpoint(options: {
   if (options.datasetPath) args.push('--dataset', options.datasetPath);
 
   return runPythonTool<EvaluationResult>('eval_runner.py', args, { timeoutMs: 15 * 60 * 1000 });
+}
+
+/** A grid is base64-encoded int8, row-major, resolution x resolution. */
+export type EncodedGrid = string;
+
+export interface SurfaceFrame {
+  round: number;
+  output: EncodedGrid;
+  layers: Array<{ layer: number; neurons: EncodedGrid[] }>;
+  weights: Array<{ layer: number; matrix: number[][] }>;
+}
+
+export interface FilterFrame {
+  round: number;
+  /** base64 uint8, laid out [filter][row][col][rgb]. */
+  filters: string;
+  filterCount: number;
+  accuracy: number | null;
+  perClass: Array<{ label: string; accuracy: number | null; support: number }>;
+}
+
+/**
+ * How a trained model can be shown, as the tool worked it out.
+ *
+ * `view` is decided from the shape of a real batch and the structure of the
+ * model, not from the experiment's config: two-dimensional input gets a
+ * decision surface, image input with a convolution gets its first-layer
+ * kernels, and anything else says why it cannot be drawn.
+ */
+export interface ModelView {
+  ok: boolean;
+  view?: 'surface' | 'filters' | 'none';
+  /** Shape of one input, e.g. [2] or [3, 32, 32]. */
+  inputShape?: number[];
+  reason?: string;
+  encoding?: string;
+  clientId?: string | null;
+  error?: string;
+
+  // view === 'surface'
+  domain?: number;
+  resolution?: number;
+  hiddenSizes?: number[];
+  /** Where the per-neuron responses came from, since not every model publishes them. */
+  activationSource?: string;
+  points?: number[][];
+  labels?: number[];
+  datasetKind?: string | null;
+  frames?: SurfaceFrame[] | FilterFrame[];
+
+  // view === 'filters'
+  layerName?: string;
+  kernelHeight?: number;
+  kernelWidth?: number;
+  inputChannels?: number;
+  totalFilters?: number;
+  classNames?: string[];
+  evalSamples?: number;
+  evalSource?: string;
+}
+
+/**
+ * Decide how a trained model can be visualised, and produce it.
+ *
+ * Every saved round is evaluated in a single Python process. Importing torch
+ * dominates the cost, so twenty rounds together take about as long as one --
+ * and the client can then move between rounds with no round trip.
+ */
+export function modelView(options: {
+  experimentId: string;
+  resolution?: number;
+  maxSamples?: number;
+  clientId?: string | null;
+}): Promise<ModelView> {
+  const args = [options.experimentId];
+  if (options.resolution) args.push('--resolution', String(options.resolution));
+  if (options.maxSamples) args.push('--max-samples', String(options.maxSamples));
+  if (options.clientId) args.push('--client', options.clientId);
+
+  return runPythonTool<ModelView>('model_view.py', args, { timeoutMs: 300000 });
 }

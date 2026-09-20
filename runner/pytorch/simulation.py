@@ -25,6 +25,7 @@ from .client import create_client_fn
 from .server import create_strategy
 from .defaults.model import get_model as get_default_model
 from .defaults.dataset import load_data as load_default_data
+from .defaults.toy2d import get_model as get_toy2d_model, load_data as load_toy2d_data
 from .defaults.config import DEFAULT_CONFIG
 
 
@@ -201,9 +202,22 @@ class SimulationOrchestrator:
         except Exception:
             pass
 
+    def _is_toy2d(self) -> bool:
+        """Whether this experiment uses the drawable 2D dataset."""
+        custom_config = self.config.get('custom_config') or {}
+        dataset_config = custom_config.get('dataset')
+        return isinstance(dataset_config, dict) and bool(dataset_config.get('kind'))
+
     def _load_modules(self):
         """Load user modules or fall back to defaults."""
         print("\n[Orchestrator] Loading modules...")
+
+        # Set before any loader runs: the toy dataset reads its shape from here.
+        custom_config = self.config.get('custom_config') or {}
+        if self._is_toy2d():
+            os.environ['FLOWER_TOY2D'] = json.dumps(custom_config['dataset'])
+        if custom_config.get('partitioner'):
+            os.environ['FLOWER_PARTITIONER'] = json.dumps(custom_config['partitioner'])
 
         # Load model
         model_path = self.config.get('model_path')
@@ -216,8 +230,12 @@ class SimulationOrchestrator:
                 raise RuntimeError("No valid model found. Expected get_model() function or Net/Model class. Please check your file and upload again.")
 
         if self.model_fn is None:
-            print("[Orchestrator] Using default CIFAR-10 CNN model")
-            self.model_fn = get_default_model
+            if self._is_toy2d():
+                print("[Orchestrator] Using 2D playground network")
+                self.model_fn = get_toy2d_model
+            else:
+                print("[Orchestrator] Using default CIFAR-10 CNN model")
+                self.model_fn = get_default_model
 
         # Load dataset
         dataset_path = self.config.get('dataset_path')
@@ -230,8 +248,12 @@ class SimulationOrchestrator:
                 raise RuntimeError("No valid dataset loader found. Expected load_data() function. Please check your file and upload again.")
 
         if self.load_data_fn is None:
-            print("[Orchestrator] Using default CIFAR-10 dataset")
-            self.load_data_fn = load_default_data
+            if self._is_toy2d():
+                print("[Orchestrator] Using 2D playground dataset")
+                self.load_data_fn = load_toy2d_data
+            else:
+                print("[Orchestrator] Using default CIFAR-10 dataset")
+                self.load_data_fn = load_default_data
 
         # Load strategy/algorithm
         algorithm_path = self.config.get('algorithm_path')
@@ -295,6 +317,16 @@ class SimulationOrchestrator:
         self.save_client_checkpoints = bool(custom_config.get('save_client_checkpoints'))
         if self.save_client_checkpoints:
             print("[Orchestrator] Saving per-client model checkpoints")
+
+        # A 2D dataset config swaps in the toy dataset and its matching network.
+        # Nothing else about the run changes -- same strategies, same partitioner,
+        # same simulation -- but the input becomes drawable.
+        dataset_config = custom_config.get('dataset')
+        if isinstance(dataset_config, dict) and dataset_config.get('kind'):
+            os.environ['FLOWER_TOY2D'] = json.dumps(dataset_config)
+            print(f"[Orchestrator] 2D dataset: {dataset_config}")
+        else:
+            os.environ.pop('FLOWER_TOY2D', None)
 
         partitioner_config = custom_config.get('partitioner')
         if partitioner_config:
@@ -449,7 +481,39 @@ class SimulationOrchestrator:
                 self._current_round = 0
 
             @staticmethod
-            def _client_rows(results, phase):
+            def _parameter_bytes(parameters) -> int:
+                """
+                The size of a parameter payload as Flower actually serialised it.
+
+                Parameters.tensors is the exact byte string the transport carries,
+                so this is a measurement rather than an estimate. The checkpoint
+                file on disk is not a substitute: it adds a pickle envelope and
+                the stored metrics, which inflate a small model by an order of
+                magnitude and would never cross a network.
+                """
+                tensors = getattr(parameters, "tensors", None) or []
+                return sum(len(tensor) for tensor in tensors)
+
+            def configure_fit(self, server_round, parameters, client_manager):
+                instructions = self._base.configure_fit(server_round, parameters, client_manager)
+                # What the server sends each selected client to train from.
+                self._fit_downlink = {
+                    getattr(proxy, "cid", None): self._parameter_bytes(ins.parameters)
+                    for proxy, ins in instructions
+                }
+                return instructions
+
+            def configure_evaluate(self, server_round, parameters, client_manager):
+                instructions = self._base.configure_evaluate(server_round, parameters, client_manager)
+                # Evaluation clients are sampled independently of the fit clients,
+                # so this is a different cohort and a separate download.
+                self._evaluate_downlink = {
+                    getattr(proxy, "cid", None): self._parameter_bytes(ins.parameters)
+                    for proxy, ins in instructions
+                }
+                return instructions
+
+            def _client_rows(self, results, phase):
                 """
                 Per-client metrics, straight off the results the strategy already
                 receives.
@@ -458,13 +522,32 @@ class SimulationOrchestrator:
                 rest away, which is why metrics.client_metrics has always been
                 empty. Keeping them is what makes per-node analysis, non-IID
                 diagnosis and straggler detection possible.
+
+                Each row also carries the bytes that client actually exchanged
+                this round, so communication cost is measured rather than assumed.
                 """
+                downlink = (
+                    getattr(self, "_fit_downlink", None)
+                    if phase == "fit"
+                    else getattr(self, "_evaluate_downlink", None)
+                ) or {}
+
                 rows = []
                 for proxy, res in results:
+                    cid = getattr(proxy, "cid", None)
                     row = {
-                        "cid": getattr(proxy, "cid", None),
+                        "cid": cid,
                         "phase": phase,
                         "num_examples": getattr(res, "num_examples", None),
+                        # Model parameters received from the server this round.
+                        "downlink_bytes": downlink.get(cid),
+                        # Model parameters returned. An evaluation reply carries a
+                        # loss and a few scalars, never a model, so it is zero.
+                        "uplink_bytes": (
+                            self._parameter_bytes(getattr(res, "parameters", None))
+                            if phase == "fit"
+                            else 0
+                        ),
                     }
                     if phase == "evaluate" and getattr(res, "loss", None) is not None:
                         row["loss"] = float(res.loss)

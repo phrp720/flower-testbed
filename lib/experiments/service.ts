@@ -190,6 +190,8 @@ export interface ExperimentSnapshot {
     evalLoss: number | null;
     evalAccuracy: number | null;
     createdAt: Date;
+    /** Only carried on the newest round; see buildExperimentSnapshot. */
+    clientMetrics?: unknown;
   }>;
   checkpoints: Array<{
     id: string;
@@ -234,7 +236,7 @@ export async function buildExperimentSnapshot(
       currentRound: latestMetrics?.round || 0,
       totalRounds: experiment.numRounds,
     },
-    metrics: metrics.map((m) => ({
+    metrics: metrics.map((m, index) => ({
       id: m.id,
       round: m.round,
       trainLoss: m.trainLoss,
@@ -242,6 +244,12 @@ export async function buildExperimentSnapshot(
       evalLoss: m.evalLoss,
       evalAccuracy: m.evalAccuracy,
       createdAt: m.createdAt,
+      // Per-client rows are attached only to the newest round. The full series
+      // is sent on every tick, and one round's worth of client metrics is
+      // roughly as large as all the aggregate rows combined -- carrying it for
+      // every round would grow the payload with the length of the run. The
+      // client keeps earlier rounds' copies from the initial fetch.
+      ...(index === metrics.length - 1 ? { clientMetrics: m.clientMetrics } : {}),
     })),
     checkpoints: checkpoints.map((c) => ({
       id: c.id,

@@ -10,6 +10,7 @@ import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
 import MetricsTable from "@/app/components/MetricsTable";
 import CheckpointsList from "@/app/components/CheckpointsList";
+import PlaygroundView from "@/app/components/experiments/PlaygroundView";
 import {
   useDeleteExperiment,
   useExperiment,
@@ -35,6 +36,7 @@ type Experiment = {
   finalLoss: number | null;
   errorMessage: string | null;
   logs: string | null;
+  customConfig: { dataset?: { kind?: string } } | null;
 };
 
 type Metric = {
@@ -146,7 +148,20 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
             experiment: data.experiment
               ? { ...previous.experiment, status: data.experiment.status }
               : previous.experiment,
-            metrics: data.metrics?.length ? data.metrics : previous.metrics,
+            // Re-attach per-client metrics the stream omits for older rounds,
+            // so switching rounds in the topology view still has its data.
+            metrics: data.metrics?.length
+              ? data.metrics.map((row) => {
+                  const withClients = row as Metric & { clientMetrics?: unknown };
+                  if (withClients.clientMetrics != null) return withClients;
+                  const earlier = previous.metrics.find((m) => m.round === row.round) as
+                    | (Metric & { clientMetrics?: unknown })
+                    | undefined;
+                  return earlier?.clientMetrics != null
+                    ? { ...withClients, clientMetrics: earlier.clientMetrics }
+                    : withClients;
+                })
+              : previous.metrics,
             checkpoints: data.checkpoints?.length ? data.checkpoints : previous.checkpoints,
           };
         }
@@ -448,6 +463,16 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
             <p className="text-red-700">{experiment.errorMessage}</p>
           </div>
         )}
+
+        <div className="mb-6">
+          <PlaygroundView
+            experimentId={id}
+            status={experiment.status}
+            rounds={metrics.map((m) => m.round)}
+            latestAccuracy={metrics[metrics.length - 1]?.evalAccuracy ?? null}
+            latestLoss={metrics[metrics.length - 1]?.evalLoss ?? null}
+          />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <MetricsTable metrics={metrics} />

@@ -185,6 +185,24 @@ def load_data(
     return trainloader, testloader
 
 
+def get_class_names() -> list:
+    """
+    CIFAR-10's label names, read from the dataset rather than written here.
+
+    Hard-coding the order would be a guess that happens to be right until the
+    upstream dataset changes; asking the features for it never is.
+    """
+    try:
+        fds = FederatedDataset(dataset="uoft-cs/cifar10", partitioners={})
+        feature = fds.load_split("test").features["label"]
+        names = getattr(feature, "names", None)
+        if names:
+            return [str(name) for name in names]
+    except Exception as e:
+        print(f"[Dataset] Could not read class names: {e}")
+    return []
+
+
 def get_centralized_testset(batch_size: int = 32) -> DataLoader:
     """
     Get the full centralized test set for evaluation.

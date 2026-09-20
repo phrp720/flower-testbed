@@ -43,15 +43,22 @@ def main() -> int:
 
     layers = []
     total_params = 0
+    # The parameters' own size, which is what a federated round actually moves.
+    # The file on disk is larger: it carries a pickle envelope and the stored
+    # metrics, neither of which would ever cross a network.
+    total_bytes = 0
     for name, tensor in state_dict.items():
         try:
             shape = list(tensor.shape)
             count = int(tensor.numel())
+            nbytes = int(tensor.numel() * tensor.element_size())
             total_params += count
+            total_bytes += nbytes
             layers.append({
                 "name": name,
                 "shape": shape,
                 "params": count,
+                "bytes": nbytes,
                 "dtype": str(tensor.dtype),
                 # A mean absolute value near zero across every layer usually
                 # means the weights never moved.
@@ -67,6 +74,7 @@ def main() -> int:
         "round": checkpoint.get("round") if isinstance(checkpoint, dict) else None,
         "metrics": checkpoint.get("metrics") if isinstance(checkpoint, dict) else None,
         "totalParameters": total_params,
+        "parameterBytes": total_bytes,
         "layerCount": len(layers),
         "layers": layers[:200],
     }))

@@ -35,6 +35,12 @@ const TEMPLATES = {
 export default function DashboardPage() {
     const router = useRouter();
     const [preset, setPreset] = useState("pytorch");
+    /**
+     * "" keeps the framework's own dataset (CIFAR-10 images). The other values
+     * swap in a two-input dataset, which is the only kind whose input plane can
+     * be drawn -- the federated learning itself is identical either way.
+     */
+    const [datasetKind, setDatasetKind] = useState("");
 
     // Track selected files (not uploaded yet)
     const [modelFile, setModelFile] = useState<File | null>(null);
@@ -100,6 +106,11 @@ export default function DashboardPage() {
                     useGpu,
                     cpusPerClient,
                     gpuFractionPerClient: useGpu ? gpuFractionPerClient : 0,
+                    // Omitted entirely when no 2D dataset is chosen, so the run
+                    // falls through to the framework default exactly as before.
+                    ...(datasetKind
+                        ? { customConfig: { dataset: { kind: datasetKind } } }
+                        : {}),
                 },
             },
             {
@@ -171,6 +182,30 @@ export default function DashboardPage() {
                                         {/*<option value="flowertune">FlowerTune</option>*/}
                                         {/*<option value="flower-baseline">Flower Baseline</option>*/}
                                     </select>
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Dataset
+                                    </label>
+                                    <select
+                                        value={datasetKind}
+                                        onChange={(e) => setDatasetKind(e.target.value)}
+                                        disabled={datasetFile !== null}
+                                        className="w-full rounded-lg border border-gray-300 pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent appearance-none disabled:bg-gray-100 disabled:text-gray-500 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
+                                    >
+                                        <option value="">CIFAR-10 images (default)</option>
+                                        <option value="circle">2D · circle</option>
+                                        <option value="spiral">2D · spiral</option>
+                                        <option value="xor">2D · xor</option>
+                                        <option value="gauss">2D · gauss</option>
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1.5">
+                                        {datasetFile !== null
+                                            ? "Your uploaded dataset file is used instead."
+                                            : datasetKind
+                                            ? "Two inputs, so the decision boundary can be drawn round by round."
+                                            : "Images. The experiment page shows the learned filters and per-class accuracy."}
+                                    </p>
                                 </div>
                             </div>
                         </div>

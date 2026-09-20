@@ -45,3 +45,22 @@ body {
     transform: scale(1);
   }
 }
+
+/* Network diagram: dashes travelling along a weight, input toward output.
+   The dash pattern sums to 10, so shifting the offset by 10 is exactly one
+   period and the loop has no visible seam. */
+@keyframes flowDash {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Steady dashes still show direction; only the movement goes. */
+  [data-flow-link] {
+    animation: none !important;
+  }
+}
