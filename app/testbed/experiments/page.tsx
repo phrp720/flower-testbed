@@ -6,12 +6,12 @@ import Dialog from "@/app/components/Dialog";
 import {
   Button,
   Card,
+  ChipToggleGroup,
   EmptyState,
   Icon,
   LinkButton,
   PageHeader,
   Pagination,
-  Select,
   StatusBadge,
   Spinner,
   CONTROL,
@@ -20,12 +20,15 @@ import { useDeleteExperiment, useExperiments } from "@/app/hooks/useExperiments"
 
 const PER_PAGE = 10;
 
+/** The statuses the runner can write, in the order a run moves through them. */
+const STATUSES = ["pending", "running", "completed", "failed"] as const;
+
 export default function ExperimentsPage() {
   const { data: experiments = [], isLoading } = useExperiments();
   const deleteExperiment = useDeleteExperiment();
 
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [frameworkFilter, setFrameworkFilter] = useState("all");
+  // Empty means no status filter, which is what an untouched filter bar should do.
+  const [statuses, setStatuses] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -36,25 +39,36 @@ export default function ExperimentsPage() {
   const filtered = useMemo(
     () =>
       experiments.filter((exp) => {
-        const byStatus = statusFilter === "all" || exp.status === statusFilter;
-        const byFramework = frameworkFilter === "all" || exp.framework === frameworkFilter;
+        const byStatus = statuses.length === 0 || statuses.includes(exp.status);
         const byName = exp.name.toLowerCase().includes(search.toLowerCase());
-        return byStatus && byFramework && byName;
+        return byStatus && byName;
       }),
-    [experiments, statusFilter, frameworkFilter, search]
+    [experiments, statuses, search]
   );
+
+  const statusOptions = useMemo(() => {
+    const counts = experiments.reduce<Record<string, number>>((acc, exp) => {
+      acc[exp.status] = (acc[exp.status] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    return STATUSES.map((status) => ({
+      value: status,
+      label: status[0].toUpperCase() + status.slice(1),
+      count: counts[status] ?? 0,
+    }));
+  }, [experiments]);
 
   const pageCount = Math.ceil(filtered.length / PER_PAGE);
   const visible = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   // A filter that shortens the list can strand the reader on a page that no
   // longer exists, so narrowing always returns them to the first one.
-  useEffect(() => setPage(1), [statusFilter, frameworkFilter, search]);
+  useEffect(() => setPage(1), [statuses, search]);
 
   const clearFilters = () => {
     setSearch("");
-    setStatusFilter("all");
-    setFrameworkFilter("all");
+    setStatuses([]);
   };
 
   const confirmDelete = () => {
@@ -80,8 +94,8 @@ export default function ExperimentsPage() {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
-        <div className="relative flex-1">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-5">
+        <div className="relative lg:max-w-sm lg:flex-1">
           <Icon
             name="search"
             size={15}
@@ -95,28 +109,19 @@ export default function ExperimentsPage() {
             className={`${CONTROL} h-9 pl-9 pr-3`}
           />
         </div>
-        <Select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          aria-label="Filter by status"
-          wrapperClassName="sm:w-40"
-        >
-          <option value="all">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="running">Running</option>
-          <option value="completed">Completed</option>
-          <option value="failed">Failed</option>
-        </Select>
-        <Select
-          value={frameworkFilter}
-          onChange={(e) => setFrameworkFilter(e.target.value)}
-          aria-label="Filter by framework"
-          wrapperClassName="sm:w-40"
-        >
-          <option value="all">All frameworks</option>
-          <option value="pytorch">PyTorch</option>
-          <option value="tensorflow" disabled>TensorFlow</option>
-        </Select>
+
+        <ChipToggleGroup
+          label="Filter by status"
+          options={statusOptions}
+          selected={statuses}
+          onChange={setStatuses}
+        />
+
+        {(statuses.length > 0 || search) && (
+          <Button size="sm" variant="ghost" onClick={clearFilters} className="lg:ml-auto">
+            Clear
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

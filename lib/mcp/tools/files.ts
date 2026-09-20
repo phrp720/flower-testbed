@@ -12,7 +12,7 @@ import { PYTORCH_TEMPLATES, USER_MODULE_CONTRACT, readPytorchTemplate } from '@/
 import { USER_MODULE_NAMES, inspectCheckpoint, validateUserModule } from '@/lib/python-tools';
 import { assertExperimentId, getCheckpoints } from '@/lib/experiments/service';
 import { resolveScoped } from '../paths';
-import { NotFoundError } from '@/lib/errors';
+import { NotFoundError, ValidationError } from '@/lib/errors';
 
 /** Groups E and D (reads) -- code, templates, and checkpoint inspection. */
 
@@ -143,14 +143,38 @@ export const inspectCheckpointTool = defineTool({
   description:
     'Describe a saved checkpoint: the round it came from, the metrics stored with ' +
     'it, total parameter count, and every layer with its shape and mean absolute ' +
-    'weight. Weights near zero across all layers usually mean training never moved them.',
+    'weight. Weights near zero across all layers usually mean training never moved ' +
+    'them. Addresses either a run\'s checkpoint or one in the agent workspace.',
   group: 'results',
   risk: 'read',
   inputSchema: z.object({
-    experimentId: z.string().describe('Experiment UUID.'),
-    round: z.number().int().min(1).describe('Which round to inspect.'),
+    experimentId: z.string().optional().describe('Experiment UUID. Use with `round`.'),
+    round: z.number().int().min(1).optional().describe('Which round to inspect.'),
+    workspacePath: z
+      .string()
+      .optional()
+      .describe(
+        'A checkpoint in the agent workspace, such as one the user attached. ' +
+          'Use instead of experimentId and round.'
+      ),
   }),
-  handler: async ({ experimentId, round }) => {
+  handler: async ({ experimentId, round, workspacePath }) => {
+    // A checkpoint someone attached to the conversation is as worth describing
+    // as one a run produced, and read_file cannot touch it -- it is binary.
+    // Without this branch an attached .pt could be wired into an experiment but
+    // never looked at first.
+    if (workspacePath) {
+      const absolute = resolveScoped('workspace', workspacePath);
+      const inspection = await inspectCheckpoint(absolute);
+      return { scope: 'workspace', path: workspacePath, ...inspection };
+    }
+
+    if (!experimentId || round == null) {
+      throw new ValidationError(
+        'Pass either workspacePath, or both experimentId and round.'
+      );
+    }
+
     const id = assertExperimentId(experimentId);
     const checkpoints = await getCheckpoints(id);
     const checkpoint = checkpoints.find((c) => c.round === round);

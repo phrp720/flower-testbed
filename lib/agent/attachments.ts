@@ -28,9 +28,14 @@ const MAX_BYTES = 10 * 1024 * 1024;
  * a way to stage something for a later execute-shaped tool.
  */
 const ALLOWED_EXTENSIONS = new Set([
+  // Text the agent can read with read_file.
   '.py', '.json', '.yaml', '.yml', '.toml',
   '.txt', '.md', '.csv', '.tsv', '.log',
-  '.pt', '.pth', '.pkl', '.npy', '.npz',
+  // Binary the agent cannot read, but can describe with inspect_checkpoint and
+  // promote with upload_from_agent as an experiment's model file. Deliberately
+  // not .npy or .npz: nothing in the tool surface consumes them, so accepting
+  // one would only let someone upload a file that then sits there unusable.
+  '.pt', '.pth', '.pkl',
 ]);
 
 export interface Attachment {

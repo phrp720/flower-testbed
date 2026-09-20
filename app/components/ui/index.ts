@@ -10,6 +10,7 @@ export { default as Button, LinkButton } from "./Button";
 export { default as Badge, type Tone } from "./Badge";
 export { default as StatusBadge } from "./StatusBadge";
 export { default as Callout } from "./Callout";
+export { default as ChipToggleGroup, type ChipOption } from "./ChipToggleGroup";
 export { default as CopyButton } from "./CopyButton";
 export { default as EmptyState } from "./EmptyState";
 export { default as PageHeader } from "./PageHeader";
