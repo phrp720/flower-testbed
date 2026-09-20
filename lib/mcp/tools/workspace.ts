@@ -50,6 +50,15 @@ async function readIfExists(absolute: string): Promise<string | null> {
   }
 }
 
+/** Raw bytes, for files that are not text and must survive a copy intact. */
+async function readBytesIfExists(absolute: string): Promise<Buffer | null> {
+  try {
+    return await readFile(absolute);
+  } catch {
+    return null;
+  }
+}
+
 async function recordArtifact(input: {
   relativePath: string;
   contents: string;
@@ -179,14 +188,14 @@ export const promoteArtifactTool = defineTool({
   }),
   handler: async ({ workspacePath, type }) => {
     const absolute = resolveScoped('workspace', workspacePath);
-    const contents = await readIfExists(absolute);
+    // Copied as bytes, not decoded and re-encoded as UTF-8. A model file is a
+    // legitimate thing to promote -- the model upload type accepts .pt, .pth
+    // and .pkl -- and a text round-trip would silently corrupt every one of
+    // them while still reporting success.
+    const contents = await readBytesIfExists(absolute);
     if (contents === null) throw new NotFoundError(`No such file: ${workspacePath}`);
 
-    const result = await persistUpload(
-      Buffer.from(contents, 'utf-8'),
-      path.basename(workspacePath),
-      type
-    );
+    const result = await persistUpload(contents, path.basename(workspacePath), type);
 
     return { ...result, note: 'Pass this path to set_experiment_files.' };
   },
