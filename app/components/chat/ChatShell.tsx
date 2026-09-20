@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Button, Callout, Card, EmptyState, Spinner } from "@/app/components/ui";
+import { Button, Callout, Card, Spinner } from "@/app/components/ui";
 import Dialog from "@/app/components/Dialog";
 import ConversationSidebar from "./ConversationSidebar";
 import MessageList from "./MessageList";
 import MessageComposer from "./MessageComposer";
+import ChatSuggestions from "./ChatSuggestions";
 import { readAgentStream } from "@/app/testbed/chat/lib/sse";
 import {
     useConversations,
@@ -21,6 +22,7 @@ import {
     type Thread,
 } from "@/app/hooks/useAgent";
 import { queryKeys } from "@/lib/query-keys";
+import { useExperiments } from "@/app/hooks/useExperiments";
 import type { AgentMessage, Conversation } from "./types";
 
 type Props = { conversationId?: string };
@@ -107,6 +109,10 @@ export default function ChatShell({ conversationId }: Props) {
 
     // Attachments are uploaded as soon as they are picked, so the file is on
     // disk before the turn starts and the message only has to name it.
+    // Only to choose which openers to show: with nothing to analyse, every
+    // suggestion has to be about getting a first run going.
+    const { data: experiments = [] } = useExperiments();
+
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     const uploadAttachment = useUploadAttachment();
 
@@ -303,8 +309,14 @@ export default function ChatShell({ conversationId }: Props) {
         updateConversation.mutate({ autoRun: !conversation.autoRun }, { onError: onMutationError });
     };
 
-    const handleSend = async () => {
-        const text = input.trim();
+    /**
+     * Send a specific message, rather than whatever is in the box.
+     *
+     * A suggestion cannot go through handleSend: it would have to setInput and
+     * then read it back in the same tick, which React has not applied yet.
+     */
+    const submit = async (raw: string) => {
+        const text = raw.trim();
         if (!text && attachments.length === 0) return;
 
         if (conversationId) {
@@ -324,6 +336,8 @@ export default function ChatShell({ conversationId }: Props) {
             fail(e);
         }
     };
+
+    const handleSend = () => void submit(input);
 
     // Claimed by the mount it was addressed to, exactly once.
     useEffect(() => {
@@ -416,15 +430,9 @@ export default function ChatShell({ conversationId }: Props) {
                                 <Spinner size={16} label="Loading conversation" />
                             </div>
                         ) : messages.length === 0 && !isRunning ? (
-                            <EmptyState
-                                icon="sparkle"
-                                title="Ask about your experiments"
-                                description={
-                                    'The agent can read your runs, compare them, inspect saved ' +
-                                    'checkpoints and explain what happened. Try "summarise my last ' +
-                                    'experiment" or "which of my runs converged fastest?"'
-                                }
-                                className="py-16"
+                            <ChatSuggestions
+                                hasExperiments={experiments.length > 0}
+                                onPick={(prompt) => void submit(prompt)}
                             />
                         ) : (
                             <MessageList
