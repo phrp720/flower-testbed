@@ -164,6 +164,7 @@ export default function ExperimentsPage() {
                     <div className="flex items-center gap-2.5 mb-1.5">
                       <Link
                         href={`/testbed/experiments/${exp.id}`}
+                        title={exp.name}
                         className="text-sm font-medium text-ink truncate hover:underline underline-offset-2"
                       >
                         {exp.name}

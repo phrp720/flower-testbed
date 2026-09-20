@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Button, EmptyState, Icon, cn } from "@/app/components/ui";
+import { Button, EmptyState, Icon, cn, CONTROL } from "@/app/components/ui";
 import { useUpdateConversation } from "@/app/hooks/useAgent";
 import type { Conversation } from "./types";
 
@@ -95,6 +95,11 @@ function ConversationRow({
         >
             <Link
                 href={`/testbed/chat/${conversation.id}`}
+                // The sidebar is narrow enough that most titles truncate. The
+                // native tooltip is the right tool: it waits before appearing,
+                // so it never fires while someone is just moving the pointer
+                // down the list.
+                title={conversation.title}
                 className="flex items-center gap-2 min-w-0 flex-1"
             >
                 {dot ? (
@@ -135,6 +140,12 @@ function ConversationRow({
     );
 }
 
+/**
+ * Below this many conversations the list is scannable and a search box is just
+ * a control taking up the space it would save.
+ */
+const SEARCH_FROM = 6;
+
 export default function ConversationSidebar({
     conversations,
     activeId,
@@ -142,9 +153,19 @@ export default function ConversationSidebar({
     onDelete,
     creating,
 }: Props) {
+    const [query, setQuery] = useState("");
+
+    const matches = useMemo(() => {
+        const needle = query.trim().toLowerCase();
+        if (!needle) return conversations;
+        return conversations.filter((c) => c.title.toLowerCase().includes(needle));
+    }, [conversations, query]);
+
+    const searchable = conversations.length >= SEARCH_FROM;
+
     return (
         <aside className="w-60 shrink-0 min-h-0 flex flex-col border-r border-line">
-            <div className="p-3">
+            <div className="p-3 space-y-2">
                 <Button
                     variant="primary"
                     icon="add"
@@ -155,6 +176,24 @@ export default function ConversationSidebar({
                 >
                     New chat
                 </Button>
+
+                {searchable && (
+                    <div className="relative">
+                        <Icon
+                            name="search"
+                            size={13}
+                            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none"
+                        />
+                        <input
+                            type="search"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Search"
+                            aria-label="Search conversations"
+                            className={`${CONTROL} h-8 pl-7 pr-2 text-xs`}
+                        />
+                    </div>
+                )}
             </div>
 
             <nav className="flex-1 min-h-0 overflow-y-auto px-2 pb-3 space-y-0.5">
@@ -164,8 +203,18 @@ export default function ConversationSidebar({
                         title="No conversations"
                         className="py-8 [&>p:first-of-type]:text-xs"
                     />
+                ) : matches.length === 0 ? (
+                    <EmptyState
+                        icon="search"
+                        title="No matches"
+                        // Titles are generated from the opening message, so say
+                        // what was searched rather than implying the whole
+                        // transcript was.
+                        description="Searches titles only."
+                        className="py-8 [&>p:first-of-type]:text-xs"
+                    />
                 ) : (
-                    conversations.map((conversation) => (
+                    matches.map((conversation) => (
                         <ConversationRow
                             key={conversation.id}
                             conversation={conversation}

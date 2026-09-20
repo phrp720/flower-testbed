@@ -388,7 +388,10 @@ export default function ChatShell({ conversationId }: Props) {
                     {/* No subtitle: the suggestions panel below says the same
                         thing, and on a view sized to the viewport every line
                         here is a line taken off the conversation. */}
-                    <h1 className="text-xl font-semibold text-ink truncate">
+                    <h1
+                        title={conversation?.title ?? undefined}
+                        className="text-xl font-semibold text-ink truncate"
+                    >
                         {conversation?.title ?? "Chat"}
                     </h1>
                 </div>
