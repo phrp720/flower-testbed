@@ -294,53 +294,6 @@ The `gh-action/` directory contains a reusable GitHub Action that lets any repos
 | `final_accuracy` | Final accuracy (set only when `wait_for_completion: true`) |
 | `final_loss` | Final loss (set only when `wait_for_completion: true`) |
 
-## User interface
-
-The UI is built from a small component kit in `app/components/ui/`. Pages compose
-these rather than writing Tailwind classes for the same shapes, which is what
-keeps spacing, radius, weight and colour consistent as the app grows.
-
-```tsx
-import { Button, Card, CardHeader, Input, StatusBadge } from "@/app/components/ui";
-```
-
-| Component | Use |
-| --- | --- |
-| `Button`, `LinkButton` | `primary` / `secondary` / `ghost` / `danger`, with `icon` and `loading` |
-| `Card`, `CardHeader` | The one container: hairline border, no shadow |
-| `Badge`, `StatusBadge` | Status labels; `StatusBadge` owns the experiment status map |
-| `Callout` | An inline note attached to the thing it is about |
-| `Field`, `Input`, `Select`, `Textarea`, `Checkbox` | Form controls sharing one control surface |
-| `Table`, `THead`, `TBody`, `TR`, `TH`, `TD` | Hairline-separated rows, tabular figures via `numeric` |
-| `PageHeader`, `SectionLabel`, `KeyValue`, `Stat` | Page and section structure |
-| `EmptyState`, `Spinner`, `Progress`, `Pagination` | Shared states and controls |
-| `Icon` | Every icon, named by meaning |
-
-### Icons
-
-Icons come from [Hugeicons](https://hugeicons.com) and are registered once in
-`app/components/ui/Icon.tsx`, keyed by what they mean rather than what they look
-like:
-
-```tsx
-<Icon name="delete" size={16} />   // not <Delete02Icon />
-```
-
-Components never import an icon package directly. That keeps the set swappable
-from one file and stops the same concept being drawn two different ways in two
-different places. To add one, import the glyph in `Icon.tsx` and give it a
-semantic name.
-
-### Design tokens
-
-Colours, radius and type live as CSS variables on `:root` in `app/globals.css`
-and are exposed to Tailwind through `@theme inline`, so classes read as
-`bg-surface`, `text-ink-muted`, `border-line` rather than as raw greys. The
-palette is deliberately small: a near-neutral scale, one accent used for the
-primary action and the focus ring, and four status hues used only for status.
-Surfaces separate with hairlines instead of shadows; the only shadows in the app
-are on modals, which genuinely sit above the page.
-
 ## Contributing
 
 This is a research project. Contributions, issues, and feature requests are welcome!
