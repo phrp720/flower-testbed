@@ -251,20 +251,27 @@ export default function PlaygroundView({
                 </div>
             )}
 
-            <div
-                className={
-                    drawable
-                        ? "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-6"
-                        : "space-y-5"
-                }
-            >
+            {/*
+              * The visualisation, then the charts across the full width below.
+              *
+              * They used to sit in a 300px sidebar beside it, which meant the
+              * taller of the two columns set the height and the shorter one
+              * ended in dead space -- badly for the filters view, where kernels
+              * and a class list run out long before four stacked charts do, and
+              * visibly even for the surface. Stacking cannot gap whatever the
+              * view turns out to be.
+              */}
+            <div className="space-y-5">
                 <div className="min-w-0">
                     {isLoading ? (
                         <div className="h-80 flex items-center justify-center">
                             <Spinner size={16} label="Working out how this model can be shown" />
                         </div>
                     ) : currentSurface ? (
-                        <div className="flex flex-col lg:flex-row gap-6">
+                        // Centred: the pair is narrower than the card on a wide
+                        // screen, and left-aligned it piled all the slack on the
+                        // right, which read as something missing.
+                        <div className="flex flex-col lg:flex-row lg:justify-center gap-6">
                             <div className="min-w-0">
                                 <SectionLabel className="mb-3">Hidden layers</SectionLabel>
                                 <NetworkDiagram
@@ -327,7 +334,7 @@ export default function PlaygroundView({
                             </div>
                         </div>
                     ) : currentFilters ? (
-                        <div className="flex flex-col lg:flex-row gap-8">
+                        <div className="flex flex-col lg:flex-row lg:justify-center gap-8">
                             <div className="min-w-0">
                                 <SectionLabel className="mb-3">First-layer filters</SectionLabel>
                                 <FilterGrid
@@ -404,7 +411,7 @@ export default function PlaygroundView({
                 <FlCharts
                     experimentId={experimentId}
                     status={status}
-                    variant={drawable ? "sidebar" : "grid"}
+                    variant="grid"
                 />
             </div>
         </Card>

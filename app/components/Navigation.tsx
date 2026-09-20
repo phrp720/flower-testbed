@@ -12,7 +12,7 @@ type Item = { href: string; label: string; icon: IconName };
 const ITEMS: Item[] = [
     { href: "/testbed/dashboard", label: "Dashboard", icon: "dashboard" },
     { href: "/testbed/experiments", label: "Experiments", icon: "experiments" },
-    { href: "/testbed/chat", label: "Chat", icon: "chat" },
+    { href: "/testbed/chat", label: "Chat", icon: "sparkle" },
     { href: "/testbed/settings", label: "Settings", icon: "settings" },
 ];
 

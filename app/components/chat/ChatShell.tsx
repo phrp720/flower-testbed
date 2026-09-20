@@ -244,24 +244,27 @@ export default function ChatShell({ conversationId }: Props) {
         });
     };
 
-    /** Post a message and consume its stream. Assumes the conversation exists. */
-    const send = async (targetId: string, text: string, files: Attachment[] = []) => {
-        setInput("");
-        setAttachments([]);
+    /**
+     * Drive a turn and consume its stream.
+     *
+     * Sending and retrying differ only in which endpoint they hit and whether a
+     * message of the user's goes up with them. Everything from the response
+     * onwards -- the deltas, the refetches, the teardown -- is identical, so it
+     * lives here once rather than being written twice and drifting.
+     *
+     * `restore` is the text to hand back to the composer if the request never
+     * reached the server; a retry has none, because nothing was typed.
+     */
+    const runTurn = async (url: string, body: unknown, restore?: string) => {
         setIsRunning(true);
         setStreamingText("");
         setStreamingThinking("");
 
-        // Show it straight away. It is held apart from the cached thread rather
-        // than written into it, so a refetch cannot resurrect a stale copy: the
-        // moment the server's own message arrives, this list is cleared.
-        setPending([optimisticMessage(text, (messages.at(-1)?.seq ?? 0) + 1)]);
-
         try {
-            const res = await fetch(`/api/agent/conversations/${targetId}/messages`, {
+            const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text, attachments: files }),
+                body: JSON.stringify(body),
             });
 
             if (!res.ok || !res.body) {
@@ -300,7 +303,7 @@ export default function ChatShell({ conversationId }: Props) {
         } catch (e) {
             // Nothing reached the server, so hand the text back rather than
             // losing what they typed.
-            setInput((current) => current || text);
+            if (restore) setInput((current) => current || restore);
             fail(e);
         } finally {
             setIsRunning(false);
@@ -310,6 +313,34 @@ export default function ChatShell({ conversationId }: Props) {
             await refreshThread();
             await queryClient.invalidateQueries({ queryKey: queryKeys.agent.conversations });
         }
+    };
+
+    /** Post a message and consume its stream. Assumes the conversation exists. */
+    const send = async (targetId: string, text: string, files: Attachment[] = []) => {
+        setInput("");
+        setAttachments([]);
+
+        // Show it straight away. It is held apart from the cached thread rather
+        // than written into it, so a refetch cannot resurrect a stale copy: the
+        // moment the server's own message arrives, this list is cleared.
+        setPending([optimisticMessage(text, (messages.at(-1)?.seq ?? 0) + 1)]);
+
+        await runTurn(
+            `/api/agent/conversations/${targetId}/messages`,
+            { text, attachments: files },
+            text
+        );
+    };
+
+    /**
+     * Run the failed turn again.
+     *
+     * Nothing is appended -- the message is already in the transcript -- so
+     * there is no optimistic copy to show and nothing to hand back on failure.
+     */
+    const handleRetry = () => {
+        if (!conversationId) return;
+        void runTurn(`/api/agent/conversations/${conversationId}/retry`, {});
     };
 
     const handleCancel = () => {
@@ -441,7 +472,9 @@ export default function ChatShell({ conversationId }: Props) {
                                 streamingThinking={streamingThinking}
                                 isRunning={agentWorking}
                                 status={conversation?.status}
+                                errorMessage={conversation?.errorMessage ?? null}
                                 onDecided={refreshThread}
+                                onRetry={handleRetry}
                             />
                         )}
                     </div>

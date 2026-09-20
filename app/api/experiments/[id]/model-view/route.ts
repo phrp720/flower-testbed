@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession, unauthorized } from '@/lib/auth';
 import { toErrorResponse } from '@/lib/errors';
 import { assertExperimentId } from '@/lib/experiments/service';
-import { modelView } from '@/lib/python-tools';
+import { getModelView } from '@/lib/experiments/model-view';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,8 +28,7 @@ export async function GET(
     const resolution = request.nextUrl.searchParams.get('resolution');
     const maxSamples = request.nextUrl.searchParams.get('maxSamples');
 
-    const view = await modelView({
-      experimentId: assertExperimentId(id),
+    const view = await getModelView(assertExperimentId(id), {
       resolution: resolution ? Number.parseInt(resolution, 10) : undefined,
       maxSamples: maxSamples ? Number.parseInt(maxSamples, 10) : undefined,
       clientId: request.nextUrl.searchParams.get('clientId'),

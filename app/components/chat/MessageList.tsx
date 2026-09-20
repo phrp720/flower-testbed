@@ -7,8 +7,9 @@ import ToolCallCard from "./ToolCallCard";
 import ThinkingBlock from "./ThinkingBlock";
 import ActionApprovalCard from "./ActionApprovalCard";
 import ExperimentWidget from "./ExperimentWidget";
+import ModelViewWidget from "./ModelViewWidget";
 import AgentStatus from "./AgentStatus";
-import { Callout, CopyButton } from "@/app/components/ui";
+import { Button, Callout, CopyButton } from "@/app/components/ui";
 import type { AgentMessage, ToolCall } from "./types";
 
 type Props = {
@@ -20,7 +21,11 @@ type Props = {
     isRunning: boolean;
     /** The conversation's own status, so a failed turn leaves a visible trace. */
     status?: string;
+    /** Why it failed, straight from the provider. */
+    errorMessage?: string | null;
     onDecided: () => void;
+    /** Run the failed turn again, without retyping anything. */
+    onRetry?: () => void;
 };
 
 function Markdown({ children }: { children: string }) {
@@ -40,6 +45,16 @@ function Markdown({ children }: { children: string }) {
                             {children}
                         </a>
                     ),
+                    /**
+                     * Dropped, never rendered.
+                     *
+                     * The agent cannot see images and has nowhere to host one,
+                     * so a markdown image here is always a guess at a URL that
+                     * does not exist -- and a broken-image glyph beside a
+                     * perfectly good explanation reads as the feature failing.
+                     * The real picture is drawn by ModelViewWidget.
+                     */
+                    img: () => null,
                     code: ({ className, children }) => {
                         // Fenced blocks carry a language class; inline code does not.
                         const isBlock = typeof className === "string" && className.includes("language-");
@@ -80,6 +95,22 @@ function Markdown({ children }: { children: string }) {
 }
 
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
+
+/**
+ * Experiments whose model view was asked about, so the transcript can show the
+ * picture the agent could only describe.
+ */
+function modelViewIdsFrom(calls: ToolCall[]): string[] {
+    const ids = new Set<string>();
+    for (const call of calls) {
+        if (call.toolName !== "describe_model_view") continue;
+        if (call.status !== "succeeded") continue;
+
+        const id = (call.input as { experimentId?: string } | null)?.experimentId;
+        if (typeof id === "string" && UUID_PATTERN.test(id)) ids.add(id);
+    }
+    return [...ids];
+}
 
 /**
  * Experiment ids a tool call touched, so the conversation can show the run
@@ -147,7 +178,9 @@ export default function MessageList({
     streamingThinking,
     isRunning,
     status,
+    errorMessage,
     onDecided,
+    onRetry,
 }: Props) {
     const callsByMessage = new Map<string, ToolCall[]>();
     for (const call of toolCalls) {
@@ -227,6 +260,10 @@ export default function MessageList({
                                 <ExperimentWidget key={id} experimentId={id} />
                             ))}
 
+                            {modelViewIdsFrom(calls).map((id) => (
+                                <ModelViewWidget key={`view-${id}`} experimentId={id} />
+                            ))}
+
                             {message.errorMessage && (
                                 <p className="text-sm text-danger mt-2">{message.errorMessage}</p>
                             )}
@@ -256,12 +293,31 @@ export default function MessageList({
                 coming back to the conversation showed a question with no answer
                 and no reason. The status outlives the dialog. */}
             {!isRunning && status === "error" && messages.length > 0 && (
-                <Callout tone="danger" title="The agent did not reply">
-                    The last turn failed. Check that a model and API key are set in{" "}
-                    <a href="/testbed/settings" className="underline underline-offset-2">
-                        Settings
-                    </a>
-                    , then send the message again.
+                <Callout
+                    tone="danger"
+                    title="The agent did not reply"
+                    actions={
+                        onRetry && (
+                            <Button size="sm" variant="secondary" icon="refresh" onClick={onRetry}>
+                                Retry
+                            </Button>
+                        )
+                    }
+                >
+                    {/* The provider's own words first. "Check your settings" is
+                        useless advice when the real answer is a rate limit or a
+                        model name the endpoint does not know. */}
+                    {errorMessage ? (
+                        <span className="font-mono text-xs break-words">{errorMessage}</span>
+                    ) : (
+                        <>
+                            The last turn failed. Check that a model and API key are set in{" "}
+                            <a href="/testbed/settings" className="underline underline-offset-2">
+                                Settings
+                            </a>
+                            .
+                        </>
+                    )}
                 </Callout>
             )}
         </div>

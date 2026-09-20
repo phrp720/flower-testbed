@@ -344,7 +344,7 @@ export default function DashboardPage() {
         />
         <ShortcutCard
           href="/testbed/chat"
-          icon="chat"
+          icon="sparkle"
           title="Open the agent"
           description="Set up runs, analyse results"
         />

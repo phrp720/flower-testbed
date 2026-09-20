@@ -10,6 +10,9 @@ import {
   getMetrics,
 } from '@/lib/experiments/service';
 import { compareExperiments, digestExperiment } from '@/lib/agent/analysis';
+import { getModelView } from '@/lib/experiments/model-view';
+import type { FilterFrame } from '@/lib/python-tools';
+import { ValidationError } from '@/lib/errors';
 
 /** Group B -- reading and interpreting results. All read-only. */
 
@@ -193,10 +196,160 @@ export const readExperimentLogsTool = defineTool({
   },
 });
 
+/**
+ * The same answer the experiment page draws, in words.
+ *
+ * The page renders decision surfaces and convolution kernels as base64 pixel
+ * grids; there is no point sending those to a model, which cannot look at them
+ * and would pay tens of thousands of tokens for the privilege. What survives
+ * the translation is everything that is actually interpretable -- which view the
+ * model supports and why, its input shape, its layer sizes or kernel geometry,
+ * and, for an image model, how accuracy is distributed across the classes. That
+ * last one is the part a person usually wants explained anyway.
+ *
+ * Served from the same cache as the page, so asking for it after opening the
+ * experiment costs nothing, and asking for it first warms the page.
+ */
+export const describeModelViewTool = defineTool({
+  name: 'describe_model_view',
+  title: 'Describe what the model learned',
+  description:
+    'What the experiment page shows under "What the network learned", as numbers ' +
+    'rather than pixels: which visualisation the model supports and why, its input ' +
+    'shape, hidden layer sizes or first-layer kernel geometry, and -- for image ' +
+    'models -- accuracy broken down by class for one round. Use this when asked what ' +
+    'a model learned, which classes it confuses, or what the picture means. ' +
+    'You cannot see the image, but calling this draws it in the conversation, ' +
+    'attached to this call and so sitting just above whatever you write next. ' +
+    'Explain what the numbers mean and refer to the picture as shown above -- do ' +
+    'not tell the user to go to another page for it, and never write a markdown ' +
+    'image: the platform draws it, you do not. First call on a finished run takes ' +
+    'a few seconds; later ones are instant.',
+  group: 'results',
+  risk: 'read',
+  inputSchema: z.object({
+    experimentId: experimentIdSchema,
+    round: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Round to break down by class. Defaults to the last saved round.'),
+    clientId: z
+      .string()
+      .optional()
+      .describe("Inspect one client's own model instead of the aggregated global one."),
+  }),
+  handler: async ({ experimentId, round, clientId }) => {
+    const id = assertExperimentId(experimentId);
+    const experiment = await getExperiment(id);
+    const view = await getModelView(id, { clientId: clientId ?? null });
+
+    if (!view.ok) {
+      return {
+        available: false,
+        reason: view.error ?? 'The model could not be inspected.',
+      };
+    }
+
+    const frames = (view.frames ?? []) as Array<{ round: number }>;
+    const common = {
+      experimentId: id,
+      experimentName: experiment.name,
+      view: view.view,
+      inputShape: view.inputShape ?? null,
+      clientId: view.clientId ?? null,
+      roundsAvailable: frames.map((frame) => frame.round),
+      /** For the animated round-by-round version, which the inline one is not. */
+      pageUrl: `/testbed/experiments/${id}`,
+    };
+
+    if (view.view === 'none') {
+      return {
+        ...common,
+        available: false,
+        reason: view.reason ?? 'This model has no visualisation the platform can draw.',
+      };
+    }
+
+    if (view.view === 'surface') {
+      const labels = view.labels ?? [];
+      return {
+        ...common,
+        available: true,
+        shows:
+          'A decision surface: the model classifies every point of the input plane, ' +
+          'and each hidden neuron is drawn by how it responds across that same plane.',
+        datasetKind: view.datasetKind ?? null,
+        hiddenLayerSizes: view.hiddenSizes ?? [],
+        inputDomain: view.domain ?? null,
+        gridResolution: view.resolution ?? null,
+        activationSource: view.activationSource ?? null,
+        trainingPoints: (view.points ?? []).length,
+        classCount: new Set(labels).size,
+        note:
+          'The surface has already been drawn for the user, just above your reply. ' +
+          'Describe what it means rather than linking them away. Per-round loss and ' +
+          'accuracy come from get_metrics.',
+      };
+    }
+
+    const filterFrames = (view.frames ?? []) as FilterFrame[];
+    const chosen = round
+      ? filterFrames.find((frame) => frame.round === round)
+      : filterFrames[filterFrames.length - 1];
+
+    if (!chosen) {
+      throw new ValidationError(
+        `Round ${round} has no saved checkpoint. Available: ${common.roundsAvailable.join(', ')}`
+      );
+    }
+
+    // Ordered worst-first, because the question behind this is almost always
+    // which classes the model is getting wrong.
+    const perClass = [...chosen.perClass].sort(
+      (a, b) => (a.accuracy ?? 0) - (b.accuracy ?? 0)
+    );
+
+    return {
+      ...common,
+      available: true,
+      shows:
+        'The first convolution layer\'s kernels -- the small patches the network ' +
+        'learned to look for -- alongside accuracy per class.',
+      firstConvLayer: view.layerName ?? null,
+      kernelShape:
+        view.kernelHeight && view.kernelWidth
+          ? {
+              filters: view.totalFilters ?? null,
+              inputChannels: view.inputChannels ?? null,
+              height: view.kernelHeight,
+              width: view.kernelWidth,
+            }
+          : null,
+      classNames: view.classNames ?? [],
+      evaluation: {
+        round: chosen.round,
+        accuracy: chosen.accuracy,
+        samples: view.evalSamples ?? null,
+        source: view.evalSource ?? null,
+        perClassWorstFirst: perClass,
+      },
+      note:
+        'The kernels and this class breakdown have already been drawn for the user, ' +
+        'just above your reply. Describe what they mean rather than linking them ' +
+        'away. The accuracy here was ' +
+        'measured by this tool over the clients\' own test splits, so it can differ ' +
+        'slightly from the round metric reported during training.',
+    };
+  },
+});
+
 export const resultsTools = [
   summariseExperimentTool,
   getMetricsTool,
   listCheckpointsTool,
   compareExperimentsTool,
   readExperimentLogsTool,
+  describeModelViewTool,
 ];

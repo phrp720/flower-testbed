@@ -480,6 +480,100 @@ export async function startAgentTurn(
 }
 
 /**
+ * Run the last turn again, without the user having to retype anything.
+ *
+ * A failed turn is almost always the provider refusing the request -- a missing
+ * or expired key, a model name the endpoint does not know, a rate limit, a
+ * network blip. None of that is the user's fault and none of it is in what they
+ * wrote, so making them reconstruct the message to try again is pure friction.
+ * Their message is already persisted; the turn simply has to be driven again.
+ *
+ * The one thing that cannot be replayed blindly is a failure that landed after
+ * the model had already asked for tools. That leaves an assistant message
+ * carrying tool_use blocks with no matching tool_result, which is a 400 from
+ * Anthropic and quietly derails an OpenAI-compatible server. Resuming is the
+ * operation that fills those in, so that case is handed to it instead.
+ */
+export async function retryAgentTurn(
+  conversationId: string,
+  options: { role?: RoleName } = {}
+): Promise<void> {
+  const conversation = await getConversation(conversationId);
+
+  if (conversation.status === 'running' && isTurnRunning(conversationId)) {
+    throw new ValidationError('This conversation is already working on a reply.');
+  }
+
+  if (conversation.status === 'awaiting_approval') {
+    throw new ValidationError('Decide the pending actions first.');
+  }
+
+  const history = await getMessages(conversationId);
+  const last = history[history.length - 1];
+  if (!last) throw new ValidationError('There is nothing to retry yet.');
+
+  // Anything a dead process left mid-call, so resuming does not wait on a tool
+  // that is never coming back.
+  await sweepStaleToolCalls(conversationId);
+  await setConversationStatus(conversationId, 'idle');
+
+  const dangling = last.role === 'assistant' ? toolUseBlocks(last.content as LlmBlock[]) : [];
+
+  if (dangling.length > 0) {
+    /**
+     * A call the model asked for that was never even written down.
+     *
+     * The turn can die between the provider returning a tool_use block and the
+     * platform recording the row for it. Resuming works from the rows, so such
+     * a call would be skipped -- and a tool_use with no matching tool_result is
+     * exactly the thing that 400s. Recorded now as an already-failed call, so
+     * the model is told what happened instead of the payload being malformed.
+     */
+    const known = new Set(
+      (await getToolCallsForMessage(last.id)).map((row) => row.toolUseId)
+    );
+
+    for (const call of dangling) {
+      if (known.has(call.id)) continue;
+
+      const row = await recordToolCall({
+        conversationId,
+        messageId: last.id,
+        toolUseId: call.id,
+        toolName: call.name,
+        input: call.input,
+        riskLevel: getTool(call.name)?.risk ?? 'execute',
+        requiresApproval: false,
+      });
+
+      await completeToolCall(row.id, {
+        content: 'Error: the turn failed before this call could run.',
+        isError: true,
+        durationMs: 0,
+      });
+    }
+
+    void resumeAgentTurn(conversationId, last.id).catch((error) => {
+      const message = error instanceof Error ? error.message : 'The turn could not be resumed.';
+      void setConversationStatus(conversationId, 'error', message);
+      emitAgentEvent(conversationId, { type: 'error', message });
+      emitAgentEvent(conversationId, { type: 'turn_end', reason: 'error' });
+    });
+    return;
+  }
+
+  // The same retrieval the original turn would have done, from the same text.
+  const lastUserText = [...history]
+    .reverse()
+    .find((message) => message.role === 'user' && message.kind === 'chat')
+    ?.content?.find((block) => block.type === 'text')?.text;
+
+  const retrieved = lastUserText ? await retrieveContext(lastUserText) : null;
+
+  void drive(conversationId, options.role ?? 'orchestrator', retrieved);
+}
+
+/**
  * Continue a suspended turn once every pending call has been decided.
  *
  * Approved calls run; declined ones still produce a tool_result saying so. A
