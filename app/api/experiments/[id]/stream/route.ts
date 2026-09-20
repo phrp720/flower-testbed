@@ -1,8 +1,10 @@
 import { NextRequest } from 'next/server';
-import { db, schema } from '@/lib/db';
-import { eq, desc } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
 import { parseExperimentIdParam } from '@/lib/experiment-id';
+import { buildExperimentSnapshot } from '@/lib/experiments/service';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/experiments/:id/stream - Server-Sent Events for real-time updates
 export async function GET(
@@ -25,97 +27,58 @@ export async function GET(
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
+      let closed = false;
 
-      // Function to send SSE message
-      const sendEvent = (data: any) => {
+      const sendEvent = (data: unknown) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+
+      const shutdown = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(intervalId);
+        clearInterval(keepAliveId);
+        try {
+          controller.close();
+        } catch {
+          // Already closed by the runtime; nothing to do.
+        }
       };
 
       // Poll for updates every 2 seconds
       const intervalId = setInterval(async () => {
         try {
-          // Fetch experiment status
-          const [experiment] = await db
-            .select()
-            .from(schema.experiments)
-            .where(eq(schema.experiments.id, experimentId));
+          const snapshot = await buildExperimentSnapshot(experimentId);
 
-          if (!experiment) {
-            clearInterval(intervalId);
-            controller.close();
+          if (!snapshot) {
+            shutdown();
             return;
           }
 
-          // Fetch all metrics
-          const metrics = await db
-            .select()
-            .from(schema.metrics)
-            .where(eq(schema.metrics.experimentId, experimentId))
-            .orderBy(schema.metrics.round);
-
-          // Fetch all checkpoints
-          const checkpoints = await db
-            .select()
-            .from(schema.modelCheckpoints)
-            .where(eq(schema.modelCheckpoints.experimentId, experimentId))
-            .orderBy(schema.modelCheckpoints.round);
-
-          const latestMetrics = metrics[metrics.length - 1] || null;
-
-          // Send update
-          sendEvent({
-            experiment: {
-              id: experiment.id,
-              name: experiment.name,
-              status: experiment.status,
-              currentRound: latestMetrics?.round || 0,
-              totalRounds: experiment.numRounds,
-            },
-            metrics: metrics.map(m => ({
-              id: m.id,
-              round: m.round,
-              trainLoss: m.trainLoss,
-              trainAccuracy: m.trainAccuracy,
-              evalLoss: m.evalLoss,
-              evalAccuracy: m.evalAccuracy,
-              createdAt: m.createdAt,
-            })),
-            checkpoints: checkpoints.map(c => ({
-              id: c.id,
-              round: c.round,
-              filePath: c.filePath,
-              accuracy: c.accuracy,
-              loss: c.loss,
-              createdAt: c.createdAt,
-            })),
-            latestMetrics: latestMetrics ? {
-              round: latestMetrics.round,
-              trainLoss: latestMetrics.trainLoss,
-              trainAccuracy: latestMetrics.trainAccuracy,
-              evalLoss: latestMetrics.evalLoss,
-              evalAccuracy: latestMetrics.evalAccuracy,
-            } : null,
-          });
+          sendEvent(snapshot);
 
           // Stop if experiment is completed or failed
-          if (experiment.status === 'completed' || experiment.status === 'failed') {
-            clearInterval(intervalId);
-            // Send final update
+          if (
+            snapshot.experiment.status === 'completed' ||
+            snapshot.experiment.status === 'failed'
+          ) {
             sendEvent({ status: 'complete', final: true });
-            controller.close();
+            shutdown();
           }
         } catch (error) {
           console.error('Stream error:', error);
-          clearInterval(intervalId);
-          controller.close();
+          shutdown();
         }
       }, 2000);
 
+      // Comment frame: keeps intermediaries from dropping an idle connection.
+      const keepAliveId = setInterval(() => {
+        if (closed) return;
+        controller.enqueue(encoder.encode(': ping\n\n'));
+      }, 15000);
+
       // Clean up on client disconnect
-      request.signal.addEventListener('abort', () => {
-        clearInterval(intervalId);
-        controller.close();
-      });
+      request.signal.addEventListener('abort', shutdown);
     },
   });
 

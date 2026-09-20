@@ -3,7 +3,7 @@ FlowerClient - PyTorch client implementation for Flower federated learning.
 """
 
 from collections import OrderedDict
-from typing import List, Tuple, Dict, Any, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader
 import flwr as fl
 from flwr.client import Client
 from flwr.common import NDArrays, Scalar, Context
+
+from .evaluate import evaluate_model
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -31,6 +33,7 @@ class FlowerClient(fl.client.NumPyClient):
         device: torch.device,
         local_epochs: int = 1,
         learning_rate: float = 0.01,
+        partition_id: Optional[int] = None,
     ):
         """
         Initialize the Flower client.
@@ -49,6 +52,10 @@ class FlowerClient(fl.client.NumPyClient):
         self.device = device
         self.local_epochs = local_epochs
         self.learning_rate = learning_rate
+        # Flower's client id is a random node identifier, not the data partition.
+        # Reporting the partition explicitly is what lets analysis line a client's
+        # model up with the data it actually trained on.
+        self.partition_id = partition_id
 
     def get_parameters(self, config: Dict[str, Scalar]) -> NDArrays:
         """Return model parameters as a list of NumPy arrays."""
@@ -90,6 +97,10 @@ class FlowerClient(fl.client.NumPyClient):
             {
                 "train_loss": float(train_loss),
                 "train_accuracy": float(train_acc),
+                # Reported so analysis can tie this client's model back to the
+                # data it trained on. Flower's client id is a random node
+                # identifier and carries no partition information.
+                **({"partition_id": int(self.partition_id)} if self.partition_id is not None else {}),
             },
         )
 
@@ -113,7 +124,10 @@ class FlowerClient(fl.client.NumPyClient):
         return (
             float(loss),
             len(self.testloader.dataset),
-            {"eval_accuracy": float(accuracy)},
+            {
+                "eval_accuracy": float(accuracy),
+                **({"partition_id": int(self.partition_id)} if self.partition_id is not None else {}),
+            },
         )
 
     def _train(self, epochs: int, learning_rate: float) -> Tuple[float, float]:
@@ -164,33 +178,14 @@ class FlowerClient(fl.client.NumPyClient):
         """
         Evaluate the model on test data.
 
+        Delegates to the shared implementation so a standalone evaluation of a
+        saved checkpoint produces numbers comparable with these.
+
         Returns:
             Loss and accuracy
         """
-        self.model.eval()
-        criterion = nn.CrossEntropyLoss()
-
-        total_loss = 0.0
-        correct = 0
-        total = 0
-
-        with torch.no_grad():
-            for batch in self.testloader:
-                images, labels = batch
-                images, labels = images.to(self.device), labels.to(self.device)
-
-                outputs = self.model(images)
-                loss = criterion(outputs, labels)
-
-                total_loss += loss.item()
-                _, predicted = outputs.max(1)
-                total += labels.size(0)
-                correct += predicted.eq(labels).sum().item()
-
-        avg_loss = total_loss / len(self.testloader)
-        accuracy = correct / total
-
-        return avg_loss, accuracy
+        loss, accuracy, _ = evaluate_model(self.model, self.testloader, self.device)
+        return loss, accuracy
 
 
 def create_client_fn(
@@ -200,6 +195,7 @@ def create_client_fn(
     device: torch.device,
     local_epochs: int = 1,
     learning_rate: float = 0.01,
+    client_overrides: Optional[Dict[Any, Dict[str, Any]]] = None,
 ) -> Callable[[Context], Client]:
     """
     Create a client function for Flower simulation.
@@ -213,10 +209,14 @@ def create_client_fn(
         device: Device to run on
         local_epochs: Number of local epochs
         learning_rate: Learning rate
+        client_overrides: Per-partition hyperparameter overrides, keyed by
+            partition id. Lets individual nodes train differently from the rest,
+            which is what makes heterogeneous-client experiments possible.
 
     Returns:
         Client function that takes Context and returns Client
     """
+    overrides = client_overrides or {}
 
     def client_fn(context: Context) -> Client:
         """Create a Flower client for the given context."""
@@ -232,14 +232,23 @@ def create_client_fn(
         # Load data partition for this client
         trainloader, testloader = load_data_fn(int(partition_id), num_clients)
 
+        # Apply any per-node overrides. JSON object keys are strings, so accept
+        # either form rather than silently missing the match.
+        override = overrides.get(int(partition_id)) or overrides.get(str(partition_id)) or {}
+        node_epochs = int(override.get("local_epochs", local_epochs))
+        node_lr = float(override.get("learning_rate", learning_rate))
+        if override:
+            print(f"[Client {partition_id}] overrides: epochs={node_epochs} lr={node_lr}")
+
         # Create NumPyClient and convert to Client
         numpy_client = FlowerClient(
             model=model,
             trainloader=trainloader,
             testloader=testloader,
             device=device,
-            local_epochs=local_epochs,
-            learning_rate=learning_rate,
+            local_epochs=node_epochs,
+            learning_rate=node_lr,
+            partition_id=int(partition_id),
         )
 
         # Convert NumPyClient to Client (required by modern Flower API)

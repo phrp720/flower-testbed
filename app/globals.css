@@ -1,31 +1,109 @@
 @import "tailwindcss";
 
+/**
+ * Design tokens.
+ *
+ * Every surface, border and text colour in the app resolves to one of these,
+ * so the whole palette moves from one place. They are deliberately few: a
+ * near-neutral scale, one accent, and four status hues used only for status.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces, from the page backdrop inward. */
+  --canvas: #fafafa;
+  --surface: #ffffff;
+  --surface-muted: #f6f6f7;
+  --surface-hover: #f1f1f2;
+
+  /* Hairlines. The UI separates with these rather than with shadows. */
+  --line: #e8e8ea;
+  --line-strong: #d6d6da;
+
+  /* Text, in descending emphasis. */
+  --ink: #18181b;
+  --ink-muted: #6b6b76;
+  --ink-subtle: #9a9aa5;
+  --ink-inverted: #ffffff;
+
+  /* One accent, used for the primary action and the focus ring only. */
+  --accent: #18181b;
+  --accent-hover: #2f2f36;
+  --ring: #a1a1ab;
+
+  /* Status. Text and border share a hue; the fill is its faintest tint. */
+  --ok: #15803d;
+  --ok-surface: #f0fdf4;
+  --ok-line: #bbf7d0;
+
+  --warn: #b45309;
+  --warn-surface: #fffbeb;
+  --warn-line: #fde68a;
+
+  --danger: #b91c1c;
+  --danger-surface: #fef2f2;
+  --danger-line: #fecaca;
+
+  --info: #1d4ed8;
+  --info-surface: #eff6ff;
+  --info-line: #bfdbfe;
+
+  --radius: 0.625rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-ink-inverted: var(--ink-inverted);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-ring: var(--ring);
+
+  --color-ok: var(--ok);
+  --color-ok-surface: var(--ok-surface);
+  --color-ok-line: var(--ok-line);
+
+  --color-warn: var(--warn);
+  --color-warn-surface: var(--warn-surface);
+  --color-warn-line: var(--warn-line);
+
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-line: var(--danger-line);
+
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
+  --color-info-line: var(--info-line);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --radius-card: var(--radius);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Text at these sizes reads better with the optical tightening on. */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Modal animations */
+/* Numbers that change in place -- metrics, counters, timers -- should not
+   reflow the layout as their digits change. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -38,10 +116,43 @@ body {
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
   to {
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Network diagram: dashes travelling along a weight, input toward output.
+   The dash pattern sums to 10, so shifting the offset by 10 is exactly one
+   period and the loop has no visible seam. */
+@keyframes flowDash {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Steady dashes still show direction; only the movement goes. */
+  [data-flow-link] {
+    animation: none !important;
+  }
+}
+
+/* The native control is chrome we cannot restyle; this keeps the arrow but
+   drops the platform bevel so a select matches the inputs beside it. */
+select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%236b6b76' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
 }

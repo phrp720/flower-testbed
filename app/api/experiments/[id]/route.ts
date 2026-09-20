@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, schema } from '@/lib/db';
-import { eq } from 'drizzle-orm';
 import { getSession, unauthorized } from '@/lib/auth';
-import { unlink, rm } from 'fs/promises';
-import path from 'path';
-import { getCheckpointsDir, stopExperimentExecution } from '@/lib/experiment-runtime';
-import { parseExperimentIdParam } from '@/lib/experiment-id';
+import { toErrorResponse } from '@/lib/errors';
+import {
+  assertExperimentId,
+  deleteExperiment,
+  getExperimentDetail,
+  updateExperiment,
+} from '@/lib/experiments/service';
 
 // GET /api/experiments/[id] - Get single experiment with metrics
 export async function GET(
@@ -17,73 +18,27 @@ export async function GET(
 
   try {
     const { id } = await params;
-    const experimentId = parseExperimentIdParam(id);
-
-    if (!experimentId) {
-      return NextResponse.json(
-        { error: 'Invalid experiment ID' },
-        { status: 400 }
-      );
-    }
-
-    // Fetch experiment
-    const [experiment] = await db
-      .select()
-      .from(schema.experiments)
-      .where(eq(schema.experiments.id, experimentId));
-
-    if (!experiment) {
-      return NextResponse.json(
-        { error: 'Experiment not found' },
-        { status: 404 }
-      );
-    }
-
-    // Fetch metrics for this experiment
-    const metrics = await db
-      .select()
-      .from(schema.metrics)
-      .where(eq(schema.metrics.experimentId, experimentId))
-      .orderBy(schema.metrics.round);
-
-    // Fetch checkpoints
-    const checkpoints = await db
-      .select()
-      .from(schema.modelCheckpoints)
-      .where(eq(schema.modelCheckpoints.experimentId, experimentId))
-      .orderBy(schema.modelCheckpoints.round);
-
-    return NextResponse.json({
-      experiment,
-      metrics,
-      checkpoints,
-    });
+    const detail = await getExperimentDetail(assertExperimentId(id));
+    return NextResponse.json(detail);
   } catch (error) {
-    console.error('Error fetching experiment:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch experiment' },
-      { status: 500 }
-    );
+    return toErrorResponse(error, 'Error fetching experiment', 'Failed to fetch experiment');
   }
 }
 
-// Helper to safely delete a file
-async function safeDeleteFile(filePath: string | null) {
-  if (!filePath) return;
-  try {
-    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
-    await unlink(fullPath);
-  } catch (error) {
-    console.log(`Could not delete file: ${filePath}`);
-  }
-}
+// PATCH /api/experiments/[id] - Update the configuration of a pending experiment
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session) return unauthorized();
 
-// Helper to safely delete a directory
-async function safeDeleteDir(dirPath: string) {
   try {
-    await rm(dirPath, { recursive: true, force: true });
+    const { id } = await params;
+    const experiment = await updateExperiment(assertExperimentId(id), await request.json());
+    return NextResponse.json({ experiment });
   } catch (error) {
-    console.log(`Could not delete directory: ${dirPath}`);
+    return toErrorResponse(error, 'Error updating experiment', 'Failed to update experiment');
   }
 }
 
@@ -97,52 +52,9 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    const experimentId = parseExperimentIdParam(id);
-
-    if (!experimentId) {
-      return NextResponse.json(
-        { error: 'Invalid experiment ID' },
-        { status: 400 }
-      );
-    }
-
-    // Fetch experiment to get file paths
-    const [experiment] = await db
-      .select()
-      .from(schema.experiments)
-      .where(eq(schema.experiments.id, experimentId));
-
-    if (!experiment) {
-      return NextResponse.json(
-        { error: 'Experiment not found' },
-        { status: 404 }
-      );
-    }
-
-    if (experiment.status === 'running' || experiment.status === 'pending') {
-      await stopExperimentExecution(experimentId);
-    }
-
-    // Delete uploaded files (algorithm, model, config)
-    await safeDeleteFile(experiment.algorithmPath);
-    await safeDeleteFile(experiment.modelPath);
-    await safeDeleteFile(experiment.configPath);
-
-    // Delete the experiment's checkpoint directory
-    const checkpointDir = path.join(getCheckpointsDir(), `exp_${experimentId}`);
-    await safeDeleteDir(checkpointDir);
-
-    // Delete experiment from database (cascades to metrics and checkpoints)
-    await db
-      .delete(schema.experiments)
-      .where(eq(schema.experiments.id, experimentId));
-
+    await deleteExperiment(assertExperimentId(id));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting experiment:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete experiment' },
-      { status: 500 }
-    );
+    return toErrorResponse(error, 'Error deleting experiment', 'Failed to delete experiment');
   }
 }

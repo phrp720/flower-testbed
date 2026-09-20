@@ -6,6 +6,9 @@ import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { promisify } from 'util';
 import { db, schema } from '@/lib/db';
 import { eq, or } from 'drizzle-orm';
+import { getCheckpointsDir, getExperimentCheckpointDir } from '@/lib/storage';
+import { getPythonExecutable, getRunnerScript } from '@/lib/python';
+import { getProjectRoot } from '@/lib/paths';
 
 const DOCKER_API_VERSION = 'v1.41';
 const execFileAsync = promisify(execFile);
@@ -17,9 +20,8 @@ export interface ExperimentCapacity {
   canCreateExperiment: boolean;
 }
 
-export function getCheckpointsDir(): string {
-  return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
-}
+// Re-exported so existing importers keep working; the definition lives in lib/storage.
+export { getCheckpointsDir };
 
 function getContainerSocketPath(): string {
   return process.env.CONTAINER_SOCKET_PATH || '/var/run/docker.sock';
@@ -30,7 +32,7 @@ export function getWorkerContainerName(experimentId: string): string {
 }
 
 export function getExperimentPidFile(experimentId: string): string {
-  return path.join(getCheckpointsDir(), `exp_${experimentId}`, 'runner.pid');
+  return path.join(getExperimentCheckpointDir(experimentId), 'runner.pid');
 }
 
 export function shouldUseDockerExecutor(): boolean {
@@ -96,7 +98,7 @@ export async function getExperimentCapacity(options?: {
 }
 
 export async function ensureExperimentRuntimeDirs(experimentId: string): Promise<void> {
-  const checkpointDir = path.join(getCheckpointsDir(), `exp_${experimentId}`);
+  const checkpointDir = getExperimentCheckpointDir(experimentId);
   await mkdir(checkpointDir, { recursive: true });
 }
 
@@ -177,13 +179,9 @@ async function stopLocalWorker(experimentId: string): Promise<void> {
 }
 
 async function startLocalWorker(experimentId: string): Promise<void> {
-  const projectRoot = process.cwd();
-  const pythonScript = path.join(projectRoot, 'runner', 'flower_runner.py');
-  const pythonPath = path.join(
-    process.env.VENV_PATH ?? path.join(projectRoot, 'venv'),
-    'bin',
-    'python'
-  );
+  const projectRoot = getProjectRoot();
+  const pythonScript = getRunnerScript('flower_runner.py');
+  const pythonPath = getPythonExecutable();
   const showLogs = process.env.SHOW_FLWR_LOGS === 'true';
 
   const spawnOptions: SpawnOptions = {

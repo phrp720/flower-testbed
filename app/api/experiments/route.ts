@@ -1,21 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, schema } from '@/lib/db';
-import { desc } from 'drizzle-orm';
 import { getSession, unauthorized } from '@/lib/auth';
-import os from 'os';
-import { getExperimentCapacity } from '@/lib/experiment-runtime';
-
-function getEffectiveRayCpuCount(): number {
-  const visibleCpus = os.cpus().length || 1;
-  const configured = process.env.RAY_NUM_CPUS;
-
-  if (!configured) return visibleCpus;
-
-  const parsed = Number.parseInt(configured, 10);
-  if (Number.isNaN(parsed) || parsed <= 0) return visibleCpus;
-
-  return Math.min(visibleCpus, parsed);
-}
+import { toErrorResponse } from '@/lib/errors';
+import { createExperiment, listExperiments } from '@/lib/experiments/service';
 
 // GET /api/experiments - List all experiments
 export async function GET() {
@@ -23,18 +9,10 @@ export async function GET() {
   if (!session) return unauthorized();
 
   try {
-    const experiments = await db
-      .select()
-      .from(schema.experiments)
-      .orderBy(desc(schema.experiments.createdAt));
-
+    const experiments = await listExperiments();
     return NextResponse.json({ experiments });
   } catch (error) {
-    console.error('Error fetching experiments:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch experiments' },
-      { status: 500 }
-    );
+    return toErrorResponse(error, 'Error fetching experiments', 'Failed to fetch experiments');
   }
 }
 
@@ -44,85 +22,9 @@ export async function POST(request: NextRequest) {
   if (!session) return unauthorized();
 
   try {
-    const body = await request.json();
-
-    const {
-      name,
-      description,
-      framework,
-      algorithmPath,
-      modelPath,
-      configPath,
-      datasetPath,
-      numClients = 10,
-      numRounds = 3,
-      clientFraction = 0.5,
-      localEpochs = 1,
-      learningRate = 0.01,
-      useGpu = false,
-      cpusPerClient = 1,
-      gpuFractionPerClient = 0.1,
-      customConfig,
-    } = body;
-
-    // Validate required fields
-    if (!name || !framework) {
-      return NextResponse.json(
-        { error: 'Name and framework are required' },
-        { status: 400 }
-      );
-    }
-
-    const effectiveRayCpus = getEffectiveRayCpuCount();
-    if (cpusPerClient > effectiveRayCpus) {
-      return NextResponse.json(
-        {
-          error: `CPUs per client (${cpusPerClient}) cannot exceed the available Ray CPU budget (${effectiveRayCpus}).`,
-        },
-        { status: 400 }
-      );
-    }
-
-    const capacity = await getExperimentCapacity();
-    if (!capacity.canCreateExperiment) {
-      return NextResponse.json(
-        {
-          error: `All experiment worker slots are busy (${capacity.activeExperiments}/${capacity.maxConcurrentExperiments}). Try again when a slot is free.`,
-        },
-        { status: 409 }
-      );
-    }
-
-    // Insert experiment into database
-    const [experiment] = await db
-      .insert(schema.experiments)
-      .values({
-        name,
-        description,
-        framework,
-        algorithmPath,
-        modelPath,
-        configPath,
-        datasetPath,
-        numClients,
-        numRounds,
-        clientFraction,
-        localEpochs,
-        learningRate,
-        useGpu,
-        cpusPerClient,
-        gpuFractionPerClient,
-        customConfig,
-        status: 'pending',
-      })
-      .returning();
-
+    const experiment = await createExperiment(await request.json());
     return NextResponse.json({ experiment }, { status: 201 });
   } catch (error) {
-    console.error('Error creating experiment:', error);
-    return NextResponse.json(
-      { error: 'Failed to create experiment' },
-      { status: 500 }
-    );
+    return toErrorResponse(error, 'Error creating experiment', 'Failed to create experiment');
   }
 }

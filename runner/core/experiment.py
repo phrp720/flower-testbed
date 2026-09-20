@@ -110,7 +110,7 @@ class ExperimentManager:
                     metrics.get("train_accuracy"),
                     metrics.get("eval_loss"),
                     metrics.get("eval_accuracy"),
-                    json.dumps(metrics.get("client_metrics", [])),
+                    json.dumps(metrics.get("client_metrics") or []),
                 )
             )
             self.conn.commit()
@@ -129,8 +129,21 @@ class ExperimentManager:
             self.conn.commit()
         print(f"[ExperimentManager] Saved final results - Accuracy: {accuracy:.4f}, Loss: {loss:.4f}")
 
-    def record_checkpoint(self, round_num: int, file_path: str, accuracy: Optional[float], loss: Optional[float]):
-        """Record a checkpoint in the database."""
+    def record_checkpoint(
+        self,
+        round_num: int,
+        file_path: str,
+        accuracy: Optional[float],
+        loss: Optional[float],
+        client_id: Optional[str] = None,
+    ):
+        """
+        Record a checkpoint in the database.
+
+        client_id is NULL for the aggregated global model and set for a client's
+        local model, so existing queries that want the global chain filter on
+        `client_id IS NULL`.
+        """
         if not self.conn:
             raise RuntimeError("Not connected to database")
 
@@ -138,8 +151,8 @@ class ExperimentManager:
             # Use PostgreSQL NOW() for consistent timezone handling
             cur.execute(
                 """
-                INSERT INTO model_checkpoints (experiment_id, round, file_path, accuracy, loss, created_at)
-                VALUES (%s, %s, %s, %s, %s, NOW())
+                INSERT INTO model_checkpoints (experiment_id, round, file_path, accuracy, loss, client_id, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
                 """,
                 (
                     self.experiment_id,
@@ -147,10 +160,54 @@ class ExperimentManager:
                     file_path,
                     accuracy,
                     loss,
+                    str(client_id) if client_id is not None else None,
                 )
             )
             self.conn.commit()
-        print(f"[ExperimentManager] Recorded checkpoint for round {round_num}")
+        if client_id is None:
+            print(f"[ExperimentManager] Recorded checkpoint for round {round_num}")
+
+    def record_evaluation(
+        self,
+        round_num: int,
+        client_id: Optional[str],
+        accuracy: Optional[float],
+        loss: Optional[float],
+        extra_metrics: Optional[Dict[str, Any]] = None,
+        dataset_path: Optional[str] = None,
+        split: Optional[str] = None,
+    ):
+        """
+        Record a standalone evaluation.
+
+        Kept out of the `metrics` table on purpose: that one is the per-round
+        training series, and mixing ad-hoc evaluations into it would make the
+        training charts wrong.
+        """
+        if not self.conn:
+            raise RuntimeError("Not connected to database")
+
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO evaluation_runs
+                    (experiment_id, round, client_id, dataset_path, split,
+                     loss, accuracy, extra_metrics, status, created_at, completed_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'completed', NOW(), NOW())
+                """,
+                (
+                    self.experiment_id,
+                    round_num,
+                    str(client_id) if client_id is not None else None,
+                    dataset_path,
+                    split,
+                    loss,
+                    accuracy,
+                    json.dumps(extra_metrics or {}),
+                )
+            )
+            self.conn.commit()
+        print(f"[ExperimentManager] Recorded evaluation for round {round_num}")
 
     def save_logs(self, logs: str):
         """Save execution logs to the experiment."""

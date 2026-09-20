@@ -1,113 +1,122 @@
-// `app/components/FileUploader.tsx`
-import React, {useCallback, useRef, useState} from "react";
+"use client";
+
+import { useCallback, useRef, useState } from "react";
+import type { ChangeEvent, DragEvent } from "react";
+import Icon from "@/app/components/ui/Icon";
+import { cn } from "@/app/components/ui/cn";
 
 type Props = {
     id?: string;
     accept?: string;
     hint?: string;
-    type: 'algorithm' | 'model' | 'config' | 'dataset';
-    onFileSelect?: (file: File | null) => void;
+    /**
+     * The selected file, owned by the caller.
+     *
+     * The caller already holds it to submit the form, so keeping a second copy
+     * in here would be two sources of truth for one fact -- and they can
+     * disagree, which is exactly how the filled state went missing before.
+     */
+    file: File | null;
+    onFileSelect: (file: File | null) => void;
 };
 
-export default function SingleFileUploader({id = "single-uploader", accept = "*", hint = "Drop or click to upload", type, onFileSelect}: Props) {
-    const [file, setFile] = useState<File | null>(null);
-    const [isDragOver, setIsDragOver] = useState(false);
+function formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+}
+
+/**
+ * A dropzone for one optional file.
+ *
+ * The zone collapses into a filled row once something is chosen, so a form with
+ * four of these does not stay four large empty rectangles after they are used.
+ */
+export default function SingleFileUploader({
+    id = "single-uploader",
+    accept = "*",
+    hint = "Drop a file",
+    file,
+    onFileSelect,
+}: Props) {
+    const [dragging, setDragging] = useState(false);
     const inputRef = useRef<HTMLInputElement | null>(null);
 
-    const handleFiles = useCallback(
-        (f: File | null) => {
-            setFile(f);
-            onFileSelect?.(f);
-        },
+    const select = useCallback(
+        (next: File | null) => onFileSelect(next),
         [onFileSelect]
     );
 
-    const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const f = e.target.files?.[0] ?? null;
-        handleFiles(f);
+    const onChange = (event: ChangeEvent<HTMLInputElement>) =>
+        select(event.target.files?.[0] ?? null);
+
+    const onDrop = (event: DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setDragging(false);
+        select(event.dataTransfer.files?.[0] ?? null);
     };
 
-    const onDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-        const f = e.dataTransfer.files?.[0] ?? null;
-        handleFiles(f);
-    };
-
-    const onDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(true);
-    };
-
-    const onDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
+    const setDrag = (value: boolean) => (event: DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setDragging(value);
     };
 
     const remove = () => {
-        handleFiles(null);
-        if (inputRef.current) {
-            inputRef.current.value = '';
-        }
+        select(null);
+        // Clearing the input matters: without it, re-picking the same file
+        // fires no change event and the field silently stays empty.
+        if (inputRef.current) inputRef.current.value = "";
     };
 
-    return (
-        <div>
-            <label
-                htmlFor={id}
-                className={`group relative flex flex-col items-center justify-center gap-2 rounded-md border p-3 text-sm transition
-          ${isDragOver ? "border-gray-400 bg-gray-50" : "border-gray-200 bg-white"}
-          hover:border-gray-300 cursor-pointer`}
-                onDrop={onDrop}
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-            >
-                <input
-                    id={id}
-                    ref={inputRef}
-                    type="file"
-                    accept={accept}
-                    multiple={false}
-                    className="sr-only"
-                    onChange={onChange}
-                />
-
-                <div className="text-center">
-                    <p className="text-xs font-medium text-gray-700">{hint}</p>
-                    <p className="mt-0.5 text-[11px] text-gray-400">Supported: {accept === "*" ? "any" : accept}</p>
+    if (file) {
+        return (
+            <div className="flex items-center gap-2.5 rounded-[var(--radius)] border border-line bg-surface-muted px-3 py-2">
+                <Icon name="attach" size={15} className="text-ink-muted shrink-0" />
+                <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-ink truncate">{file.name}</p>
+                    <p className="text-[11px] text-ink-subtle tabular">{formatSize(file.size)}</p>
                 </div>
-
                 <button
                     type="button"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        inputRef.current?.click();
-                    }}
-                    className="pointer-events-auto mt-2 rounded-md bg-gray-800 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                    onClick={remove}
+                    aria-label={`Remove ${file.name}`}
+                    className="flex items-center justify-center w-7 h-7 rounded-[var(--radius)] text-ink-subtle hover:text-danger hover:bg-danger-surface transition-colors shrink-0"
                 >
-                    Choose file
+                    <Icon name="close" size={14} />
                 </button>
-            </label>
+            </div>
+        );
+    }
 
-            {file && (
-                <div className="mt-2 flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-2 text-sm">
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-                        <p className="text-[11px] text-gray-500">
-                            {(file.size / 1024).toFixed(1)} KB
-                        </p>
-                    </div>
-                    <button
-                        onClick={remove}
-                        className="ml-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
-                    >
-                        Remove
-                    </button>
-                </div>
+    return (
+        <label
+            htmlFor={id}
+            onDrop={onDrop}
+            onDragOver={setDrag(true)}
+            onDragLeave={setDrag(false)}
+            className={cn(
+                "flex flex-col items-center justify-center gap-1 rounded-[var(--radius)] border border-dashed px-3 py-4 cursor-pointer transition-colors",
+                dragging
+                    ? "border-ink-subtle bg-surface-muted"
+                    : "border-line-strong bg-surface hover:bg-surface-muted"
             )}
-        </div>
+        >
+            <input
+                id={id}
+                ref={inputRef}
+                type="file"
+                accept={accept}
+                multiple={false}
+                className="sr-only"
+                onChange={onChange}
+            />
+            <Icon name="attach" size={16} className="text-ink-subtle" />
+            <p className="text-xs text-ink-muted">{hint}</p>
+            <p className="text-[11px] text-ink-subtle">
+                {accept === "*" ? "any file" : accept}
+            </p>
+        </label>
     );
 }

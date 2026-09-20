@@ -7,12 +7,18 @@ node_modules/
 .env.local
 .env
 venv
+.codex
+.claude
 
 # Uploads and experiment data
 uploads/
 checkpoints-data/
 data/
 .module_cache/
+
+# Python
+__pycache__/
+*.pyc
 
 # Database
 lib/db/migrations/

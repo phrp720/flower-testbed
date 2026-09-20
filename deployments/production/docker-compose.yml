@@ -23,6 +23,7 @@ services:
       SHOW_FLWR_LOGS: '${SHOW_FLWR_LOGS:-false}'
       EXPERIMENT_EXECUTOR: '${EXPERIMENT_EXECUTOR:-docker}'
       CONTAINER_SOCKET_PATH: '${CONTAINER_SOCKET_PATH:-/var/run/docker.sock}'
+      MAX_CONCURRENT_EXPERIMENTS: '${MAX_CONCURRENT_EXPERIMENTS:-}'
       CHECKPOINTS_DIR: '${CHECKPOINTS_DIR:-/app/checkpoints-data}'
       DATA_DIR: '${DATA_DIR:-/app/uploads}'
       HF_HOME: '${HF_HOME:-/app/.cache/huggingface}'
@@ -32,6 +33,14 @@ services:
       OPENBLAS_NUM_THREADS: '${OPENBLAS_NUM_THREADS:-1}'
       NUMEXPR_NUM_THREADS: '${NUMEXPR_NUM_THREADS:-1}'
       VECLIB_MAXIMUM_THREADS: '${VECLIB_MAXIMUM_THREADS:-1}'
+      AGENT_SECRET_KEY: '${AGENT_SECRET_KEY:-}'
+      AGENT_WORKSPACE_DIR: '${AGENT_WORKSPACE_DIR:-/app/uploads/agent-workspace}'
+      AGENT_MCP_TRANSPORT: '${AGENT_MCP_TRANSPORT:-http}'
+      INTERNAL_BASE_URL: '${INTERNAL_BASE_URL:-}'
+      INTERNAL_MCP_TOKEN: '${INTERNAL_MCP_TOKEN:-}'
+      AGENT_MAX_ITERATIONS: '${AGENT_MAX_ITERATIONS:-24}'
+      AGENT_MAX_TOOL_RESULT_BYTES: '${AGENT_MAX_TOOL_RESULT_BYTES:-32768}'
+      AGENT_ALLOW_REPO_WRITES: '${AGENT_ALLOW_REPO_WRITES:-false}'
     volumes:
       - ${CHECKPOINTS_DIR:-./checkpoints-data}:/app/checkpoints-data
       - ${DATA_DIR:-./uploads}:/app/uploads
@@ -41,7 +50,7 @@ services:
       postgres:
         condition: service_healthy
   postgres:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     container_name: flower-testbed-db
     restart: unless-stopped
     environment:
