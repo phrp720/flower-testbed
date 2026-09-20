@@ -286,6 +286,9 @@ export const describeModelViewTool = defineTool({
           'and each hidden neuron is drawn by how it responds across that same plane.',
         datasetKind: view.datasetKind ?? null,
         hiddenLayerSizes: view.hiddenSizes ?? [],
+        // Only some neurons of a wide layer are drawn. Reported so the answer
+        // never describes the picture as if it were the whole model.
+        neuronsDrawnPerLayer: view.drawnSizes ?? view.hiddenSizes ?? [],
         inputDomain: view.domain ?? null,
         gridResolution: view.resolution ?? null,
         activationSource: view.activationSource ?? null,

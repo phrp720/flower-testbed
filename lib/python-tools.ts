@@ -178,7 +178,8 @@ export type EncodedGrid = string;
 export interface SurfaceFrame {
   round: number;
   output: EncodedGrid;
-  layers: Array<{ layer: number; neurons: EncodedGrid[] }>;
+  /** `width` is the real neuron count; `neurons` is capped at what is drawable. */
+  layers: Array<{ layer: number; width?: number; neurons: EncodedGrid[] }>;
   weights: Array<{ layer: number; matrix: number[][] }>;
 }
 
@@ -212,7 +213,10 @@ export interface ModelView {
   // view === 'surface'
   domain?: number;
   resolution?: number;
+  /** The model's real hidden layer widths. */
   hiddenSizes?: number[];
+  /** How many of each were actually encoded -- fewer, for a wide layer. */
+  drawnSizes?: number[];
   /** Where the per-neuron responses came from, since not every model publishes them. */
   activationSource?: string;
   points?: number[][];

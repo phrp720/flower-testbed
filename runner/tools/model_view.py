@@ -176,26 +176,36 @@ def main() -> int:
             # The plane to sweep comes from the data's own extent, so an uploaded
             # 2D dataset on any scale is framed correctly rather than assumed to
             # match the built-in one.
+            # A share each, rather than first-come-first-served.
+            #
+            # This used to fill a single 1200-point budget client by client and
+            # stop when it was full, so a ten-client run drew only the first six
+            # partitions. Under non-IID splitting those six are not a sample of
+            # the data, they are a biased corner of it -- and `domain` is derived
+            # from the extent of whatever was collected, so the plane being swept
+            # was sized to that corner too. Every client contributes its share.
+            per_client = max(1, MAX_SCATTER_POINTS // max(1, num_clients))
+
             points = []
             labels = []
-            collected = 0
             for partition in range(num_clients):
-                if collected >= MAX_SCATTER_POINTS:
-                    break
                 try:
                     trainloader, _ = load_data_fn(partition, num_clients)
                 except Exception:
                     continue
+
+                taken = 0
                 for inputs, targets in trainloader:
-                    points.append(inputs.detach().float())
-                    labels.append(targets.detach().to(torch.int64))
-                    collected += int(targets.numel())
-                    if collected >= MAX_SCATTER_POINTS:
+                    room = per_client - taken
+                    if room <= 0:
                         break
+                    points.append(inputs.detach().float()[:room])
+                    labels.append(targets.detach().to(torch.int64)[:room])
+                    taken += min(room, int(targets.shape[0]))
 
             if points:
-                all_points = torch.cat(points)[:MAX_SCATTER_POINTS]
-                all_labels = torch.cat(labels)[:MAX_SCATTER_POINTS]
+                all_points = torch.cat(points)
+                all_labels = torch.cat(labels)
             else:
                 all_points = sample_inputs.detach().float()
                 all_labels = sample_batch[1].detach().to(torch.int64)
@@ -288,6 +298,13 @@ def main() -> int:
                 layers = [
                     {
                         "layer": index,
+                        # Both counts travel with the frame. Only the first
+                        # MAX_NEURONS_PER_LAYER are encoded -- a wide layer would
+                        # otherwise cost megabytes of base64 for rows nobody can
+                        # read -- but a viewer that is shown sixteen squares for a
+                        # layer of thirty-two has to be told so, or it silently
+                        # reports the wrong architecture.
+                        "width": int(activation.shape[1]),
                         "neurons": [
                             encode_signed(activation[:, n].reshape(resolution, resolution))
                             for n in range(min(activation.shape[1], MAX_NEURONS_PER_LAYER))
@@ -316,7 +333,9 @@ def main() -> int:
                 "domain": domain,
                 "resolution": resolution,
                 "activationSource": activation_source,
-                "hiddenSizes": [len(layer["neurons"]) for layer in frames[0]["layers"]],
+                # The real architecture, not what fits on screen.
+                "hiddenSizes": [layer["width"] for layer in frames[0]["layers"]],
+                "drawnSizes": [len(layer["neurons"]) for layer in frames[0]["layers"]],
                 "points": all_points.round(decimals=3).tolist(),
                 "labels": all_labels.tolist(),
                 "datasetKind": (dataset_config or {}).get("kind") if isinstance(dataset_config, dict) else None,
@@ -328,20 +347,29 @@ def main() -> int:
         # Pooled test data: every client's own test split, which is the data the
         # reported eval accuracy was measured on. A separate centralized split
         # would produce a number that disagrees with the run's own.
+        #
+        # A share each, for the same reason the scatter takes one: a single
+        # budget filled client by client stops partway down the client list, and
+        # the per-class accuracy it reports is then measured on a corner of the
+        # federation rather than on it. Non-IID splitting is exactly the setting
+        # where that corner has the wrong class balance, which is exactly when
+        # someone is reading the per-class numbers.
+        per_client = max(1, args.max_samples // max(1, num_clients))
+
         batches = []
-        collected = 0
         for partition in range(num_clients):
-            if collected >= args.max_samples:
-                break
             try:
                 _, testloader = load_data_fn(partition, num_clients)
             except Exception:
                 continue
+
+            taken = 0
             for inputs, targets in testloader:
-                batches.append((inputs, targets))
-                collected += int(targets.numel())
-                if collected >= args.max_samples:
+                room = per_client - taken
+                if room <= 0:
                     break
+                batches.append((inputs[:room], targets[:room]))
+                taken += min(room, int(targets.shape[0]))
 
         if not batches:
             print(json.dumps({"ok": False, "error": "No test data to evaluate."}))

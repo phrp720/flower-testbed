@@ -20,6 +20,16 @@ import { getCheckpoints } from './service';
  * disk immediately.
  */
 
+/**
+ * Bumped whenever the tool's output shape changes.
+ *
+ * The key is built from the checkpoints, which is right for "did the data
+ * change" and useless for "did the code change" -- a finished run keeps serving
+ * a payload produced by an older version of the tool forever. Any change to
+ * what model_view.py emits has to move this.
+ */
+const SCHEMA_VERSION = 3;
+
 function cacheDir(): string {
   return path.join(getDataDir(), '.cache', 'model-view');
 }
@@ -49,6 +59,7 @@ async function cacheKey(experimentId: string, options: ViewOptions): Promise<str
   if (!info) return null;
 
   const fingerprint = [
+    SCHEMA_VERSION,
     experimentId,
     global.length,
     Math.round(info.mtimeMs),

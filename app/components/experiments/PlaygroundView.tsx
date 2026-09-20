@@ -37,6 +37,7 @@ type ModelView = {
     domain?: number;
     resolution?: number;
     hiddenSizes?: number[];
+    drawnSizes?: number[];
     activationSource?: string;
     points?: number[][];
     labels?: number[];
@@ -94,6 +95,26 @@ export default function PlaygroundView({
     const frames = useMemo(() => view?.frames ?? [], [view]);
 
     const isSurface = kind === "surface" && frames.length > 0;
+
+    /**
+     * What the diagram is leaving out.
+     *
+     * Only the first few neurons of a layer are encoded -- a wide one would cost
+     * megabytes of base64 for rows nobody can read -- so a 32-unit layer arrives
+     * as 16 squares. Left unsaid, the picture describes a model that does not
+     * exist.
+     */
+    const truncation = (() => {
+        const full = view?.hiddenSizes;
+        const drawn = view?.drawnSizes;
+        if (!full || !drawn || full.length !== drawn.length) return null;
+        if (full.every((size, index) => size === drawn[index])) return null;
+
+        const parts = full.map((size, index) =>
+            size === drawn[index] ? `${size}` : `${drawn[index]} of ${size}`
+        );
+        return `Showing ${parts.join(", then ")} neurons.`;
+    })();
     const isFilters = kind === "filters" && frames.length > 0;
     const drawable = isSurface || isFilters;
 
@@ -285,6 +306,10 @@ export default function PlaygroundView({
                                     Each square is one neuron, coloured by how it responds across the
                                     input. Line thickness is the weight between them, and the dashes
                                     travel faster along the stronger ones.
+                                    {/* A wide layer is drawn in part. Saying so
+                                        matters: sixteen squares for a layer of
+                                        thirty-two is a different architecture. */}
+                                    {truncation && ` ${truncation}`}
                                 </p>
                             </div>
 

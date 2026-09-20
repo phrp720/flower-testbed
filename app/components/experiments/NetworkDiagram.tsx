@@ -45,11 +45,32 @@ export default function NetworkDiagram({
 
     const columnX = (index: number) => 30 + index * COLUMN_GAP;
 
-    // Scale link width against the largest weight present, so the diagram is
-    // readable whatever absolute magnitudes training happened to produce.
+    /**
+     * The weights between neurons that are actually on screen.
+     *
+     * The matrices describe the whole model, while only the first few neurons of
+     * a wide layer are drawn -- so a 32-unit layer arrives as sixteen tiles and a
+     * 32x32 matrix. Indexing that matrix against the drawn count placed the
+     * links for neurons 16 to 31 up to 940px below the diagram, where they were
+     * clipped by the SVG: a dense bundle of curves pouring off the bottom edge
+     * and stopping mid-air. Clamped to what exists, the picture closes.
+     *
+     * Rows are targets and columns are sources, which is how nn.Linear stores
+     * `[out_features, in_features]`.
+     */
+    const visibleWeights = weights.slice(0, layers.length).map((weight) => ({
+        layer: weight.layer,
+        matrix: weight.matrix
+            .slice(0, columns[weight.layer + 1] ?? 0)
+            .map((row) => row.slice(0, columns[weight.layer] ?? 0)),
+    }));
+
+    // Scaled against the links being drawn rather than every weight in the
+    // model: a strong connection between two hidden neurons nobody can see
+    // would otherwise flatten everything visible into the same thin line.
     const maxWeight = Math.max(
         0.1,
-        ...weights.flatMap((w) => w.matrix.flat().map(Math.abs))
+        ...visibleWeights.flatMap((w) => w.matrix.flat().map(Math.abs))
     );
 
     return (
@@ -61,7 +82,7 @@ export default function NetworkDiagram({
                     className="absolute inset-0"
                     style={{ pointerEvents: "none" }}
                 >
-                    {weights.slice(0, layers.length).map((weight) => {
+                    {visibleWeights.map((weight) => {
                         const targetIndex = weight.layer + 1;
                         const sourceCount = columns[weight.layer];
                         const targetCount = columns[targetIndex];

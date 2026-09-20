@@ -45,6 +45,8 @@ type ModelView = {
     view?: "surface" | "filters" | "none";
     domain?: number;
     resolution?: number;
+    hiddenSizes?: number[];
+    drawnSizes?: number[];
     points?: number[][];
     labels?: number[];
     layerName?: string;
@@ -146,6 +148,13 @@ function SurfacePair({ frame, view }: { frame: SurfaceFrame; view: ModelView }) 
                     resolution={resolution}
                     domain={view.domain}
                 />
+                {/* A wide layer is drawn in part, and sixteen squares standing
+                    in for thirty-two is a different architecture. */}
+                {truncationNote(view) && (
+                    <p className="text-xs text-ink-muted mt-2 max-w-[260px]">
+                        {truncationNote(view)}
+                    </p>
+                )}
             </div>
 
             <div className="shrink-0">
@@ -232,4 +241,17 @@ function FilterPair({ frame, view }: { frame: FilterFrame; view: ModelView }) {
             </div>
         </div>
     );
+}
+
+/** "Showing 16 of 32, then 16 of 32 neurons.", or nothing when all are drawn. */
+function truncationNote(view: ModelView): string | null {
+    const full = view.hiddenSizes;
+    const drawn = view.drawnSizes;
+    if (!full || !drawn || full.length !== drawn.length) return null;
+    if (full.every((size, index) => size === drawn[index])) return null;
+
+    const parts = full.map((size, index) =>
+        size === drawn[index] ? `${size}` : `${drawn[index]} of ${size}`
+    );
+    return `Showing ${parts.join(", then ")} neurons.`;
 }
