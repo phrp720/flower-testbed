@@ -1,50 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart3, Zap, CheckCircle2, AlertCircle, ChevronRight, Plus, ClipboardList, BookOpen } from "lucide-react";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-type Experiment = {
-  id: string;
-  name: string;
-  status: string;
-  framework: string;
-  numClients: number;
-  numRounds: number;
-  createdAt: string;
-  finalAccuracy: number | null;
-  finalLoss: number | null;
-};
+import { useExperiments } from "@/app/hooks/useExperiments";
 
 export default function DashboardPage() {
-  const [experiments, setExperiments] = useState<Experiment[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchExperiments();
-    const interval = setInterval(() => {
-      fetchExperiments();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchExperiments = async () => {
-    try {
-      const response = await fetch('/api/experiments');
-      if (!response.ok) throw new Error('Failed to fetch experiments');
-
-      const data = await response.json();
-      setExperiments(data.experiments);
-    } catch (error) {
-      console.error('Error fetching experiments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: experiments = [], isLoading: loading } = useExperiments();
 
   // Calculate stats
   const totalExperiments = experiments.length;

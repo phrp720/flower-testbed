@@ -50,6 +50,10 @@ export const modelCheckpoints = pgTable('model_checkpoints', {
   round: integer('round').notNull(),
   filePath: text('file_path').notNull(),
 
+  // NULL for the aggregated global model; set for a client's local model.
+  // Queries that want the global chain filter on clientId IS NULL.
+  clientId: text('client_id'),
+
   // Metrics at this checkpoint
   accuracy: real('accuracy'),
   loss: real('loss'),
@@ -86,3 +90,6 @@ export const clients = pgTable('clients', {
 
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// Agent layer tables (settings, conversations, tool calls, artifacts, memory).
+export * from './agent-schema';

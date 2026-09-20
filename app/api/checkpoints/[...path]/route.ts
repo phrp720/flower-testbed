@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { getSession, unauthorized } from '@/lib/auth';
-
-function getCheckpointsDir(): string {
-  return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
-}
+import { getCheckpointsDir, resolveSafe } from '@/lib/storage';
 
 // GET /api/checkpoints/[...path] - Download checkpoint file
 export async function GET(
@@ -17,13 +14,11 @@ export async function GET(
 
   try {
     const { path: filePath } = await params;
-    const checkpointsDir = getCheckpointsDir();
 
-    // Construct full path
-    const fullPath = path.join(checkpointsDir, ...filePath);
-
-    // Security check - ensure path is within checkpoints directory
-    if (!fullPath.startsWith(checkpointsDir)) {
+    // resolveSafe normalises `..` and compares on a separator boundary, so a
+    // sibling directory such as checkpoints-data-x cannot slip through.
+    const fullPath = resolveSafe(getCheckpointsDir(), ...filePath);
+    if (!fullPath) {
       return NextResponse.json(
         { error: 'Invalid file path' },
         { status: 403 }

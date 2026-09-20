@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FlaskConical, Plus, LogOut } from "lucide-react";
+import { LayoutDashboard, FlaskConical, Plus, MessageSquare, Settings, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 export default function Navigation() {
@@ -17,6 +17,8 @@ export default function Navigation() {
         { href: "/testbed/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/testbed/experiments", label: "Experiments", icon: FlaskConical },
         { href: "/testbed/experiments/new", label: "New Experiment", icon: Plus },
+        { href: "/testbed/chat", label: "Chat", icon: MessageSquare },
+        { href: "/testbed/settings", label: "Settings", icon: Settings },
     ];
 
     return (
@@ -34,7 +36,8 @@ export default function Navigation() {
             <nav className="flex items-center gap-1">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href ||
-                        (item.href === "/testbed/experiments" && pathname?.startsWith("/testbed/experiments/") && pathname !== "/testbed/experiments/new");
+                        (item.href === "/testbed/experiments" && pathname?.startsWith("/testbed/experiments/") && pathname !== "/testbed/experiments/new") ||
+                        (item.href === "/testbed/chat" && pathname?.startsWith("/testbed/chat/"));
                     const Icon = item.icon;
                     return (
                         <Link

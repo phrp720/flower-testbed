@@ -1,0 +1,189 @@
+% ============================================================
+% references.bib — Bibliography for the Flower Testbed paper
+% ============================================================
+
+% --- Foundational Federated Learning ---
+
+@inproceedings{mcmahan2017communication,
+  title     = {Communication-Efficient Learning of Deep Networks from Decentralized Data},
+  author    = {McMahan, Brendan and Moore, Eider and Ramage, Daniel and Hampson, Seth and
+               Ag{\"u}era y Arcas, Blaise},
+  booktitle = {Proceedings of the 20th International Conference on Artificial Intelligence
+               and Statistics (AISTATS)},
+  pages     = {1273--1282},
+  year      = {2017},
+  volume    = {54},
+  series    = {Proceedings of Machine Learning Research},
+  publisher = {PMLR},
+  url       = {https://arxiv.org/abs/1602.05629}
+}
+
+@inproceedings{bonawitz2019towards,
+  title     = {Towards Federated Learning at Scale: System Design},
+  author    = {Bonawitz, Keith and Eichner, Hubert and Grieskamp, Wolfgang and Huba, Dzmitry
+               and Ingerman, Alex and Ivanov, Vladimir and Kiddon, Chlo{\'e} and
+               Kone{\v{c}}n{\'y}, Jakub and Mazzocchi, Stefano and McMahan, H.~Brendan
+               and Van Overveldt, Timon and Ramage, David and Ramjit, Swaroop and
+               Roselander, Jason},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  year      = {2019},
+  url       = {https://arxiv.org/abs/1902.01046}
+}
+
+% --- Open Problems / Comprehensive Survey ---
+
+@article{kairouz2021advances,
+  title   = {Advances and Open Problems in Federated Learning},
+  author  = {Kairouz, Peter and McMahan, H.~Brendan and Avent, Brendan and
+             Bellet, Aur{\'e}lien and Bennis, Mehdi and Bhagoji, Arjun Nitin and
+             Bonawitz, Kallista and Charles, Zachary and Cormode, Graham and
+             Cummings, Rachel and others},
+  journal = {Foundations and Trends in Machine Learning},
+  volume  = {14},
+  number  = {1--2},
+  pages   = {1--210},
+  year    = {2021},
+  url     = {https://arxiv.org/abs/1912.04977}
+}
+
+% --- Flower Framework ---
+
+@misc{beutel2020flower,
+  title         = {Flower: A Friendly Federated Learning Research Framework},
+  author        = {Beutel, Daniel J. and Topal, Taner and Mathur, Akhil and Qiu, Xinchi and
+                   Fernandez-Marques, Javier and Gao, Yan and Sboev, Lorenzo and
+                   Lane, Nicholas D.},
+  year          = {2020},
+  eprint        = {2007.14390},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2007.14390}
+}
+
+% --- Heterogeneity & Optimization ---
+
+@inproceedings{li2020fedprox,
+  title     = {Federated Optimization in Heterogeneous Networks},
+  author    = {Li, Tian and Sahu, Anit Kumar and Talwalkar, Ameet and Smith, Virginia},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  year      = {2020},
+  url       = {https://arxiv.org/abs/1812.06127}
+}
+
+@inproceedings{li2020convergence,
+  title     = {On the Convergence of {FedAvg} on Non-{IID} Data},
+  author    = {Li, Xiang and Huang, Kaixuan and Yang, Wenhao and Wang, Shusen and
+               Zhang, Zhihua},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2020},
+  url       = {https://arxiv.org/abs/1907.02189}
+}
+
+@inproceedings{reddi2021adaptive,
+  title     = {Adaptive Federated Optimization},
+  author    = {Reddi, Sashank and Charles, Zachary and Zaheer, Manzil and Garrett, Zachary and
+               Rush, Keith and Kone{\v{c}}n{\'y}, Jakub and Kumar, Sanjiv and
+               McMahan, H.~Brendan},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+  url       = {https://arxiv.org/abs/2003.00295}
+}
+
+% --- Communication Efficiency ---
+
+@misc{konecny2016strategies,
+  title         = {Federated Learning: Strategies for Improving Communication Efficiency},
+  author        = {Kone{\v{c}}n{\'y}, Jakub and McMahan, H.~Brendan and Yu, Felix X. and
+                   Richt{\'a}rik, Peter and Suresh, Ananda Theertha and Bacon, Dave},
+  year          = {2016},
+  eprint        = {1610.05492},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/1610.05492}
+}
+
+% --- Differential Privacy ---
+
+@inproceedings{abadi2016deep,
+  title     = {Deep Learning with Differential Privacy},
+  author    = {Abadi, Martin and Chu, Andy and Goodfellow, Ian and McMahan, H.~Brendan and
+               Mironov, Ilya and Talwar, Kunal and Zhang, Li},
+  booktitle = {Proceedings of the 2016 ACM SIGSAC Conference on Computer and
+               Communications Security (CCS)},
+  pages     = {308--318},
+  year      = {2016},
+  publisher = {ACM},
+  doi       = {10.1145/2976749.2978318}
+}
+
+% --- Distributed Computing ---
+
+@inproceedings{moritz2018ray,
+  title     = {Ray: A Distributed Framework for Emerging {AI} Applications},
+  author    = {Moritz, Philipp and Nishihara, Robert and Wang, Stephanie and Tumanov, Alexey
+               and Liaw, Richard and Liang, Eric and Elibol, Melih and Yang, Zongheng and
+               Paul, William and Jordan, Michael I. and Stoica, Ion},
+  booktitle = {13th USENIX Symposium on Operating Systems Design and Implementation
+               (OSDI~'18)},
+  pages     = {561--577},
+  year      = {2018},
+  publisher = {USENIX Association},
+  url       = {https://arxiv.org/abs/1712.05889}
+}
+
+% --- PyTorch ---
+
+@inproceedings{paszke2019pytorch,
+  title     = {{PyTorch}: An Imperative Style, High-Performance Deep Learning Library},
+  author    = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and
+               Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and
+               Gimelshein, Natalia and Antiga, Luca and Desmaison, Alban and
+               Kopf, Andreas and Yang, Edward and DeVito, Zachary and Raison, Martin and
+               Tejani, Alykhan and Chilamkurthy, Sasank and Steiner, Benoit and Fang, Lu and
+               Bai, Junjie and Chintala, Soumith},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {32},
+  year      = {2019},
+  url       = {https://arxiv.org/abs/1912.01703}
+}
+
+% --- Related Frameworks ---
+
+@misc{tensorflow_federated,
+  title        = {{TensorFlow Federated}: Machine Learning on Decentralized Data},
+  author       = {{Google LLC}},
+  year         = {2018},
+  howpublished = {Software framework, \url{https://www.tensorflow.org/federated}}
+}
+
+% --- Benchmarking ---
+
+@article{hu2022oarf,
+  title   = {The {OARF} Benchmark Suite: Characterization and Implications of
+             Cross-Silo Federated Learning},
+  author  = {Hu, Sixu and Liu, Yuan and Liu, Wenkai and Li, Ting and Wu, Fangzhao and
+             Xie, Xuqiang and Liu, Xing},
+  journal = {ACM Transactions on Intelligent Systems and Technology (TIST)},
+  volume  = {13},
+  number  = {4},
+  pages   = {1--32},
+  year    = {2022},
+  publisher = {ACM},
+  doi     = {10.1145/3510540}
+}
+
+@misc{pgvector,
+  author       = {Andrew Kane},
+  title        = {pgvector: Open-source vector similarity search for {PostgreSQL}},
+  year         = {2021},
+  howpublished = {\url{https://github.com/pgvector/pgvector}},
+  note         = {Accessed: 2026}
+}
+
+@misc{mcp,
+  author       = {{Anthropic}},
+  title        = {Model {Context} {Protocol} Specification},
+  year         = {2024},
+  howpublished = {\url{https://modelcontextprotocol.io}},
+  note         = {Accessed: 2026}
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Download, ChevronLeft, Trash2, Terminal, X, Copy, Check, Square, Loader2 } from "lucide-react";
@@ -9,6 +10,12 @@ import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
 import MetricsTable from "@/app/components/MetricsTable";
 import CheckpointsList from "@/app/components/CheckpointsList";
+import {
+  useDeleteExperiment,
+  useExperiment,
+  useStopExperiment,
+} from "@/app/hooks/useExperiments";
+import { queryKeys } from "@/lib/query-keys";
 
 type Experiment = {
   id: string;
@@ -76,16 +83,25 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const router = useRouter();
 
-  const [experiment, setExperiment] = useState<Experiment | null>(null);
-  const [metrics, setMetrics] = useState<Metric[]>([]);
-  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentMetrics, setCurrentMetrics] = useState<LatestMetrics | null>(null);
+  const queryClient = useQueryClient();
+  const { data, isLoading: loading } = useExperiment(id);
+  const stopExperiment = useStopExperiment();
+  const deleteExperiment = useDeleteExperiment();
+
+  const experiment = (data?.experiment ?? null) as Experiment | null;
+  const metrics = (data?.metrics ?? []) as Metric[];
+  const checkpoints = (data?.checkpoints ?? []) as Checkpoint[];
+
+  // The stream's latestMetrics is just the last row of the same series, so
+  // derive it rather than tracking a second copy that can disagree.
+  const currentMetrics = (metrics[metrics.length - 1] ?? null) as LatestMetrics | null;
+
+  const isStopping = stopExperiment.isPending;
+  const isDeleting = deleteExperiment.isPending;
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [logsCopied, setLogsCopied] = useState(false);
-  const [isStopping, setIsStopping] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -97,11 +113,6 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     message: '',
     type: 'info',
   });
-
-  // Fetch initial data
-  useEffect(() => {
-    fetchExperimentData();
-  }, [id]);
 
   // Set up SSE for real-time updates
   useEffect(() => {
@@ -115,31 +126,31 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
       const data: StreamUpdate = JSON.parse(event.data);
 
       if (data.final) {
-        // Experiment completed, refresh data
-        fetchExperimentData();
+        // The run reached a terminal state; refetch for the fields the stream
+        // does not carry, such as the captured logs.
+        void queryClient.invalidateQueries({ queryKey: queryKeys.experiments.detail(id) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.experiments.list() });
         eventSource.close();
         return;
       }
 
-      // Update metrics array
-      if (data.metrics && data.metrics.length > 0) {
-        setMetrics(data.metrics);
-      }
-
-      // Update checkpoints array
-      if (data.checkpoints && data.checkpoints.length > 0) {
-        setCheckpoints(data.checkpoints);
-      }
-
-      // Update current metrics for progress display
-      if (data.latestMetrics) {
-        setCurrentMetrics(data.latestMetrics);
-      }
-
-      // Update experiment status
-      if (data.experiment) {
-        setExperiment((prev) => prev ? { ...prev, status: data.experiment.status } : null);
-      }
+      // Push the snapshot straight into the cache rather than into component
+      // state, so the cache stays the single source of truth and anything else
+      // reading this experiment sees the update too.
+      queryClient.setQueryData(
+        queryKeys.experiments.detail(id),
+        (previous: { experiment: Experiment; metrics: Metric[]; checkpoints: Checkpoint[] } | undefined) => {
+          if (!previous) return previous;
+          return {
+            ...previous,
+            experiment: data.experiment
+              ? { ...previous.experiment, status: data.experiment.status }
+              : previous.experiment,
+            metrics: data.metrics?.length ? data.metrics : previous.metrics,
+            checkpoints: data.checkpoints?.length ? data.checkpoints : previous.checkpoints,
+          };
+        }
+      );
     };
 
     eventSource.onerror = () => {
@@ -149,23 +160,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     return () => {
       eventSource.close();
     };
-  }, [experiment?.status, id]);
-
-  const fetchExperimentData = async () => {
-    try {
-      const response = await fetch(`/api/experiments/${id}`);
-      if (!response.ok) throw new Error('Failed to fetch experiment');
-
-      const data = await response.json();
-      setExperiment(data.experiment);
-      setMetrics(data.metrics);
-      setCheckpoints(data.checkpoints);
-    } catch (error) {
-      console.error('Error fetching experiment:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [experiment?.status, id, queryClient]);
 
   if (loading) {
     return (
@@ -216,54 +211,31 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     setShowDeleteDialog(true);
   };
 
-  const handleStopExperiment = async () => {
-    setIsStopping(true);
-    try {
-      const response = await fetch(`/api/experiments/${id}/stop`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to stop experiment');
-      }
-
-      await fetchExperimentData();
-    } catch (error) {
-      console.error('Error stopping experiment:', error);
-      setDialog({
-        isOpen: true,
-        title: 'Error',
-        message: 'Failed to stop experiment. Please try again.',
-        type: 'error',
-      });
-    } finally {
-      setIsStopping(false);
-    }
+  const handleStopExperiment = () => {
+    stopExperiment.mutate(id, {
+      onError: (error) => {
+        setDialog({
+          isOpen: true,
+          title: 'Error',
+          message: error instanceof Error ? error.message : 'Failed to stop experiment. Please try again.',
+          type: 'error',
+        });
+      },
+    });
   };
 
-  const confirmDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/experiments/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete experiment');
-      }
-
-      router.push('/testbed/experiments');
-    } catch (error) {
-      console.error('Error deleting experiment:', error);
-      setDialog({
-        isOpen: true,
-        title: 'Error',
-        message: 'Failed to delete experiment. Please try again.',
-        type: 'error',
-      });
-    } finally {
-      setIsDeleting(false);
-    }
+  const confirmDelete = () => {
+    deleteExperiment.mutate(id, {
+      onSuccess: () => router.push('/testbed/experiments'),
+      onError: (error) => {
+        setDialog({
+          isOpen: true,
+          title: 'Error',
+          message: error instanceof Error ? error.message : 'Failed to delete experiment. Please try again.',
+          type: 'error',
+        });
+      },
+    });
   };
 
   return (

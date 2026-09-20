@@ -10,19 +10,28 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:check": "./scripts/check-schema-drift.sh"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@tanstack/react-query": "^5.103.1",
     "archiver": "^7.0.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "lucide-react": "^0.563.0",
+    "mcp-handler": "^2.2.0",
     "next": "16.1.7",
     "next-auth": "^4.24.13",
     "pg": "^8.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "recharts": "^3.6.0"
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.6.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

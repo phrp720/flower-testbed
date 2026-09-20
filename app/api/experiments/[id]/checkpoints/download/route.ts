@@ -7,10 +7,7 @@ import { getSession, unauthorized } from '@/lib/auth';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { parseExperimentIdParam } from '@/lib/experiment-id';
-
-function getCheckpointsDir(): string {
-  return process.env.CHECKPOINTS_DIR || path.join(process.cwd(), 'checkpoints-data');
-}
+import { getCheckpointsDir, resolveSafe } from '@/lib/storage';
 
 // GET /api/experiments/[id]/checkpoints/download - Download all checkpoints as ZIP
 export async function GET(
@@ -53,10 +50,10 @@ export async function GET(
     archive.pipe(passthrough);
 
     for (const cp of checkpoints) {
-      const fullPath = path.join(checkpointsDir, cp.filePath);
-
-      // Security check
-      if (!fullPath.startsWith(checkpointsDir)) {
+      // Security check: file_path comes from the database but is written by the
+      // Python runner, so it is still resolved against the checkpoints root.
+      const fullPath = resolveSafe(checkpointsDir, cp.filePath);
+      if (!fullPath) {
         continue;
       }
 

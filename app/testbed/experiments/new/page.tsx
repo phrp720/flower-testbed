@@ -6,6 +6,7 @@ import SingleFileUploader from "@/app/components/FileUploader";
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
+import { useCreateExperiment, useResources } from "@/app/hooks/useExperiments";
 
 interface SystemResources {
     cpu: { count: number; ray_count: number };
@@ -53,29 +54,10 @@ export default function DashboardPage() {
     const [gpuFractionPerClient, setGpuFractionPerClient] = useState(0.1);
 
     // System resources
-    const [resources, setResources] = useState<SystemResources | null>(null);
-    const [loadingResources, setLoadingResources] = useState(true);
+    const { data: resources = null, isLoading: loadingResources } = useResources();
+    const createExperiment = useCreateExperiment();
 
-    const [isCreating, setIsCreating] = useState(false);
-
-    // Fetch available system resources on mount
-    useEffect(() => {
-        const fetchResources = async () => {
-            try {
-                const response = await fetch('/api/resources');
-                if (response.ok) {
-                    const data = await response.json();
-                    setResources(data);
-
-                }
-            } catch (error) {
-                console.error('Failed to fetch resources:', error);
-            } finally {
-                setLoadingResources(false);
-            }
-        };
-        fetchResources();
-    }, []);
+    const isCreating = createExperiment.isPending;
 
     useEffect(() => {
         if (!resources) return;
@@ -97,46 +79,19 @@ export default function DashboardPage() {
         type: 'info',
     });
 
-    const uploadFile = async (file: File, type: string): Promise<string> => {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('type', type);
-
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Upload failed');
-        }
-
-        const data = await response.json();
-        return data.path;
-    };
-
-    const handleStartExperiment = async () => {
-        setIsCreating(true);
-        try {
-            // Upload files if provided
-            const algorithmPath = algorithmFile ? await uploadFile(algorithmFile, 'algorithm') : null;
-            const modelPath = modelFile ? await uploadFile(modelFile, 'model') : null;
-            const configPath = configFile ? await uploadFile(configFile, 'config') : null;
-            const datasetPath = datasetFile ? await uploadFile(datasetFile, 'dataset') : null;
-
-            // Create experiment with uploaded file paths
-            const response = await fetch('/api/experiments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+    const handleStartExperiment = () => {
+        createExperiment.mutate(
+            {
+                files: {
+                    algorithm: algorithmFile,
+                    model: modelFile,
+                    config: configFile,
+                    dataset: datasetFile,
+                },
+                body: {
                     name: experimentName || `Experiment - ${new Date().toLocaleString()}`,
                     description: `Federated Learning experiment using ${preset}`,
                     framework: preset,
-                    algorithmPath,
-                    modelPath,
-                    configPath,
-                    datasetPath,
                     numClients,
                     numRounds,
                     clientFraction,
@@ -145,39 +100,18 @@ export default function DashboardPage() {
                     useGpu,
                     cpusPerClient,
                     gpuFractionPerClient: useGpu ? gpuFractionPerClient : 0,
+                },
+            },
+            {
+                onSuccess: (experiment) => router.push(`/testbed/experiments/${experiment.id}`),
+                onError: (error) => setDialog({
+                    isOpen: true,
+                    title: 'Error',
+                    message: `Failed to start experiment:\n${error instanceof Error ? error.message : 'Unknown error'}`,
+                    type: 'error',
                 }),
-            });
-
-            if (!response.ok) {
-                const error = await response.json().catch(() => null);
-                throw new Error(error?.error || 'Failed to create experiment');
             }
-
-            const { experiment } = await response.json();
-
-            // Start the experiment
-            const startResponse = await fetch(`/api/experiments/${experiment.id}/start`, {
-                method: 'POST',
-            });
-
-            if (!startResponse.ok) {
-                const error = await startResponse.json().catch(() => null);
-                throw new Error(error?.error || 'Failed to start experiment');
-            }
-
-            // Navigate to experiment monitoring page
-            router.push(`/testbed/experiments/${experiment.id}`);
-        } catch (error) {
-            console.error('Error:', error);
-            setDialog({
-                isOpen: true,
-                title: 'Error',
-                message: `Failed to start experiment:\n${error instanceof Error ? error.message : 'Unknown error'}`,
-                type: 'error',
-            });
-        } finally {
-            setIsCreating(false);
-        }
+        );
     };
 
     const downloadTemplate = (templateKey: keyof typeof TEMPLATES) => {

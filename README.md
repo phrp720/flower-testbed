@@ -33,6 +33,8 @@ A Testbed Experiment Platform for testing <a href="https://flower.ai/docs/framew
       - [Prerequisites](#prerequisites)
     - [Production Setup](#production-setup)
 - [Usage](#usage)
+- [AI Agent](#ai-agent)
+- [MCP Server](#mcp-server)
 - [GitHub Action](#github-action)
 - [Contributing](#contributing)
 - [License](#license)
@@ -46,9 +48,13 @@ Flower Testbed is an open-source platform for experimenting with federated learn
 ### Key Capabilities
 
 - **Algorithm Management**: Upload and test custom FL algorithms
-- **Model Tracking**: Export model states at each federated round
-- **Metrics Monitoring**: Real-time tracking of training metrics
+- **Built-in Strategies**: FedAvg, FedProx, FedAdam, FedAdagrad and FedYogi selectable by name
+- **Non-IID Partitioning**: IID, Dirichlet, shard and pathological splits
+- **Model Tracking**: Export global and per-client model states at each federated round
+- **Metrics Monitoring**: Real-time tracking of aggregate and per-client training metrics
 - **Resource Flexibility**: CPU/GPU support with configurable client resources
+- **AI Agent**: Chat with an assistant that can read your results, write strategy code and run experiments for you
+- **MCP Server**: Connect Claude Desktop, Claude Code or any MCP client directly to your experiments
 
 ## Getting Started
 
@@ -81,22 +87,30 @@ Steps:
    cp .env.example .env
    ```
 
-4. **Start PostgreSQL database**
+4. **Set an encryption key** (only needed for the AI agent)
+
+   The agent stores your model provider's API key encrypted at rest. Generate a key and put it in `.env`:
+   ```bash
+   echo "AGENT_SECRET_KEY=$(openssl rand -base64 32)" >> .env
+   ```
+   If you skip this, the key is derived from `NEXTAUTH_SECRET` instead, and rotating that will invalidate any stored API key.
+
+5. **Start PostgreSQL database**
    ```bash
    docker compose -f deployments/development/docker-compose.yml up -d
    ```
 
-5. **Push database schema**
+6. **Push database schema**
    ```bash
    pnpm db:push
    ```
 
-6. **Start the development server**
+7. **Start the development server**
    ```bash
    pnpm dev
    ```
 
-7. **Open the dashboard**
+8. **Open the dashboard**
 
    Navigate to [http://localhost:3000/](http://localhost:3000/) in your web browser.
 
@@ -148,6 +162,63 @@ Steps:
 
 > [!NOTE]
 > The application supports only Pytorch for now. Support for TensorFlow is coming soon.
+
+## AI Agent
+
+The testbed includes an AI agent that can read your experiments, reason about the results, write
+strategy code and run new experiments.
+
+### Setup
+
+1. Open **Settings** in the dashboard.
+2. Choose a provider:
+   - **Anthropic** — enter your API key; leave the base URL empty.
+   - **OpenAI-compatible** — enter the base URL of any server speaking the OpenAI chat completions
+     API (Ollama, vLLM, LM Studio, OpenRouter, Azure), e.g. `http://localhost:11434/v1`.
+3. Click **Test connection**.
+4. Optionally enable **memory embeddings** so the agent recalls previous experiments. This needs an
+   OpenAI-compatible embeddings endpoint; Anthropic does not provide one. Without it, memory search
+   falls back to keyword matching.
+
+Then open **Chat** and ask something like *"summarise my last experiment"* or
+*"run a FedProx variant with a lower learning rate and tell me if it helps"*.
+
+### Approvals
+
+Anything that changes state — creating or starting an experiment, writing a file — is held for your
+approval and shown as a card describing the action, with a diff for file writes. Reads run freely.
+A per-conversation **Auto-run** toggle lifts the gate when you want the agent to work uninterrupted.
+
+## MCP Server
+
+The testbed exposes its experiments over the [Model Context Protocol](https://modelcontextprotocol.io)
+at `/api/mcp`, so any MCP client can read and control them.
+
+1. Go to **Settings → MCP access** and create a token. Choose **read only** unless you want the
+   assistant to be able to start and modify experiments.
+2. Connect a client:
+
+   ```bash
+   claude mcp add flower-testbed --transport http http://localhost:3000/api/mcp \
+     --header "Authorization: Bearer <token>"
+   ```
+
+   For a host that cannot send custom headers (some Claude Desktop versions), use the bundled bridge:
+
+   ```json
+   {
+     "mcpServers": {
+       "flower-testbed": {
+         "command": "node",
+         "args": ["/absolute/path/to/scripts/mcp-stdio-bridge.mjs"],
+         "env": { "FLOWER_MCP_TOKEN": "<token>" }
+       }
+     }
+   }
+   ```
+
+A read-only token never has the experiment-modifying tools registered at all, so an assistant holding
+one cannot change anything.
 
 ## GitHub Action
 

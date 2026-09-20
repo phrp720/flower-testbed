@@ -6,29 +6,15 @@ import { Search, Eye, Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-
 import Dialog from "@/app/components/Dialog";
 import Navigation from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
-
-type Experiment = {
-  id: string;
-  name: string;
-  description: string | null;
-  framework: string;
-  status: string;
-  numClients: number;
-  numRounds: number;
-  createdAt: string;
-  completedAt: string | null;
-  finalAccuracy: number | null;
-  finalLoss: number | null;
-};
+import { useDeleteExperiment, useExperiments } from "@/app/hooks/useExperiments";
 
 export default function ExperimentsPage() {
-  const [experiments, setExperiments] = useState<Experiment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: experiments = [], isLoading: loading } = useExperiments();
+  const deleteExperiment = useDeleteExperiment();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -43,58 +29,28 @@ export default function ExperimentsPage() {
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    fetchExperiments();
-    const interval = setInterval(() => {
-      fetchExperiments();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchExperiments = async () => {
-    try {
-      const response = await fetch('/api/experiments');
-      if (!response.ok) throw new Error('Failed to fetch experiments');
-
-      const data = await response.json();
-      setExperiments(data.experiments);
-    } catch (error) {
-      console.error('Error fetching experiments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isDeleting = deleteExperiment.isPending;
 
   const handleDeleteClick = (id: string) => {
     setDeleteId(id);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (deleteId === null) return;
 
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/experiments/${deleteId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete experiment');
-
-      // Refresh list
-      fetchExperiments();
-      setDeleteId(null);
-    } catch (error) {
-      console.error('Error deleting experiment:', error);
-      setDialog({
-        isOpen: true,
-        title: 'Error',
-        message: 'Failed to delete experiment. Please try again.',
-        type: 'error',
-      });
-    } finally {
-      setIsDeleting(false);
-    }
+    // The mutation invalidates the experiment cache on success, so the list
+    // refreshes itself -- and so does the dashboard, which shares the key.
+    deleteExperiment.mutate(deleteId, {
+      onSuccess: () => setDeleteId(null),
+      onError: (error) => {
+        setDialog({
+          isOpen: true,
+          title: 'Error',
+          message: error instanceof Error ? error.message : 'Failed to delete experiment. Please try again.',
+          type: 'error',
+        });
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {

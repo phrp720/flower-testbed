@@ -38,12 +38,30 @@ _EXPECTED_EXPORTS = {
 class ModuleLoader:
     """Dynamically loads Python modules and extracts components."""
 
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path, experiment_id: Optional[str] = None):
+        """
+        Args:
+            project_root: Repository root.
+            experiment_id: Scopes the module cache to this experiment.
+
+        The cache is per-experiment because the cached files are named after the
+        module type, not the upload: every experiment's model lands at
+        user_model.py. With one shared directory, two experiments running at once
+        overwrite each other's modules and each trains whichever model was copied
+        last -- silently, with no error and plausible-looking metrics.
+
+        The module *name* can stay the same, since each worker process has its
+        own directory first on sys.path.
+        """
         self.project_root = project_root
+        self.experiment_id = experiment_id
         self._loaded_modules = {}
+
         # Cache dir for modules so Ray workers can import them by name
-        self._module_cache = project_root / '.module_cache'
-        self._module_cache.mkdir(exist_ok=True)
+        cache_root = project_root / '.module_cache'
+        self._module_cache = cache_root / f'exp_{experiment_id}' if experiment_id else cache_root
+        self._module_cache.mkdir(parents=True, exist_ok=True)
+
         cache_str = str(self._module_cache)
         # Add to sys.path for the main process
         if cache_str not in sys.path:
@@ -52,6 +70,15 @@ class ModuleLoader:
         pythonpath = os.environ.get('PYTHONPATH', '')
         if cache_str not in pythonpath:
             os.environ['PYTHONPATH'] = cache_str + os.pathsep + pythonpath if pythonpath else cache_str
+
+    def cleanup(self) -> None:
+        """Remove this experiment's cache directory once the run is finished."""
+        if not self.experiment_id:
+            return
+        try:
+            shutil.rmtree(self._module_cache, ignore_errors=True)
+        except Exception:
+            pass
 
     @staticmethod
     def _validate_structure(full_path: Path, module_name: str) -> Tuple[bool, str]:

@@ -4,18 +4,103 @@ Default CIFAR-10 dataset loading using flwr-datasets.
 This dataset loader is used when no custom dataset is provided.
 """
 
-from typing import Tuple
+import json
+import os
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from flwr_datasets import FederatedDataset
-from flwr_datasets.partitioner import IidPartitioner
+from flwr_datasets.partitioner import (
+    DirichletPartitioner,
+    IidPartitioner,
+    PathologicalPartitioner,
+    ShardPartitioner,
+)
 
 
 # Global cache for the federated dataset
 _fds_cache = {}
+
+# The label column CIFAR-10 partitions by.
+_LABEL_COLUMN = "label"
+
+
+def _partitioner_config() -> Dict[str, Any]:
+    """
+    Read the partitioning config the orchestrator passes down.
+
+    It arrives as an environment variable rather than a function argument because
+    load_data is called positionally with exactly two arguments -- that signature
+    is the contract every uploaded dataset module implements, so it cannot grow.
+    """
+    raw = os.environ.get("FLOWER_PARTITIONER")
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except (ValueError, TypeError):
+        print(f"[Dataset] Ignoring malformed FLOWER_PARTITIONER: {raw[:120]}")
+        return {}
+
+
+def build_partitioner(num_partitions: int, config: Optional[Dict[str, Any]] = None):
+    """
+    Build a partitioner from a config dict.
+
+    Supported kinds:
+      iid           -- equal random split (the default)
+      dirichlet     -- label distribution drawn from Dir(alpha); lower alpha is
+                       more skewed. alpha=0.5 is a common non-IID benchmark,
+                       alpha=0.1 is severe.
+      shard         -- each client gets a fixed number of label shards, so most
+                       clients see only a few classes
+      pathological  -- each client sees exactly num_classes_per_partition classes
+
+    Non-IID partitioning is the point of most federated learning research: with an
+    IID split, FedAvg is hard to beat and strategy differences barely show.
+    """
+    config = config or {}
+    kind = str(config.get("kind", "iid")).lower()
+
+    try:
+        if kind == "dirichlet":
+            return DirichletPartitioner(
+                num_partitions=num_partitions,
+                partition_by=config.get("partition_by", _LABEL_COLUMN),
+                alpha=float(config.get("alpha", 0.5)),
+                min_partition_size=int(config.get("min_partition_size", 10)),
+                self_balancing=bool(config.get("self_balancing", True)),
+                seed=int(config.get("seed", 42)),
+            )
+
+        if kind == "shard":
+            return ShardPartitioner(
+                num_partitions=num_partitions,
+                partition_by=config.get("partition_by", _LABEL_COLUMN),
+                num_shards_per_partition=int(config.get("num_shards_per_partition", 2)),
+                seed=int(config.get("seed", 42)),
+            )
+
+        if kind == "pathological":
+            return PathologicalPartitioner(
+                num_partitions=num_partitions,
+                partition_by=config.get("partition_by", _LABEL_COLUMN),
+                num_classes_per_partition=int(config.get("num_classes_per_partition", 2)),
+                seed=int(config.get("seed", 42)),
+            )
+    except Exception as e:
+        # A bad partitioner config should degrade to IID, not lose the run.
+        print(f"[Dataset] Failed to build '{kind}' partitioner ({e}); using IID.")
+        return IidPartitioner(num_partitions=num_partitions)
+
+    if kind != "iid":
+        print(f"[Dataset] Unknown partitioner '{kind}'; using IID.")
+
+    return IidPartitioner(num_partitions=num_partitions)
 
 
 def load_data(
@@ -26,7 +111,8 @@ def load_data(
     """
     Load CIFAR-10 data partition for a specific client.
 
-    Uses flwr-datasets for efficient IID partitioning.
+    Partitioning defaults to IID and is configurable through the experiment's
+    customConfig.partitioner (Dirichlet, shard or pathological) for non-IID setups.
 
     Args:
         partition_id: The partition/client ID (0 to num_partitions-1)
@@ -36,11 +122,15 @@ def load_data(
     Returns:
         Tuple of (train_loader, test_loader)
     """
-    # Create or reuse federated dataset
-    cache_key = f"cifar10_{num_partitions}"
+    # Create or reuse federated dataset. The partitioner config is part of the
+    # cache key, or a second experiment would silently reuse the first split.
+    config = _partitioner_config()
+    cache_key = f"cifar10_{num_partitions}_{json.dumps(config, sort_keys=True)}"
 
     if cache_key not in _fds_cache:
-        partitioner = IidPartitioner(num_partitions=num_partitions)
+        partitioner = build_partitioner(num_partitions, config)
+        print(f"[Dataset] Partitioning with {type(partitioner).__name__} "
+              f"across {num_partitions} clients")
         _fds_cache[cache_key] = FederatedDataset(
             dataset="uoft-cs/cifar10",
             partitioners={"train": partitioner},

@@ -14,6 +14,10 @@ checkpoints-data/
 data/
 .module_cache/
 
+# Python
+__pycache__/
+*.pyc
+
 # Database
 lib/db/migrations/
 

@@ -33,7 +33,8 @@ class CheckpointManager:
         round_num: int,
         model_state: Dict[str, Any],
         metrics: Dict[str, float],
-        additional_data: Optional[Dict[str, Any]] = None
+        additional_data: Optional[Dict[str, Any]] = None,
+        client_id: Optional[str] = None,
     ) -> Path:
         """
         Save a model checkpoint.
@@ -43,14 +44,24 @@ class CheckpointManager:
             model_state: Model state dict
             metrics: Metrics at this checkpoint
             additional_data: Any additional data to save
+            client_id: Set for a client's local model; omitted for the
+                aggregated global model. Local checkpoints go in a per-round
+                subdirectory so they never collide with the global chain.
 
         Returns:
             Path to saved checkpoint
         """
-        checkpoint_path = self.checkpoint_dir / f"round_{round_num}.pt"
+        if client_id is None:
+            checkpoint_path = self.checkpoint_dir / f"round_{round_num}.pt"
+        else:
+            round_dir = self.checkpoint_dir / f"round_{round_num}"
+            round_dir.mkdir(parents=True, exist_ok=True)
+            safe_cid = str(client_id).replace('/', '_')[:64]
+            checkpoint_path = round_dir / f"client_{safe_cid}.pt"
 
         checkpoint = {
             'round': round_num,
+            'client_id': client_id,
             'model_state_dict': model_state,
             'metrics': metrics,
         }

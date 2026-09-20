@@ -5,6 +5,8 @@ SimulationOrchestrator - Main orchestrator for running Flower simulations.
 import sys
 import io
 import os
+import json
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List
 
@@ -27,12 +29,26 @@ from .defaults.config import DEFAULT_CONFIG
 
 
 class LogCapture:
-    """Captures stdout and stderr without printing to terminal (silent mode)."""
+    """
+    Captures stdout and stderr without printing to terminal (silent mode).
 
-    def __init__(self):
+    Logs are flushed to the database periodically rather than only at the end.
+    Holding them until the run finishes means anyone watching a live experiment
+    -- a user, or the agent diagnosing a slow run -- sees nothing at all until
+    it is over, which is exactly when the logs stop being useful.
+    """
+
+    # Flush at most this often, and only when there is something new. Writing the
+    # whole blob is cheap next to a training round.
+    FLUSH_INTERVAL_SECONDS = 10
+
+    def __init__(self, on_flush=None):
         self.logs = io.StringIO()
         self._stdout = sys.stdout
         self._stderr = sys.stderr
+        self._on_flush = on_flush
+        self._last_flush = time.monotonic()
+        self._last_flushed_length = 0
 
     def __enter__(self):
         sys.stdout = self
@@ -46,6 +62,31 @@ class LogCapture:
     def write(self, text):
         # Capture to logs for storage, but don't print to terminal
         self.logs.write(text)
+        self._maybe_flush()
+
+    def _maybe_flush(self):
+        """Persist the captured logs if enough time has passed."""
+        if self._on_flush is None:
+            return
+
+        now = time.monotonic()
+        if now - self._last_flush < self.FLUSH_INTERVAL_SECONDS:
+            return
+
+        current = self.logs.getvalue()
+        if len(current) == self._last_flushed_length:
+            self._last_flush = now
+            return
+
+        self._last_flush = now
+        self._last_flushed_length = len(current)
+
+        try:
+            self._on_flush(current)
+        except Exception:
+            # A failed log write must never interrupt training. The final write
+            # in the run's `finally` block is the backstop.
+            pass
 
     def flush(self):
         pass  # No-op since we're not printing
@@ -84,12 +125,15 @@ class SimulationOrchestrator:
 
         # Initialize managers
         self.experiment_manager = ExperimentManager(experiment_id, project_root)
-        self.module_loader = ModuleLoader(project_root)
+        self.module_loader = ModuleLoader(project_root, experiment_id=experiment_id)
         self.checkpoint_manager = CheckpointManager(experiment_id, project_root)
 
         # Will be populated after loading config
         self.config: Dict[str, Any] = {}
         self.model_fn: Optional[Callable[[], nn.Module]] = None
+        # Persisting every client's local model multiplies disk use by the client
+        # count, so it is opt-in through customConfig.save_client_checkpoints.
+        self.save_client_checkpoints = False
         self.load_data_fn: Optional[Callable] = None
         self.strategy_fn: Optional[Callable[[], Strategy]] = None
         self.device: torch.device = torch.device("cpu")
@@ -104,7 +148,7 @@ class SimulationOrchestrator:
     def run(self):
         """Execute the complete simulation workflow."""
         # Start capturing logs (silent mode - saves to DB, no terminal output)
-        self.log_capture = LogCapture()
+        self.log_capture = LogCapture(on_flush=self._flush_logs)
 
         try:
             with self.log_capture:
@@ -145,7 +189,17 @@ class SimulationOrchestrator:
                 except Exception as e:
                     print(f"[Orchestrator] Warning: Failed to save logs: {e}")
 
+            # Drop this experiment's module cache; nothing else refers to it.
+            self.module_loader.cleanup()
+
             self.experiment_manager.close()
+
+    def _flush_logs(self, logs: str) -> None:
+        """Persist partial logs mid-run so a live experiment is observable."""
+        try:
+            self.experiment_manager.save_logs(logs)
+        except Exception:
+            pass
 
     def _load_modules(self):
         """Load user modules or fall back to defaults."""
@@ -232,6 +286,30 @@ class SimulationOrchestrator:
         print(f"Device: {self.device}")
         print(f"{'='*60}\n")
 
+        custom_config = self.config.get('custom_config') or {}
+
+        # Partitioning config reaches the default dataset loader through the
+        # environment, because load_data's signature is a fixed contract that
+        # every uploaded dataset module implements and so cannot grow a argument.
+        # Set before Ray starts, so worker processes inherit it.
+        self.save_client_checkpoints = bool(custom_config.get('save_client_checkpoints'))
+        if self.save_client_checkpoints:
+            print("[Orchestrator] Saving per-client model checkpoints")
+
+        partitioner_config = custom_config.get('partitioner')
+        if partitioner_config:
+            os.environ['FLOWER_PARTITIONER'] = json.dumps(partitioner_config)
+            print(f"[Orchestrator] Partitioner: {partitioner_config}")
+        else:
+            os.environ.pop('FLOWER_PARTITIONER', None)
+
+        # Per-node hyperparameter overrides, keyed by partition id. Lets a single
+        # experiment give different clients different local training settings.
+        client_overrides = custom_config.get('client_overrides') or {}
+        if client_overrides:
+            print(f"[Orchestrator] Per-client overrides for partitions: "
+                  f"{', '.join(str(k) for k in client_overrides)}")
+
         # Create client function
         client_fn = create_client_fn(
             model_fn=self.model_fn,
@@ -240,6 +318,7 @@ class SimulationOrchestrator:
             device=self.device,
             local_epochs=local_epochs,
             learning_rate=learning_rate,
+            client_overrides=client_overrides,
         )
 
         # Create fit/evaluate config functions
@@ -253,6 +332,25 @@ class SimulationOrchestrator:
         def on_evaluate_config_fn(server_round: int) -> Dict[str, Any]:
             return {"server_round": server_round}
 
+        # Built-in strategy selection, so aggregation can be changed without
+        # uploading a Python file.
+        strategy_spec = custom_config.get('strategy')
+        strategy_name = None
+        strategy_params = None
+        if isinstance(strategy_spec, str):
+            strategy_name = strategy_spec
+        elif isinstance(strategy_spec, dict):
+            strategy_name = strategy_spec.get('name')
+            strategy_params = strategy_spec.get('params')
+
+        # The FedOpt family keeps server-side optimiser state and needs somewhere
+        # to start. Building it costs one model instantiation.
+        initial_parameters = None
+        if strategy_name and strategy_name.lower() in ('fedadam', 'fedadagrad', 'fedyogi'):
+            initial_parameters = fl.common.ndarrays_to_parameters(
+                CheckpointManager.get_model_parameters(self.model_fn())
+            )
+
         # Create strategy
         strategy = create_strategy(
             num_clients=num_clients,
@@ -260,6 +358,9 @@ class SimulationOrchestrator:
             strategy_fn=self.strategy_fn,
             on_fit_config_fn=on_fit_config_fn,
             on_evaluate_config_fn=on_evaluate_config_fn,
+            strategy_name=strategy_name,
+            strategy_params=strategy_params,
+            initial_parameters=initial_parameters,
         )
 
         # Wrap strategy to capture metrics
@@ -347,10 +448,61 @@ class SimulationOrchestrator:
                 self._base = base_strategy
                 self._current_round = 0
 
+            @staticmethod
+            def _client_rows(results, phase):
+                """
+                Per-client metrics, straight off the results the strategy already
+                receives.
+
+                The aggregators collapse these into a weighted mean and throw the
+                rest away, which is why metrics.client_metrics has always been
+                empty. Keeping them is what makes per-node analysis, non-IID
+                diagnosis and straggler detection possible.
+                """
+                rows = []
+                for proxy, res in results:
+                    row = {
+                        "cid": getattr(proxy, "cid", None),
+                        "phase": phase,
+                        "num_examples": getattr(res, "num_examples", None),
+                    }
+                    if phase == "evaluate" and getattr(res, "loss", None) is not None:
+                        row["loss"] = float(res.loss)
+                    for key, value in (getattr(res, "metrics", None) or {}).items():
+                        if isinstance(value, (int, float)):
+                            row[key] = float(value)
+                    rows.append(row)
+                return rows
+
             def aggregate_fit(self, server_round, results, failures):
                 # Call base implementation
                 aggregated = self._base.aggregate_fit(server_round, results, failures)
                 self._current_round = server_round
+
+                self._last_fit_clients = self._client_rows(results, "fit")
+
+                # Per-client model checkpoints, off by default: this multiplies
+                # checkpoint disk usage by the number of participating clients.
+                if orchestrator.save_client_checkpoints:
+                    for proxy, res in results:
+                        try:
+                            model = orchestrator.model_fn()
+                            params = fl.common.parameters_to_ndarrays(res.parameters)
+                            path = orchestrator.checkpoint_manager.save_checkpoint(
+                                round_num=server_round,
+                                model_state=CheckpointManager.parameters_to_state_dict(model, params),
+                                metrics=dict(getattr(res, "metrics", None) or {}),
+                                client_id=getattr(proxy, "cid", None),
+                            )
+                            orchestrator.experiment_manager.record_checkpoint(
+                                round_num=server_round,
+                                file_path=orchestrator.checkpoint_manager.get_relative_path(path),
+                                accuracy=(getattr(res, "metrics", None) or {}).get("train_accuracy"),
+                                loss=(getattr(res, "metrics", None) or {}).get("train_loss"),
+                                client_id=getattr(proxy, "cid", None),
+                            )
+                        except Exception as e:
+                            print(f"[Round {server_round}] Could not save client checkpoint: {e}")
 
                 if aggregated is not None:
                     parameters, metrics = aggregated
@@ -407,6 +559,11 @@ class SimulationOrchestrator:
                     # Get train metrics from the last fit if available
                     if hasattr(self, '_last_fit_metrics'):
                         round_metrics.update(self._last_fit_metrics)
+
+                    # Per-client breakdown for both phases of this round.
+                    round_metrics["client_metrics"] = (
+                        getattr(self, "_last_fit_clients", []) + self._client_rows(results, "evaluate")
+                    )
 
                     # Save to database
                     orchestrator.experiment_manager.save_round_metrics(
