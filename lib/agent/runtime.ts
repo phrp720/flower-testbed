@@ -12,6 +12,7 @@ import {
   getConversation,
   getMessages,
   getToolCallsForMessage,
+  wasRejectedThisTurn,
   markToolCallRunning,
   recordToolCall,
   setConversationStatus,
@@ -23,6 +24,7 @@ import {
   cancelRunningTurn,
   clearRunningTurn,
   emitAgentEvent,
+  isTurnRunning,
   registerRunningTurn,
 } from './events';
 import { buildPreviewSummary } from './preview';
@@ -31,6 +33,8 @@ import { recall } from './memory';
 import { getRole, type RoleName } from './roles';
 
 const MAX_ITERATIONS = Number.parseInt(process.env.AGENT_MAX_ITERATIONS ?? '24', 10) || 24;
+/** How long a `running` row with no live turn behind it is left alone. */
+const STALE_TURN_MS = 2 * 60 * 1000;
 const MAX_TOOL_RESULT_BYTES =
   Number.parseInt(process.env.AGENT_MAX_TOOL_RESULT_BYTES ?? '32768', 10) || 32768;
 
@@ -144,6 +148,20 @@ async function runLoop(
     if (signal.aborted) return 'cancelled';
 
     const history = await getMessages(conversationId);
+
+    /**
+     * When the user last spoke.
+     *
+     * Tool results carry role 'user' on the wire but kind 'tool_results', and a
+     * human did not write them -- so only a 'chat' message moves this forward.
+     * It is the boundary a decline is remembered within: the model may not
+     * re-propose a refused call on its own, but the moment the user says
+     * anything, they are back in charge of what gets proposed.
+     */
+    const turnStartedAt =
+      [...history].reverse().find((m) => m.role === 'user' && m.kind === 'chat')?.createdAt ??
+      new Date(0);
+
     const messages = toLlmMessages(history, {
       provider: settings.provider,
       model: settings.model,
@@ -225,10 +243,35 @@ async function runLoop(
     // Record every call first, so the approval queue is complete before any of
     // them runs. Otherwise a partially-executed batch is possible.
     const rows: AgentToolCall[] = [];
+    const refused: Array<{ row: AgentToolCall; toolUseId: string }> = [];
+
     for (const call of calls) {
       const descriptor = getTool(call.name);
       const risk = descriptor?.risk ?? 'execute';
-      const needsApproval = descriptor ? requiresApproval(descriptor) && !autoRun : true;
+
+      /**
+       * The same call, declined and re-proposed with nothing said in between.
+       *
+       * The prompt tells the model not to retry a refusal and a small model
+       * ignores it: three identical create_experiment proposals in a row, each
+       * re-opening the card. Refused here rather than queued, or declining is a
+       * button that ends nothing.
+       *
+       * Only within the current turn. Blocking for the whole conversation made
+       * the agent refuse "do it again" -- arguing with the user about a request
+       * they had just made. A decline is "not now", and the next thing the user
+       * says outranks it.
+       */
+      const declinedBefore = await wasRejectedThisTurn(
+        conversationId,
+        call.name,
+        call.input,
+        turnStartedAt
+      );
+
+      const needsApproval = descriptor
+        ? requiresApproval(descriptor) && !autoRun && !declinedBefore
+        : true;
 
       const row = await recordToolCall({
         conversationId,
@@ -240,6 +283,8 @@ async function runLoop(
         requiresApproval: needsApproval,
         previewSummary: descriptor ? buildPreviewSummary(descriptor, call.input) : null,
       });
+
+      if (declinedBefore) refused.push({ row, toolUseId: call.id });
 
       rows.push(row);
 
@@ -262,9 +307,25 @@ async function runLoop(
       return 'awaiting_approval';
     }
 
+    const refusedIds = new Set(refused.map((entry) => entry.row.id));
+
     const results: LlmBlock[] = [];
     for (const row of rows) {
       if (signal.aborted) return 'cancelled';
+
+      if (refusedIds.has(row.id)) {
+        // Marked as an error so the model treats it as a wall rather than a
+        // retryable failure, and told explicitly what to do instead.
+        const content =
+          'The user declined this exact call a moment ago and has not asked for ' +
+          'it again. Do not repeat it. Stop and ask what they would like ' +
+          'instead, or propose something different.';
+
+        await completeToolCall(row.id, { content, isError: true, durationMs: 0 });
+        results.push({ type: 'tool_result', toolUseId: row.toolUseId, content, isError: true });
+        continue;
+      }
+
       results.push(await executeToolCall(conversationId, row));
     }
 
@@ -354,7 +415,34 @@ export async function startAgentTurn(
   const conversation = await getConversation(conversationId);
 
   if (conversation.status === 'running') {
-    throw new ValidationError('This conversation is already working on a reply.');
+    /**
+     * A turn that no longer exists.
+     *
+     * `running` is written to the database, but the loop driving it lives in
+     * this process. A restart -- a deploy, or a hot reload in development --
+     * takes the loop with it and leaves the row saying running forever, and the
+     * guard then rejected every later message with "already working on a
+     * reply". The conversation was bricked with no way back.
+     *
+     * The registry is the ground truth for whether a turn is actually alive
+     * here. If nothing is registered and the row has not been touched for a
+     * while, it belongs to a process that is gone and can be reclaimed. The
+     * delay is there so a turn that genuinely just started in another worker is
+     * not stolen out from under it.
+     */
+    const abandoned =
+      !isTurnRunning(conversationId) &&
+      Date.now() - new Date(conversation.updatedAt).getTime() > STALE_TURN_MS;
+
+    if (!abandoned) {
+      throw new ValidationError('This conversation is already working on a reply.');
+    }
+
+    console.warn(
+      `[agent] Conversation ${conversationId} was left running by a process that ` +
+        'is no longer here. Reclaiming it.'
+    );
+    await setConversationStatus(conversationId, 'idle');
   }
 
   const text = options.text.trim();

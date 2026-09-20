@@ -91,6 +91,7 @@ export default function ChatShell({ conversationId }: Props) {
     const updateConversation = useUpdateConversation(conversationId ?? "");
 
     const conversation = thread?.conversation ?? null;
+    const conversationStatus = conversation?.status ?? null;
     const toolCalls = thread?.toolCalls ?? [];
 
     const creating = createConversation.isPending;
@@ -128,6 +129,17 @@ export default function ChatShell({ conversationId }: Props) {
             );
         }
     };
+
+    /**
+     * Whether the agent is working, from either tab's point of view.
+     *
+     * `isRunning` only covers a turn this tab started and is streaming. A turn
+     * resumed after an approval runs detached from any request, so the local
+     * flag is false for the whole of it -- which left the transcript silent for
+     * several seconds after a decision, with no sign anything was happening.
+     * The conversation's own status is the evidence in that case.
+     */
+    const agentWorking = isRunning || conversationStatus === "running";
 
     const paneRef = useRef<HTMLDivElement>(null);
     /**
@@ -193,8 +205,8 @@ export default function ChatShell({ conversationId }: Props) {
      * over the POST instead.
      */
     useEffect(() => {
-        if (!conversationId || !conversation) return;
-        if (conversation.status !== "running" && conversation.status !== "awaiting_approval") return;
+        if (!conversationId || !conversationStatus) return;
+        if (conversationStatus !== "running" && conversationStatus !== "awaiting_approval") return;
         if (isRunning) return;
 
         const source = new EventSource(`/api/agent/conversations/${conversationId}/stream`);
@@ -220,7 +232,10 @@ export default function ChatShell({ conversationId }: Props) {
 
         source.onerror = () => source.close();
         return () => source.close();
-    }, [conversationId, conversation, isRunning]);
+        // Depends on the status, not the conversation object. The object is
+        // rebuilt by every thread refetch, which tore the subscription down and
+        // reopened it constantly -- and anything emitted in that gap was lost.
+    }, [conversationId, conversationStatus, isRunning]);
 
     const handleNew = () => {
         createConversation.mutate(undefined, {
@@ -431,7 +446,7 @@ export default function ChatShell({ conversationId }: Props) {
                             <div className="flex justify-center py-20">
                                 <Spinner size={16} label="Loading conversation" />
                             </div>
-                        ) : messages.length === 0 && !isRunning ? (
+                        ) : messages.length === 0 && !agentWorking ? (
                             <ChatSuggestions
                                 hasExperiments={experiments.length > 0}
                                 onPick={(prompt) => void submit(prompt)}
@@ -443,7 +458,7 @@ export default function ChatShell({ conversationId }: Props) {
                                 toolCalls={toolCalls}
                                 streamingText={streamingText}
                                 streamingThinking={streamingThinking}
-                                isRunning={isRunning}
+                                isRunning={agentWorking}
                                 status={conversation?.status}
                                 onDecided={refreshThread}
                             />
@@ -455,8 +470,8 @@ export default function ChatShell({ conversationId }: Props) {
                         onChange={setInput}
                         onSend={handleSend}
                         onCancel={handleCancel}
-                        disabled={isRunning}
-                        isRunning={isRunning}
+                        disabled={agentWorking}
+                        isRunning={agentWorking}
                         attachments={attachments}
                         uploading={uploadAttachment.isPending}
                         onAttach={handleAttach}

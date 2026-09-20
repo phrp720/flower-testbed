@@ -5,6 +5,7 @@ import {
   decideToolCall,
   getToolCall,
   getToolCallsForMessage,
+  setConversationStatus,
   updateConversation,
 } from '@/lib/agent/conversations';
 import { resumeAgentTurn } from '@/lib/agent/runtime';
@@ -63,6 +64,12 @@ export async function POST(
     const allDecided = siblings.every((row) => row.status !== 'pending');
 
     if (allDecided) {
+      // Marked running before detaching, so the response this client is already
+      // waiting on carries the new status. resumeAgentTurn sets it too, but it
+      // does so after this request has returned -- which left the UI with no
+      // sign the agent was working until the next poll caught up, seconds later.
+      await setConversationStatus(updated.conversationId, 'running');
+
       // Detached: resuming runs the model again and outlives this request.
       void resumeAgentTurn(updated.conversationId, updated.messageId!);
     }

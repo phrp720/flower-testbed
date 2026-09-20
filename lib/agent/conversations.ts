@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { loadAgentSettings } from '@/lib/llm/settings';
 import { NotFoundError, ValidationError } from '@/lib/errors';
@@ -260,6 +260,41 @@ export async function getPendingToolCalls(conversationId: string): Promise<Agent
     .orderBy(asc(schema.agentToolCalls.createdAt));
 }
 
+/**
+ * Has this exact call already been declined since the user last spoke?
+ *
+ * Matched on the tool and the whole input, so changing a parameter counts as a
+ * new proposal and is offered normally.
+ *
+ * Scoped to the current turn, not the whole conversation. A decline means "not
+ * now", and asking again later is the user's decision to make: a conversation-
+ * wide block turned "do it again" into an argument, with the agent refusing
+ * something the user had just explicitly requested. What must not happen is the
+ * model re-proposing on its own with nothing said in between.
+ */
+export async function wasRejectedThisTurn(
+  conversationId: string,
+  toolName: string,
+  input: unknown,
+  since: Date
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: schema.agentToolCalls.id })
+    .from(schema.agentToolCalls)
+    .where(
+      and(
+        eq(schema.agentToolCalls.conversationId, conversationId),
+        eq(schema.agentToolCalls.toolName, toolName),
+        eq(schema.agentToolCalls.status, 'rejected'),
+        gt(schema.agentToolCalls.createdAt, since),
+        sql`${schema.agentToolCalls.input}::jsonb = ${JSON.stringify(input ?? {})}::jsonb`
+      )
+    )
+    .limit(1);
+
+  return row != null;
+}
+
 export async function getToolCallsForMessage(messageId: string): Promise<AgentToolCall[]> {
   return db
     .select()
@@ -319,7 +354,7 @@ export async function completeToolCall(
  */
 export async function sweepStaleToolCalls(
   conversationId: string,
-  olderThanMs = 10 * 60 * 1000
+  olderThanMs = 2 * 60 * 1000
 ): Promise<void> {
   const cutoff = new Date(Date.now() - olderThanMs);
 

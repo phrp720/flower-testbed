@@ -1,7 +1,7 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { createMcpServer } from '@/lib/mcp/server';
-import { getInternalMcpToken } from '@/lib/mcp/internal-token';
+import { getInternalMcpToken, invalidateInternalMcpToken } from '@/lib/mcp/internal-token';
 import type { LlmToolDef } from '@/lib/llm/types';
 import { ALL_TOOLS } from '@/lib/mcp/tools';
 import { filterToolsByScope, type ToolScope } from '@/lib/mcp/registry';
@@ -108,12 +108,35 @@ export async function resetMcpClient(): Promise<void> {
 }
 
 /**
+ * Retry once against a freshly authenticated client if the credential is refused.
+ *
+ * A cached client holds its bearer token for the life of the process, and a
+ * token can stop being accepted underneath it -- a restart elsewhere, a
+ * rotation, a hot reload in development. The symptom is every tool call failing
+ * with `-32001 Unauthorized` until the process is restarted, which is a bad way
+ * to find out. Anything other than an auth failure is rethrown untouched.
+ */
+async function withAuthRetry<T>(run: (client: Client) => Promise<T>): Promise<T> {
+  try {
+    return await run(await getMcpClient());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/unauthorized|-32001|\b401\b/i.test(message)) throw error;
+
+    console.warn('[agent] MCP credential refused; provisioning a new one and retrying.');
+    invalidateInternalMcpToken();
+    await resetMcpClient();
+
+    return run(await getMcpClient());
+  }
+}
+
+/**
  * Tool definitions for the model, taken from the live MCP tool list so what the
  * model sees and what the server exposes cannot drift apart.
  */
 export async function listAgentTools(scope: ToolScope = 'write'): Promise<LlmToolDef[]> {
-  const client = await getMcpClient();
-  const { tools } = await client.listTools();
+  const { tools } = await withAuthRetry((client) => client.listTools());
 
   const allowed = new Set(filterToolsByScope(ALL_TOOLS, scope).map((tool) => tool.name));
   const eager = new Set(ALL_TOOLS.filter((tool) => tool.eagerInput).map((tool) => tool.name));
@@ -137,10 +160,8 @@ export async function callAgentTool(
   name: string,
   args: Record<string, unknown>
 ): Promise<ToolCallOutcome> {
-  const client = await getMcpClient();
-
   try {
-    const result = await client.callTool({ name, arguments: args });
+    const result = await withAuthRetry((client) => client.callTool({ name, arguments: args }));
     const content = (result.content as Array<{ type: string; text?: string }> | undefined) ?? [];
 
     return {

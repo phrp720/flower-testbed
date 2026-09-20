@@ -97,6 +97,23 @@ export function useThread(id: string | undefined) {
         queryKey: queryKeys.agent.thread(id ?? ""),
         queryFn: () => apiFetch<Thread>(`/api/agent/conversations/${id}`),
         enabled: Boolean(id),
+        /**
+         * Poll while the conversation is mid-turn.
+         *
+         * The stream is the fast path, not the only one. A turn resumed after an
+         * approval runs detached from any request, and its events can land while
+         * the client happens to have no subscription -- between an EventSource
+         * teardown and its reopen, most reliably right after a decision. The
+         * reply was written to the database and simply never fetched, so it
+         * appeared only when the next message forced a refetch.
+         *
+         * Polling makes the transcript converge whatever the stream missed, and
+         * stops the moment the turn does.
+         */
+        refetchInterval: (query) => {
+            const status = query.state.data?.conversation?.status;
+            return status === "running" || status === "awaiting_approval" ? 2000 : false;
+        },
     });
 }
 
