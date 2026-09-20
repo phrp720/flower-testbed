@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check, ChevronRight, Loader2, X } from "lucide-react";
 import DiffView from "./DiffView";
+import { Badge, Button, Callout, Icon, SectionLabel, cn } from "@/app/components/ui";
 import { useDecideAction } from "@/app/hooks/useAgent";
 import { RISK_LABELS, type ToolCall } from "./types";
 
@@ -12,12 +12,24 @@ type Props = {
     onDecided: () => void;
 };
 
+/** Riskier actions earn a stronger badge; nothing else about the card changes. */
+const RISK_TONE: Record<string, "neutral" | "warn" | "danger"> = {
+    read: "neutral",
+    write: "warn",
+    execute: "danger",
+};
+
 /**
  * The approval gate.
  *
- * The card leads with what the action does in plain language, and keeps the raw
- * payload one click below. That ordering matters: the user is judging intent, and
- * a request that does not match what was asked for should look obviously wrong.
+ * A white card rather than an amber one. The panel already interrupts the
+ * transcript by existing, and a full-bleed tint on something this tall shouts
+ * without adding information -- the badge carries the same signal in the place
+ * the eye already is. Colour is left to say how risky the action is.
+ *
+ * The summary leads and the raw payload sits one click below, because the
+ * reader is judging intent: a request that does not match what they asked for
+ * should look obviously wrong before they ever read the JSON.
  */
 export default function ActionApprovalCard({ toolCall, conversationId, onDecided }: Props) {
     const decideAction = useDecideAction(conversationId);
@@ -39,71 +51,83 @@ export default function ActionApprovalCard({ toolCall, conversationId, onDecided
         );
     };
 
+    const tone = RISK_TONE[toolCall.riskLevel] ?? "warn";
+
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-5 my-3">
-            <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                        {toolCall.previewSummary ?? `Run ${toolCall.toolName}`}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                        <span className="font-mono">{toolCall.toolName}</span>
-                        {" · "}
+        <div className="my-3 rounded-[var(--radius)] border border-line-strong bg-surface overflow-hidden">
+            <div className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <SectionLabel>Needs your approval</SectionLabel>
+                        <p className="text-sm font-medium text-ink mt-1.5">
+                            {toolCall.previewSummary ?? `Run ${toolCall.toolName}`}
+                        </p>
+                    </div>
+                    <Badge tone={tone} className="shrink-0 mt-0.5">
                         {RISK_LABELS[toolCall.riskLevel] ?? toolCall.riskLevel}
-                    </p>
+                    </Badge>
                 </div>
+
+                <p className="text-xs font-mono text-ink-subtle mt-2">{toolCall.toolName}</p>
+
+                {toolCall.previewDiff && (
+                    <div className="mt-3">
+                        <DiffView diff={toolCall.previewDiff} />
+                    </div>
+                )}
+
+                <button
+                    onClick={() => setExpanded((v) => !v)}
+                    aria-expanded={expanded}
+                    className="mt-3 flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors"
+                >
+                    <Icon
+                        name="forward"
+                        size={12}
+                        className={cn("transition-transform", expanded && "rotate-90")}
+                    />
+                    {expanded ? "Hide" : "Show"} exact request
+                </button>
+
+                {expanded && (
+                    <pre className="mt-2 text-[11px] font-mono bg-surface-muted rounded-[var(--radius)] p-2.5 overflow-x-auto">
+                        {JSON.stringify(toolCall.input, null, 2)}
+                    </pre>
+                )}
+
+                {error && (
+                    <Callout tone="danger" className="mt-3">
+                        {error}
+                    </Callout>
+                )}
             </div>
 
-            {toolCall.previewDiff && (
-                <div className="mt-3">
-                    <DiffView diff={toolCall.previewDiff} />
-                </div>
-            )}
-
-            <button
-                onClick={() => setExpanded((v) => !v)}
-                className="mt-3 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-            >
-                <ChevronRight
-                    className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`}
-                />
-                {expanded ? "Hide" : "Show"} exact request
-            </button>
-
-            {expanded && (
-                <pre className="mt-2 text-xs font-mono bg-gray-50 border border-gray-100 rounded p-2 overflow-x-auto">
-                    {JSON.stringify(toolCall.input, null, 2)}
-                </pre>
-            )}
-
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-
-            <div className="mt-4 flex items-center gap-2">
-                <button
+            {/* A tinted footer separates the decision from the description, so
+                Approve is never a click away from the text being judged. */}
+            <div className="flex items-center gap-2 px-4 py-3 bg-surface-muted border-t border-line">
+                <Button
+                    size="sm"
+                    variant="primary"
+                    icon="check"
                     onClick={() => decide("approve")}
+                    loading={busy === "approve"}
                     disabled={busy !== null}
-                    className="flex items-center gap-1.5 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
                 >
-                    {busy === "approve" ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                        <Check className="w-4 h-4" />
-                    )}
                     Approve
-                </button>
-                <button
+                </Button>
+                <Button
+                    size="sm"
+                    variant="secondary"
+                    icon="close"
                     onClick={() => decide("reject")}
+                    loading={busy === "reject"}
                     disabled={busy !== null}
-                    className="flex items-center gap-1.5 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-50 transition-colors"
                 >
-                    {busy === "reject" ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                        <X className="w-4 h-4" />
-                    )}
                     Decline
-                </button>
+                </Button>
+                <span className="ml-auto text-[11px] text-ink-subtle">
+                    Nothing runs until you choose
+                </span>
             </div>
         </div>
     );

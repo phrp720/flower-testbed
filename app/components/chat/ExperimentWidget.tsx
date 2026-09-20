@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { Icon, Progress, Spinner, StatusBadge } from "@/app/components/ui";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { useExperiment } from "@/app/hooks/useExperiments";
 import { queryKeys } from "@/lib/query-keys";
@@ -23,13 +23,6 @@ type Snapshot = {
 type Props = { experimentId: string };
 
 // Same colour map the experiments list uses, so a run looks the same everywhere.
-const STATUS_STYLES: Record<string, string> = {
-    pending: "bg-gray-200 text-gray-700",
-    running: "bg-blue-200 text-blue-800 animate-pulse",
-    completed: "bg-green-100 text-green-800",
-    failed: "bg-red-100 text-red-800",
-};
-
 /**
  * A live view of an experiment, inline in the conversation.
  *
@@ -99,8 +92,8 @@ export default function ExperimentWidget({ experimentId }: Props) {
 
     if (!snapshot) {
         return (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 my-2 text-xs text-gray-500">
-                Loading experiment...
+            <div className="border border-line rounded-[var(--radius)] px-4 py-3 my-2">
+                <Spinner size={13} label="Loading experiment" />
             </div>
         );
     }
@@ -116,40 +109,29 @@ export default function ExperimentWidget({ experimentId }: Props) {
         .map((m) => ({ round: m.round, accuracy: m.evalAccuracy }));
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 my-3">
+        <div className="border border-line rounded-[var(--radius)] p-4 my-3">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{experiment.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                        <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                STATUS_STYLES[experiment.status] ?? "bg-gray-100 text-gray-700"
-                            }`}
-                        >
-                            {experiment.status}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                            round {experiment.currentRound} / {experiment.totalRounds}
+                    <p className="text-sm font-medium text-ink truncate">{experiment.name}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                        <StatusBadge status={experiment.status} />
+                        <span className="text-xs text-ink-muted tabular">
+                            round {experiment.currentRound} of {experiment.totalRounds}
                         </span>
                     </div>
                 </div>
 
                 <Link
                     href={`/testbed/experiments/${experiment.id}`}
-                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors shrink-0"
+                    className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors shrink-0"
                 >
                     Open
-                    <ExternalLink className="w-3 h-3" />
+                    <Icon name="external" size={12} />
                 </Link>
             </div>
 
             {experiment.status === "running" && (
-                <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-blue-500 transition-all duration-500"
-                        style={{ width: `${progress}%` }}
-                    />
-                </div>
+                <Progress value={progress / 100} className="mt-3" />
             )}
 
             {chartData.length > 1 && (
@@ -160,8 +142,8 @@ export default function ExperimentWidget({ experimentId }: Props) {
                             <Line
                                 type="monotone"
                                 dataKey="accuracy"
-                                stroke="#3b82f6"
-                                strokeWidth={2}
+                                stroke="var(--ink)"
+                                strokeWidth={1.75}
                                 dot={false}
                                 isAnimationActive={false}
                             />
@@ -171,11 +153,11 @@ export default function ExperimentWidget({ experimentId }: Props) {
             )}
 
             {latestMetrics && (
-                <div className="mt-2 flex gap-4 text-xs text-gray-600">
+                <div className="mt-2.5 flex gap-4 text-xs text-ink-muted">
                     {latestMetrics.evalAccuracy != null && (
                         <span>
                             accuracy{" "}
-                            <span className="font-mono text-gray-900">
+                            <span className="font-mono tabular text-ink">
                                 {(latestMetrics.evalAccuracy * 100).toFixed(1)}%
                             </span>
                         </span>
@@ -183,7 +165,7 @@ export default function ExperimentWidget({ experimentId }: Props) {
                     {latestMetrics.evalLoss != null && (
                         <span>
                             loss{" "}
-                            <span className="font-mono text-gray-900">
+                            <span className="font-mono tabular text-ink">
                                 {latestMetrics.evalLoss.toFixed(4)}
                             </span>
                         </span>

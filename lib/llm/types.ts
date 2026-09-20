@@ -15,7 +15,22 @@ export type LlmRole = 'user' | 'assistant' | 'system';
 export type LlmBlock =
   | { type: 'text'; text: string }
   | { type: 'thinking'; text: string; signature?: string }
-  | { type: 'tool_use'; id: string; name: string; input: unknown }
+  | {
+      type: 'tool_use';
+      id: string;
+      name: string;
+      input: unknown;
+      /**
+       * Vendor fields that came attached to this call and must be echoed back.
+       *
+       * Gemini returns a `thought_signature` on every function call and rejects
+       * the next request with 400 INVALID_ARGUMENT if the call is replayed
+       * without it. Kept opaque and generic rather than typed to one vendor,
+       * because the rule -- hand back whatever the provider gave you -- is the
+       * same everywhere, and a block built from scratch always loses it.
+       */
+      providerFields?: Record<string, unknown>;
+    }
   | { type: 'tool_result'; toolUseId: string; content: string; isError?: boolean };
 
 export interface LlmMessage {

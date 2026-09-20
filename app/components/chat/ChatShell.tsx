@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Zap } from "lucide-react";
-import Navigation from "@/app/components/Navigation";
-import Footer from "@/app/components/Footer";
+import { Button, Callout, Card, EmptyState, Spinner } from "@/app/components/ui";
 import Dialog from "@/app/components/Dialog";
 import ConversationSidebar from "./ConversationSidebar";
 import MessageList from "./MessageList";
@@ -43,6 +41,20 @@ const CLOSED: DialogState = { isOpen: false, title: "", message: "", type: "info
  * event arrives, so the message looks like it vanished. The id is prefixed so a
  * later refetch, which replaces the list wholesale, cannot collide with it.
  */
+/**
+ * A message waiting for the conversation route to mount.
+ *
+ * Sending from the index page has to create a conversation and navigate to it,
+ * and that navigation swaps one route segment for another -- so the component
+ * that started the turn is unmounted while its stream is still arriving, and
+ * every state update it makes lands on nothing. The reply only reappeared after
+ * a refresh, because nothing told the fresh mount a turn was in flight.
+ *
+ * Module scope rather than state for exactly that reason: it has to outlive the
+ * component. Claimed once, by the mount that matches its id.
+ */
+let pendingHandoff: { conversationId: string; text: string } | null = null;
+
 function optimisticMessage(text: string, seq: number): AgentMessage {
     return {
         id: `pending-${Date.now()}`,
@@ -87,7 +99,15 @@ export default function ChatShell({ conversationId }: Props) {
     const [streamingThinking, setStreamingThinking] = useState("");
     const [dialog, setDialog] = useState<DialogState>(CLOSED);
 
-    const bottomRef = useRef<HTMLDivElement>(null);
+    const paneRef = useRef<HTMLDivElement>(null);
+    /**
+     * Whether the reader is parked at the bottom.
+     *
+     * Updated only by actual scrolling, so arriving content never flips it --
+     * someone who has scrolled up to re-read an earlier answer keeps their
+     * place instead of being yanked back down.
+     */
+    const stickToBottom = useRef(true);
 
     /** Refetch the thread; used whenever the stream reports something changed. */
     const refreshThread = async () => {
@@ -107,9 +127,35 @@ export default function ChatShell({ conversationId }: Props) {
             type: "error",
         });
 
+    /**
+     * What a scroll should actually follow.
+     *
+     * The previous dependency was the `messages` array, which is rebuilt on
+     * every render and so compared unequal every time -- meaning the pane
+     * scrolled itself on any state change at all, including toggling auto-run
+     * or typing. These are values, so they only change when the transcript does.
+     */
+    const lastMessageId = messages.at(-1)?.id ?? "";
+    const toolSignal = toolCalls.map((call) => `${call.id}:${call.status}`).join(",");
+
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, streamingText, toolCalls]);
+        const pane = paneRef.current;
+        if (!pane || !stickToBottom.current) return;
+        // Scrolling the pane directly rather than scrollIntoView on a sentinel:
+        // scrollIntoView walks up and moves scrollable ancestors too, which is
+        // what dragged the whole page down.
+        pane.scrollTo({
+            top: pane.scrollHeight,
+            // Smooth animation restarts on every token while streaming, which
+            // reads as lag; a jump is what a live transcript wants.
+            behavior: isRunning ? "auto" : "smooth",
+        });
+    }, [messages.length, lastMessageId, streamingText, toolSignal, isRunning]);
+
+    // A different conversation starts at its end, wherever the last one was left.
+    useEffect(() => {
+        stickToBottom.current = true;
+    }, [conversationId]);
 
     /**
      * Recovery channel: only opened for a conversation that is already mid-turn,
@@ -153,23 +199,8 @@ export default function ChatShell({ conversationId }: Props) {
         });
     };
 
-    const handleSend = async () => {
-        const text = input.trim();
-        if (!text) return;
-
-        // Create a conversation on first send if we are on the index page.
-        let targetId = conversationId;
-        if (!targetId) {
-            try {
-                const { conversation: created } = await createConversation.mutateAsync();
-                targetId = created.id;
-                router.push(`/testbed/chat/${created.id}`);
-            } catch (e) {
-                fail(e);
-                return;
-            }
-        }
-
+    /** Post a message and consume its stream. Assumes the conversation exists. */
+    const send = async (targetId: string, text: string) => {
         setInput("");
         setIsRunning(true);
         setStreamingText("");
@@ -247,6 +278,37 @@ export default function ChatShell({ conversationId }: Props) {
         updateConversation.mutate({ autoRun: !conversation.autoRun }, { onError: onMutationError });
     };
 
+    const handleSend = async () => {
+        const text = input.trim();
+        if (!text) return;
+
+        if (conversationId) {
+            void send(conversationId, text);
+            return;
+        }
+
+        // No conversation yet: make one, hand the text to the route that is
+        // about to mount, and let it own the turn from the start.
+        try {
+            const { conversation: created } = await createConversation.mutateAsync();
+            pendingHandoff = { conversationId: created.id, text };
+            setInput("");
+            router.push(`/testbed/chat/${created.id}`);
+        } catch (e) {
+            fail(e);
+        }
+    };
+
+    // Claimed by the mount it was addressed to, exactly once.
+    useEffect(() => {
+        if (!conversationId || pendingHandoff?.conversationId !== conversationId) return;
+        const { text } = pendingHandoff;
+        pendingHandoff = null;
+        void send(conversationId, text);
+        // `send` is recreated every render; re-running on that would send twice.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversationId]);
+
     const confirmDelete = (target: Conversation) =>
         setDialog({
             isOpen: true,
@@ -265,102 +327,103 @@ export default function ChatShell({ conversationId }: Props) {
         });
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-7xl mx-auto px-4">
-                <div className="mb-8">
-                    <Navigation />
-                    <div className="mt-4 flex items-start justify-between gap-4">
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-900">
-                                {conversation?.title ?? "Chat"}
-                            </h2>
-                            <p className="text-gray-600 text-sm mt-1">
-                                Ask the AI agent about your federated learning experiments.
-                            </p>
-                        </div>
+        <>
+            <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="min-w-0">
+                    <h1 className="text-xl font-semibold text-ink truncate">
+                        {conversation?.title ?? "Chat"}
+                    </h1>
+                    <p className="text-sm text-ink-muted mt-0.5">
+                        Ask the agent about your federated learning experiments.
+                    </p>
+                </div>
 
-                        {conversation && (
-                            <button
-                                onClick={toggleAutoRun}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
-                                    conversation.autoRun
-                                        ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                        : "text-gray-600 hover:bg-gray-100"
-                                }`}
-                                title="When on, the agent runs actions without asking first"
-                            >
-                                <Zap className="w-4 h-4" />
-                                Auto-run {conversation.autoRun ? "on" : "off"}
-                            </button>
+                {conversation && (
+                    <Button
+                        size="sm"
+                        icon="energy"
+                        onClick={toggleAutoRun}
+                        title="When on, the agent runs actions without asking first"
+                        className={
+                            conversation.autoRun
+                                ? "border-warn-line bg-warn-surface text-warn hover:bg-warn-surface"
+                                : undefined
+                        }
+                    >
+                        Auto-run {conversation.autoRun ? "on" : "off"}
+                    </Button>
+                )}
+            </div>
+
+            {conversation?.autoRun && (
+                <Callout tone="warn" className="mb-4">
+                    The agent will start experiments and write files without asking for approval
+                    first.
+                </Callout>
+            )}
+
+            {/* Fixed height rather than page scroll: a conversation reads as a
+                pane with its own scrollback, and the composer must stay put. */}
+            <Card padded={false} className="flex h-[calc(100vh-15rem)] min-h-[28rem] overflow-hidden">
+                <ConversationSidebar
+                    conversations={conversations}
+                    activeId={conversationId}
+                    onNew={handleNew}
+                    onDelete={confirmDelete}
+                    creating={creating}
+                />
+
+                <div className="flex-1 min-w-0 flex flex-col">
+                    <div
+                        ref={paneRef}
+                        onScroll={() => {
+                            const pane = paneRef.current;
+                            if (!pane) return;
+                            const fromBottom =
+                                pane.scrollHeight - pane.scrollTop - pane.clientHeight;
+                            stickToBottom.current = fromBottom < 120;
+                        }}
+                        className="flex-1 overflow-y-auto px-5 py-5"
+                    >
+                        {loading ? (
+                            <div className="flex justify-center py-20">
+                                <Spinner size={16} label="Loading conversation" />
+                            </div>
+                        ) : messages.length === 0 && !isRunning ? (
+                            <EmptyState
+                                icon="sparkle"
+                                title="Ask about your experiments"
+                                description={
+                                    'The agent can read your runs, compare them, inspect saved ' +
+                                    'checkpoints and explain what happened. Try "summarise my last ' +
+                                    'experiment" or "which of my runs converged fastest?"'
+                                }
+                                className="py-16"
+                            />
+                        ) : (
+                            <MessageList
+                                conversationId={conversationId ?? ""}
+                                messages={messages}
+                                toolCalls={toolCalls}
+                                streamingText={streamingText}
+                                streamingThinking={streamingThinking}
+                                isRunning={isRunning}
+                                status={conversation?.status}
+                                onDecided={refreshThread}
+                            />
                         )}
                     </div>
-                </div>
 
-                {conversation?.autoRun && (
-                    <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <p className="text-sm text-amber-800">
-                            Auto-run is on. The agent will start experiments and write files without
-                            asking for approval first.
-                        </p>
-                    </div>
-                )}
-
-                <div className="flex gap-6">
-                    <ConversationSidebar
-                        conversations={conversations}
-                        activeId={conversationId}
-                        onNew={handleNew}
-                        onDelete={confirmDelete}
-                        creating={creating}
+                    <MessageComposer
+                        value={input}
+                        onChange={setInput}
+                        onSend={handleSend}
+                        onCancel={handleCancel}
+                        disabled={isRunning}
+                        isRunning={isRunning}
                     />
-
-                    <div className="flex-1 min-w-0 bg-white rounded-lg shadow flex flex-col max-h-[calc(100vh-14rem)]">
-                        <div className="flex-1 overflow-y-auto px-5 py-5">
-                            {loading ? (
-                                <div className="text-center py-20">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div>
-                                    <p className="mt-4 text-gray-600">Loading conversation...</p>
-                                </div>
-                            ) : messages.length === 0 && !isRunning ? (
-                                <div className="text-center py-16 px-6">
-                                    <p className="text-gray-900 font-medium">
-                                        Ask about your experiments
-                                    </p>
-                                    <p className="text-gray-500 text-sm mt-2 max-w-md mx-auto">
-                                        The agent can read your runs, compare them, inspect saved
-                                        checkpoints and explain what happened. Try &quot;summarise my
-                                        last experiment&quot; or &quot;which of my runs converged
-                                        fastest?&quot;
-                                    </p>
-                                </div>
-                            ) : (
-                                <MessageList
-                                    conversationId={conversationId ?? ""}
-                                    messages={messages}
-                                    toolCalls={toolCalls}
-                                    streamingText={streamingText}
-                                    streamingThinking={streamingThinking}
-                                    isRunning={isRunning}
-                                    onDecided={refreshThread}
-                                />
-                            )}
-                            <div ref={bottomRef} />
-                        </div>
-
-                        <MessageComposer
-                            value={input}
-                            onChange={setInput}
-                            onSend={handleSend}
-                            onCancel={handleCancel}
-                            disabled={isRunning}
-                            isRunning={isRunning}
-                        />
-                    </div>
                 </div>
-
-                <Footer />
-            </div>
+            </Card>
 
             <Dialog
                 isOpen={dialog.isOpen}
@@ -371,8 +434,8 @@ export default function ChatShell({ conversationId }: Props) {
                 type={dialog.type}
                 confirmText={dialog.type === "confirm" ? "Delete" : "OK"}
                 isLoading={deleting}
-                loadingText="Deleting..."
+                loadingText="Deleting"
             />
-        </div>
+        </>
     );
 }

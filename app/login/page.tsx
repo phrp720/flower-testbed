@@ -1,102 +1,79 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
+import { Button, Callout, Card, Icon, Input, Spinner } from "@/app/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
   const { status } = useSession();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (status === "authenticated") {
-      router.push("/testbed/dashboard");
-    }
+    if (status === "authenticated") router.push("/testbed/dashboard");
   }, [status, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError("");
-    setIsSubmitting(true);
+    setSubmitting(true);
 
-    const result = await signIn("credentials", {
-      username,
-      password,
-      redirect: false,
-    });
+    const result = await signIn("credentials", { username, password, redirect: false });
 
-    if (result?.error) {
-      setError("Invalid username or password");
-      setIsSubmitting(false);
-    } else if (result?.ok) {
+    if (result?.ok) {
       router.push("/testbed/dashboard");
+      return;
     }
+
+    setError("Invalid username or password.");
+    setSubmitting(false);
   };
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size={18} />
       </div>
     );
   }
 
-  if (status === "authenticated") {
-    return null;
-  }
+  if (status === "authenticated") return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Logo and Title */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-2">
-              <Image
-                src="/testbed-icon-v2.png"
-                alt="Flower Testbed"
-                width={140}
-                height={140}
-              />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Flower Testbed</h1>
-            <p className="text-gray-500 text-sm mt-1">Federated Learning Experiment Platform</p>
-          </div>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center text-center mb-6">
+          <Image src="/testbed-icon-v2.png" alt="" width={140} height={140} priority />
+          <h1 className="text-xl font-semibold text-ink mt-2">Flower Testbed</h1>
+          <p className="text-sm text-ink-muted mt-1">
+            Federated learning experiment platform
+          </p>
+        </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {error}
-              </div>
-            )}
+        <Card>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <Callout tone="danger">{error}</Callout>}
 
+            <Input
+              label="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoFocus
+              required
+            />
+
+            {/* Not the shared Input, because the reveal toggle has to sit
+                inside the control's own box. */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                placeholder="Enter your username"
-                required
-                autoComplete="username"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-xs font-medium text-ink-muted mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -105,52 +82,32 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                  placeholder="Enter your password"
-                  required
                   autoComplete="current-password"
+                  required
+                  className="w-full h-9 pl-3 pr-10 rounded-[var(--radius)] border border-line-strong bg-surface text-ink text-sm placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 rounded text-ink-subtle hover:text-ink transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  <Icon name={showPassword ? "hide" : "view"} size={15} />
                 </button>
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full flex items-center justify-center gap-2 bg-gray-800 text-white py-3 rounded-lg font-medium hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="primary"
+              icon="login"
+              loading={submitting}
+              className="w-full"
             >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  Sign In
-                </>
-              )}
-            </button>
+              {submitting ? "Signing in" : "Sign in"}
+            </Button>
           </form>
-        </div>
-
-        <p className="text-center text-xs text-gray-400 mt-2">
-          Powered by{" "}
-          <a
-            href="https://github.com/phrp720"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-gray-500 hover:text-gray-800 transition"
-          >
-            phrp720
-          </a>
-        </p>
+        </Card>
       </div>
     </div>
   );

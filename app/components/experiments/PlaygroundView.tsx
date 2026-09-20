@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Info, Pause, Play } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { decodeGrid, lerpGrids } from "@/lib/grid";
@@ -10,6 +9,7 @@ import Heatmap from "./Heatmap";
 import NetworkDiagram from "./NetworkDiagram";
 import FilterGrid from "./FilterGrid";
 import FlCharts from "./FlCharts";
+import { Button, Callout, Card, Progress, SectionLabel, Spinner } from "@/app/components/ui";
 
 type SurfaceFrame = {
     round: number;
@@ -204,25 +204,25 @@ export default function PlaygroundView({
         : "Round-by-round measurements of the federation itself.";
 
     return (
-        <div className="bg-white rounded-lg shadow p-6">
+        <Card>
             <div className="flex items-start justify-between gap-4 mb-5">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h2 className="text-sm font-semibold text-ink">
                         {drawable ? "What the network learned" : "Federation"}
-                    </h3>
-                    <p className="text-gray-600 text-sm mt-0.5">{subtitle}</p>
+                    </h2>
+                    <p className="text-xs text-ink-muted mt-1">{subtitle}</p>
                 </div>
 
                 {drawable && frameCount > 1 && (
-                    <div className="flex items-center gap-3 shrink-0">
-                        <button
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                            size="sm"
+                            icon={playing ? "pause" : "play"}
                             onClick={() => setPlaying((v) => !v)}
-                            className="flex items-center gap-1.5 border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
                         >
-                            {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                             {playing ? "Pause" : "Play"}
-                        </button>
-                        <span className="text-sm text-gray-600 tabular-nums w-20 text-right">
+                        </Button>
+                        <span className="text-xs text-ink-muted tabular w-16 text-right">
                             Round {roundLabel}
                         </span>
                     </div>
@@ -241,10 +241,10 @@ export default function PlaygroundView({
                             setPlaying(false);
                             setPosition(Number(e.target.value));
                         }}
-                        className="w-full accent-gray-800"
+                        className="w-full accent-[var(--accent)]"
                         aria-label="Training round"
                     />
-                    <div className="flex justify-between text-[11px] text-gray-400 mt-1">
+                    <div className="flex justify-between text-[11px] text-ink-subtle mt-1 tabular">
                         <span>round {frames[0].round}</span>
                         <span>round {frames[frames.length - 1].round}</span>
                     </div>
@@ -260,15 +260,13 @@ export default function PlaygroundView({
             >
                 <div className="min-w-0">
                     {isLoading ? (
-                        <div className="h-80 flex items-center justify-center text-sm text-gray-400">
-                            Working out how this model can be shown...
+                        <div className="h-80 flex items-center justify-center">
+                            <Spinner size={16} label="Working out how this model can be shown" />
                         </div>
                     ) : currentSurface ? (
                         <div className="flex flex-col lg:flex-row gap-6">
                             <div className="min-w-0">
-                                <p className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase mb-3">
-                                    Hidden layers
-                                </p>
+                                <SectionLabel className="mb-3">Hidden layers</SectionLabel>
                                 <NetworkDiagram
                                     layers={currentSurface.layers}
                                     weights={currentSurface.weights}
@@ -276,7 +274,7 @@ export default function PlaygroundView({
                                     domain={view?.domain}
                                     active={playing || status === "running"}
                                 />
-                                <p className="text-xs text-gray-500 mt-3 max-w-sm">
+                                <p className="text-xs text-ink-muted mt-3 max-w-sm">
                                     Each square is one neuron, coloured by how it responds across the
                                     input. Line thickness is the weight between them, and the dashes
                                     travel faster along the stronger ones.
@@ -284,25 +282,23 @@ export default function PlaygroundView({
                             </div>
 
                             <div className="shrink-0">
-                                <p className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase mb-3">
-                                    Output
-                                </p>
-                                <div className="flex gap-6 text-sm mb-3">
-                                    <span className="text-gray-600">
+                                <SectionLabel className="mb-3">Output</SectionLabel>
+                                <div className="flex gap-5 text-xs mb-3">
+                                    <span className="text-ink-muted">
                                         Loss{" "}
-                                        <span className="font-mono text-gray-900">
+                                        <span className="font-mono tabular text-ink">
                                             {latestLoss?.toFixed(3) ?? "—"}
                                         </span>
                                     </span>
-                                    <span className="text-gray-600">
+                                    <span className="text-ink-muted">
                                         Accuracy{" "}
-                                        <span className="font-mono text-gray-900">
+                                        <span className="font-mono tabular text-ink">
                                             {latestAccuracy != null ? latestAccuracy.toFixed(3) : "—"}
                                         </span>
                                     </span>
                                 </div>
 
-                                <div className="rounded border border-gray-300 overflow-hidden inline-block">
+                                <div className="rounded-[var(--radius)] border border-line overflow-hidden inline-block">
                                     <Heatmap
                                         grid={currentSurface.output}
                                         resolution={resolution}
@@ -313,7 +309,7 @@ export default function PlaygroundView({
                                     />
                                 </div>
 
-                                <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+                                <div className="flex items-center gap-2 mt-3 text-xs text-ink-subtle">
                                     <span>−1</span>
                                     <span
                                         className="h-2.5 flex-1 rounded-full"
@@ -324,7 +320,7 @@ export default function PlaygroundView({
                                     />
                                     <span>+1</span>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2 max-w-[280px]">
+                                <p className="text-xs text-ink-muted mt-2 max-w-[280px]">
                                     Colour is the model&apos;s prediction; dots are the actual data,
                                     pooled across all clients. Final-round loss and accuracy shown above.
                                 </p>
@@ -333,16 +329,14 @@ export default function PlaygroundView({
                     ) : currentFilters ? (
                         <div className="flex flex-col lg:flex-row gap-8">
                             <div className="min-w-0">
-                                <p className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase mb-3">
-                                    First-layer filters
-                                </p>
+                                <SectionLabel className="mb-3">First-layer filters</SectionLabel>
                                 <FilterGrid
                                     filters={currentFilters.filters}
                                     count={currentFilters.filterCount}
                                     kernelHeight={view?.kernelHeight ?? 3}
                                     kernelWidth={view?.kernelWidth ?? 3}
                                 />
-                                <p className="text-xs text-gray-500 mt-3 max-w-sm">
+                                <p className="text-xs text-ink-muted mt-3 max-w-sm">
                                     Each tile is one {view?.kernelHeight}×{view?.kernelWidth} kernel
                                     from <code className="font-mono">{view?.layerName}</code>, drawn
                                     as the colour patch it is. These weights see raw pixels, so what
@@ -352,22 +346,15 @@ export default function PlaygroundView({
                             </div>
 
                             <div className="shrink-0 w-full lg:w-[280px]">
-                                <p className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase mb-3">
-                                    Accuracy by class
-                                </p>
+                                <SectionLabel className="mb-3">Accuracy by class</SectionLabel>
                                 <div className="space-y-1.5">
                                     {currentFilters.perClass.map((entry) => (
                                         <div key={entry.label} className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-600 w-20 shrink-0 truncate">
+                                            <span className="text-xs text-ink-muted w-20 shrink-0 truncate">
                                                 {entry.label}
                                             </span>
-                                            <span className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                                                <span
-                                                    className="block h-full bg-gray-800 rounded-full"
-                                                    style={{ width: `${(entry.accuracy ?? 0) * 100}%` }}
-                                                />
-                                            </span>
-                                            <span className="text-xs font-mono text-gray-900 w-10 text-right tabular-nums">
+                                            <Progress value={entry.accuracy ?? 0} className="flex-1" />
+                                            <span className="text-xs font-mono text-ink w-10 text-right tabular">
                                                 {entry.accuracy != null
                                                     ? `${(entry.accuracy * 100).toFixed(0)}%`
                                                     : "—"}
@@ -375,11 +362,11 @@ export default function PlaygroundView({
                                         </div>
                                     ))}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-3">
+                                <p className="text-xs text-ink-muted mt-3">
                                     {currentFilters.accuracy != null && (
                                         <>
                                             Overall{" "}
-                                            <span className="font-mono text-gray-900">
+                                            <span className="font-mono tabular text-ink">
                                                 {(currentFilters.accuracy * 100).toFixed(1)}%
                                             </span>{" "}
                                             ·{" "}
@@ -391,29 +378,26 @@ export default function PlaygroundView({
                             </div>
                         </div>
                     ) : (
-                        <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 h-fit max-w-3xl">
-                            <Info className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-                            <div className="text-sm text-gray-600">
-                                <p className="font-medium text-gray-900">
-                                    Nothing drawable for this model
+                        <Callout
+                            title="Nothing drawable for this model"
+                            className="max-w-3xl"
+                        >
+                            <p>
+                                {view?.reason ??
+                                    view?.error ??
+                                    "This experiment has no saved rounds to read yet."}
+                            </p>
+                            {view?.inputShape && (
+                                <p className="mt-2 text-xs">
+                                    Input shape{" "}
+                                    <code className="font-mono bg-surface border border-line rounded px-1 py-0.5">
+                                        {view.inputShape.join("\u00d7")}
+                                    </code>
+                                    . A surface needs two inputs to sweep; filters need a
+                                    convolution over pixels.
                                 </p>
-                                <p className="mt-1">
-                                    {view?.reason ??
-                                        view?.error ??
-                                        "This experiment has no saved rounds to read yet."}
-                                </p>
-                                {view?.inputShape && (
-                                    <p className="mt-2 text-xs">
-                                        Input shape{" "}
-                                        <code className="font-mono bg-white border border-gray-200 rounded px-1 py-0.5">
-                                            {view.inputShape.join("×")}
-                                        </code>
-                                        . A surface needs two inputs to sweep; filters need a
-                                        convolution over pixels.
-                                    </p>
-                                )}
-                            </div>
-                        </div>
+                            )}
+                        </Callout>
                     )}
                 </div>
 
@@ -423,6 +407,6 @@ export default function PlaygroundView({
                     variant={drawable ? "sidebar" : "grid"}
                 />
             </div>
-        </div>
+        </Card>
     );
 }

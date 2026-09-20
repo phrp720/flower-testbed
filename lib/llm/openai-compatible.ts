@@ -29,7 +29,12 @@ interface OpenAiToolCallFragment {
   id?: string;
   type?: string;
   function?: { name?: string; arguments?: string };
+  /** Anything else the server attached, such as Gemini's extra_content. */
+  [key: string]: unknown;
 }
+
+/** Keys this adapter understands; everything else is a vendor field to preserve. */
+const KNOWN_FRAGMENT_KEYS = new Set(['index', 'id', 'type', 'function']);
 
 interface OpenAiStreamChunk {
   choices?: Array<{
@@ -54,11 +59,13 @@ type OpenAiMessage =
   | {
       role: 'assistant';
       content: string | null;
-      tool_calls?: Array<{
-        id: string;
-        type: 'function';
-        function: { name: string; arguments: string };
-      }>;
+      tool_calls?: Array<
+        {
+          id: string;
+          type: 'function';
+          function: { name: string; arguments: string };
+        } & Record<string, unknown>
+      >;
     }
   | { role: 'tool'; tool_call_id: string; content: string };
 
@@ -82,6 +89,9 @@ function toOpenAiMessages(messages: LlmMessage[]): OpenAiMessage[] {
       const toolCalls = message.content
         .filter((b): b is Extract<LlmBlock, { type: 'tool_use' }> => b.type === 'tool_use')
         .map((b) => ({
+          // Vendor fields first, so a malformed stored value can never
+          // overwrite the three keys the wire format requires.
+          ...(b.providerFields ?? {}),
           id: b.id,
           type: 'function' as const,
           function: { name: b.name, arguments: JSON.stringify(b.input ?? {}) },
@@ -214,7 +224,10 @@ export class OpenAiCompatibleProvider implements LlmProvider {
 
     // Accumulated per `index`, because a call's name and id may only ever
     // appear on its first fragment.
-    const toolBuffers = new Map<number, { id: string; name: string; args: string }>();
+    const toolBuffers = new Map<
+      number,
+      { id: string; name: string; args: string; extras: Record<string, unknown> }
+    >();
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -275,6 +288,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
                 id: fragment.id ?? `call_${index}`,
                 name: fragment.function?.name ?? '',
                 args: '',
+                extras: {},
               };
               toolBuffers.set(index, entry);
               if (entry.name) onEvent?.({ type: 'tool_use_start', id: entry.id, name: entry.name });
@@ -282,6 +296,13 @@ export class OpenAiCompatibleProvider implements LlmProvider {
 
             if (fragment.id) entry.id = fragment.id;
             if (fragment.function?.name) entry.name = fragment.function.name;
+
+            // Merged across fragments: a signature can arrive on any chunk of
+            // the call, not only the first.
+            for (const [key, value] of Object.entries(fragment)) {
+              if (KNOWN_FRAGMENT_KEYS.has(key) || value === undefined) continue;
+              entry.extras[key] = value;
+            }
             if (fragment.function?.arguments) {
               entry.args += fragment.function.arguments;
               onEvent?.({
@@ -319,7 +340,13 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         input = { __parseError: `Model produced invalid JSON arguments: ${entry.args.slice(0, 200)}` };
       }
 
-      blocks.push({ type: 'tool_use', id: entry.id, name: entry.name, input });
+      blocks.push({
+        type: 'tool_use',
+        id: entry.id,
+        name: entry.name,
+        input,
+        ...(Object.keys(entry.extras).length > 0 ? { providerFields: entry.extras } : {}),
+      });
       onEvent?.({ type: 'tool_use_end', id: entry.id, name: entry.name, input });
     }
 

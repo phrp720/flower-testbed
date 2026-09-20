@@ -3,66 +3,92 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FlaskConical, Plus, MessageSquare, Settings, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
+import Icon, { type IconName } from "@/app/components/ui/Icon";
+import { cn } from "@/app/components/ui/cn";
+
+type Item = { href: string; label: string; icon: IconName };
+
+const ITEMS: Item[] = [
+    { href: "/testbed/dashboard", label: "Dashboard", icon: "dashboard" },
+    { href: "/testbed/experiments", label: "Experiments", icon: "experiments" },
+    { href: "/testbed/chat", label: "Chat", icon: "chat" },
+    { href: "/testbed/settings", label: "Settings", icon: "settings" },
+];
+
+/**
+ * Whether a nav item owns the current route.
+ *
+ * Detail routes have to light up their section, and "New experiment" lives
+ * under /testbed/experiments/ without being one of them -- so this is a
+ * prefix match with that one carve-out, expressed once instead of inline.
+ */
+function isActive(item: Item, pathname: string | null): boolean {
+    if (!pathname) return false;
+    if (pathname === item.href) return true;
+    if (item.href === "/testbed/experiments") {
+        return pathname.startsWith("/testbed/experiments/") && pathname !== "/testbed/experiments/new";
+    }
+    return pathname.startsWith(`${item.href}/`);
+}
 
 export default function Navigation() {
     const pathname = usePathname();
 
-    const handleLogout = () => {
-        signOut({ callbackUrl: "/login" });
-    };
-
-    const navItems = [
-        { href: "/testbed/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/testbed/experiments", label: "Experiments", icon: FlaskConical },
-        { href: "/testbed/experiments/new", label: "New Experiment", icon: Plus },
-        { href: "/testbed/chat", label: "Chat", icon: MessageSquare },
-        { href: "/testbed/settings", label: "Settings", icon: Settings },
-    ];
-
     return (
-        <div className="flex items-center justify-between pb-6 mb-6 border-b border-gray-200">
-            <Link href="/testbed/dashboard" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition">
-                <Image
-                    src="/testbed-icon-v2.png"
-                    alt="Flower Testbed"
-                    width={50}
-                    height={50}
-                />
-                <h1 className="text-xl font-bold text-gray-900">Flower Testbed</h1>
-            </Link>
-
-            <nav className="flex items-center gap-1">
-                {navItems.map((item) => {
-                    const isActive = pathname === item.href ||
-                        (item.href === "/testbed/experiments" && pathname?.startsWith("/testbed/experiments/") && pathname !== "/testbed/experiments/new") ||
-                        (item.href === "/testbed/chat" && pathname?.startsWith("/testbed/chat/"));
-                    const Icon = item.icon;
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                isActive
-                                    ? "bg-gray-800 text-white"
-                                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                            }`}
-                        >
-                            <Icon className="w-4 h-4" />
-                            {item.label}
-                        </Link>
-                    );
-                })}
-                <div className="w-px h-6 bg-gray-200 mx-2" />
-                <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+        <header className="sticky top-0 z-30 bg-surface/85 backdrop-blur-sm border-b border-line">
+            <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-6">
+                <Link
+                    href="/testbed/dashboard"
+                    className="flex items-center gap-2.5 shrink-0 hover:opacity-70 transition-opacity"
                 >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                </button>
-            </nav>
-        </div>
+                    <Image src="/testbed-icon-v2.png" alt="" width={26} height={26} priority />
+                    <span className="text-sm font-semibold text-ink tracking-tight">
+                        Flower Testbed
+                    </span>
+                </Link>
+
+                <nav className="flex items-center gap-0.5">
+                    {ITEMS.map((item) => {
+                        const active = isActive(item, pathname);
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                aria-current={active ? "page" : undefined}
+                                className={cn(
+                                    "flex items-center gap-2 px-3 h-8 rounded-[var(--radius)] text-sm transition-colors",
+                                    active
+                                        ? "bg-surface-muted text-ink font-medium"
+                                        : "text-ink-muted hover:text-ink hover:bg-surface-hover"
+                                )}
+                            >
+                                <Icon name={item.icon} size={15} />
+                                <span className="hidden sm:inline">{item.label}</span>
+                            </Link>
+                        );
+                    })}
+
+                    <span className="w-px h-5 bg-line mx-2" />
+
+                    <Link
+                        href="/testbed/experiments/new"
+                        className="flex items-center gap-1.5 px-3 h-8 rounded-[var(--radius)] bg-accent text-ink-inverted text-sm font-medium hover:bg-accent-hover transition-colors"
+                    >
+                        <Icon name="add" size={15} />
+                        <span className="hidden sm:inline">New</span>
+                    </Link>
+
+                    <button
+                        onClick={() => signOut({ callbackUrl: "/login" })}
+                        aria-label="Log out"
+                        title="Log out"
+                        className="flex items-center justify-center w-8 h-8 ml-1 rounded-[var(--radius)] text-ink-subtle hover:text-danger hover:bg-danger-surface transition-colors"
+                    >
+                        <Icon name="logout" size={15} />
+                    </button>
+                </nav>
+            </div>
+        </header>
     );
 }

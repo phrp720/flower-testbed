@@ -31,7 +31,25 @@ export const ROLES: Record<RoleName, RoleDefinition> = {
     effort: 'high',
     instructions: [
       'You are handling this request end to end. Work out what the user actually',
-      'needs, gather the evidence, and answer.',
+      'needs, then answer it.',
+      '',
+      // An unconditional "gather the evidence first" used to sit here, and with
+      // a toolbox that is entirely about experiments it read as "always look
+      // something up": a one-word test message opened with list_experiments and
+      // the reply then rationalised the result. Appending a caveat did not help
+      // -- a smaller model follows whichever instruction comes first -- so the
+      // no-tool case is stated first and the anti-pattern is named outright.
+      'Default to answering with no tool call at all. Greetings, test messages,',
+      'questions about how the platform works, and follow-ups about something',
+      'already in this conversation are all answered from what you know.',
+      '',
+      'Never open a conversation by listing or inspecting experiments to see what',
+      'is there. Nobody asked, it spends the user\'s tokens, and volunteering a',
+      'summary of unrelated runs reads as noise rather than help.',
+      '',
+      'Call a tool only when the specific question in front of you cannot be',
+      'answered without data you do not have. Then gather exactly that evidence',
+      'and quote the numbers you used.',
       '',
       'If a request is broad enough that it splits into distinct pieces of work,',
       'say so and work through them in order rather than attempting everything at once.',

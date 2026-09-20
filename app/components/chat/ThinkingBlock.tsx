@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, ChevronRight } from "lucide-react";
+import { Icon, cn } from "@/app/components/ui";
 
 type Props = { text: string; streaming?: boolean };
 
@@ -14,16 +14,19 @@ export default function ThinkingBlock({ text, streaming }: Props) {
         <div className="my-2" style={{ animation: "fadeIn 0.2s ease-out" }}>
             <button
                 onClick={() => setExpanded((v) => !v)}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                aria-expanded={expanded}
+                className="flex items-center gap-1.5 text-xs text-ink-subtle hover:text-ink-muted transition-colors"
             >
-                <ChevronRight
-                    className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`}
+                <Icon
+                    name="forward"
+                    size={12}
+                    className={cn("transition-transform", expanded && "rotate-90")}
                 />
-                <Brain className="w-3 h-3" />
+                <Icon name="thinking" size={12} />
                 {streaming ? "Thinking..." : "Thought process"}
             </button>
             {expanded && (
-                <pre className="mt-1.5 text-xs text-gray-500 whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-1">
+                <pre className="mt-1.5 text-xs text-ink-muted whitespace-pre-wrap border-l border-line pl-3 py-1">
                     {text}
                 </pre>
             )}

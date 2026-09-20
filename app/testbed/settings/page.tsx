@@ -1,11 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Loader2, Plug, Save } from "lucide-react";
-import Navigation from "@/app/components/Navigation";
-import Footer from "@/app/components/Footer";
 import Dialog from "@/app/components/Dialog";
-import ProviderForm from "@/app/components/settings/ProviderForm";
+import {
+    Button,
+    Callout,
+    Card,
+    PageHeader,
+    Spinner,
+    TabPanel,
+    Tabs,
+} from "@/app/components/ui";
+import ModelForm from "@/app/components/settings/ModelForm";
+import BehaviourForm from "@/app/components/settings/BehaviourForm";
 import EmbeddingForm from "@/app/components/settings/EmbeddingForm";
 import ApiTokensPanel from "@/app/components/settings/ApiTokensPanel";
 import type { PublicSettings } from "@/app/components/settings/types";
@@ -19,6 +26,8 @@ type DialogState = {
 };
 
 const CLOSED_DIALOG: DialogState = { isOpen: false, title: "", message: "", type: "info" };
+
+type TabId = "connection" | "behaviour" | "memory" | "access";
 
 export default function SettingsPage() {
     const { data: serverSettings, isLoading: loading, error: loadError } = useAgentSettings();
@@ -43,6 +52,38 @@ export default function SettingsPage() {
     const [clearApiKey, setClearApiKey] = useState(false);
 
     const [dialog, setDialog] = useState<DialogState>(CLOSED_DIALOG);
+    const [tab, setTab] = useState<TabId>("connection");
+
+    /**
+     * Which tab each editable field lives behind.
+     *
+     * Only used to mark a tab that has unsaved edits, but that marker is what
+     * makes tabs safe here: one Save covers all three settings tabs, so without
+     * it a change made on a tab you have since left is invisible.
+     */
+    const tabOf: Record<string, TabId> = {
+        provider: "connection",
+        baseUrl: "connection",
+        model: "connection",
+        maxTokens: "connection",
+        effort: "behaviour",
+        temperature: "behaviour",
+        disableParallelToolCalls: "behaviour",
+        systemPromptOverride: "behaviour",
+        embeddingProvider: "memory",
+        embeddingBaseUrl: "memory",
+        embeddingModel: "memory",
+        embeddingDimensions: "memory",
+    };
+
+    const editedTabs = new Set<TabId>(
+        Object.keys(draft)
+            .map((field) => tabOf[field])
+            .filter(Boolean) as TabId[]
+    );
+    // Keys are held outside the draft, so they have to be attributed by hand.
+    if (apiKey || clearApiKey) editedTabs.add("connection");
+    if (embeddingApiKey) editedTabs.add("memory");
 
     const patch = (update: Partial<PublicSettings>) => {
         setDraft((prev) => ({ ...prev, ...update }));
@@ -61,6 +102,7 @@ export default function SettingsPage() {
                 effort: settings.effort,
                 temperature: settings.temperature,
                 disableParallelToolCalls: settings.disableParallelToolCalls,
+                systemPromptOverride: settings.systemPromptOverride,
                 embeddingProvider: settings.embeddingProvider,
                 embeddingBaseUrl: settings.embeddingBaseUrl,
                 embeddingModel: settings.embeddingModel,
@@ -138,78 +180,61 @@ export default function SettingsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 py-8">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="mb-8">
-                        <Navigation />
-                    </div>
-                    <div className="text-center py-20">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div>
-                        <p className="mt-4 text-gray-600">Loading settings...</p>
-                    </div>
-                </div>
-            </div>
+            <Card className="flex justify-center py-20">
+                <Spinner size={18} label="Loading settings" />
+            </Card>
         );
     }
 
+    const TABS = [
+        { id: "connection" as const, label: "Model", icon: "agent" as const, marked: editedTabs.has("connection") },
+        { id: "behaviour" as const, label: "Behaviour", icon: "thinking" as const, marked: editedTabs.has("behaviour") },
+        { id: "memory" as const, label: "Memory", icon: "database" as const, marked: editedTabs.has("memory") },
+        { id: "access" as const, label: "MCP access", icon: "token" as const },
+    ];
+
+    // MCP tokens save themselves the moment they are created or revoked, so the
+    // Save bar would be a lie on that tab.
+    const showSaveBar = tab !== "access";
+
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-7xl mx-auto px-4">
-                <div className="mb-8">
-                    <Navigation />
-                    <div className="mt-4">
-                        <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-                        <p className="text-gray-600 text-sm mt-1">
-                            Connect the AI agent to a language model.
-                        </p>
-                    </div>
-                </div>
+        <>
+            <PageHeader
+                title="Settings"
+                description="Connect the agent to a language model, and issue tokens for external MCP clients."
+            />
 
-                {loadError && (
-                    <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-                        <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                        <div className="text-sm text-red-800">
-                            <p className="font-medium">Could not load settings</p>
-                            <p className="mt-1">
-                                {loadError instanceof Error ? loadError.message : "Please try again."}
-                            </p>
-                        </div>
-                    </div>
-                )}
+            {loadError && (
+                <Callout tone="danger" title="Could not load settings" className="mb-5">
+                    {loadError instanceof Error ? loadError.message : "Please try again."}
+                </Callout>
+            )}
 
-                {settings && !settings.secretKeyConfigured && (
-                    <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                        <div className="text-sm text-amber-800">
-                            <p className="font-medium">No encryption key configured</p>
-                            <p className="mt-1">
-                                Set <code className="font-mono text-xs">AGENT_SECRET_KEY</code> in your
-                                environment before saving an API key. Generate one with{" "}
-                                <code className="font-mono text-xs">openssl rand -base64 32</code>.
-                            </p>
-                        </div>
-                    </div>
-                )}
+            {settings && !settings.secretKeyConfigured && (
+                <Callout tone="warn" title="No encryption key configured" className="mb-5">
+                    Set <code className="font-mono text-xs">AGENT_SECRET_KEY</code> in your
+                    environment before saving an API key. Generate one with{" "}
+                    <code className="font-mono text-xs">openssl rand -base64 32</code>.
+                </Callout>
+            )}
 
-                {settings?.apiKeyDecryptionFailed && (
-                    <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-                        <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                        <div className="text-sm text-red-800">
-                            <p className="font-medium">Stored API key cannot be decrypted</p>
-                            <p className="mt-1">
-                                The encryption key has changed since the key was saved. Enter your API
-                                key again to fix this.
-                            </p>
-                        </div>
-                    </div>
-                )}
+            {settings?.apiKeyDecryptionFailed && (
+                <Callout tone="danger" title="Stored API key cannot be decrypted" className="mb-5">
+                    The encryption key has changed since the key was saved. Enter your API key again
+                    to fix this.
+                </Callout>
+            )}
 
-                {settings && (
-                    <div className="grid gap-6">
-                        <ProviderForm
+            {settings && (
+                <>
+                    <Tabs tabs={TABS} active={tab} onChange={setTab} className="mb-5" />
+
+                    <TabPanel id="connection" active={tab}>
+                        <ModelForm
                             settings={settings}
                             apiKey={apiKey}
                             showApiKey={showApiKey}
+                            clearApiKey={clearApiKey}
                             onChange={patch}
                             onApiKeyChange={(value) => {
                                 setApiKey(value);
@@ -223,13 +248,13 @@ export default function SettingsPage() {
                                 setDirty(true);
                             }}
                         />
+                    </TabPanel>
 
-                        {clearApiKey && (
-                            <p className="-mt-3 text-sm text-red-600">
-                                The stored API key will be removed when you save.
-                            </p>
-                        )}
+                    <TabPanel id="behaviour" active={tab}>
+                        <BehaviourForm settings={settings} onChange={patch} />
+                    </TabPanel>
 
+                    <TabPanel id="memory" active={tab}>
                         <EmbeddingForm
                             settings={settings}
                             embeddingApiKey={embeddingApiKey}
@@ -239,46 +264,46 @@ export default function SettingsPage() {
                                 setDirty(true);
                             }}
                         />
+                    </TabPanel>
 
-                        <div className="flex items-center gap-3">
-                            <button
+                    <TabPanel id="access" active={tab}>
+                        <ApiTokensPanel />
+                    </TabPanel>
+
+                    {showSaveBar && (
+                        /* Sticky, because the forms are long enough that Save
+                           would otherwise scroll away mid-edit. */
+                        <div className="sticky bottom-4 z-10 mt-5 flex items-center gap-3 p-3 rounded-[var(--radius)] border border-line bg-surface/95 backdrop-blur-sm">
+                            <Button
+                                variant="primary"
+                                icon="save"
                                 onClick={handleSave}
-                                disabled={saving || !dirty}
-                                className="flex items-center gap-2 bg-gray-800 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                loading={saving}
+                                disabled={!dirty}
                             >
-                                {saving ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Save className="w-4 h-4" />
-                                )}
-                                {saving ? "Saving..." : "Save settings"}
-                            </button>
+                                {saving ? "Saving" : "Save settings"}
+                            </Button>
 
-                            <button
+                            <Button
+                                icon="connection"
                                 onClick={handleTest}
-                                disabled={testing || dirty}
+                                loading={testing}
+                                disabled={dirty}
                                 title={dirty ? "Save your changes before testing" : undefined}
-                                className="flex items-center gap-2 border border-gray-300 text-gray-700 px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                {testing ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Plug className="w-4 h-4" />
-                                )}
-                                {testing ? "Testing..." : "Test connection"}
-                            </button>
+                                {testing ? "Testing" : "Test connection"}
+                            </Button>
 
                             {dirty && (
-                                <span className="text-sm text-gray-500">Unsaved changes</span>
+                                <span className="text-xs text-warn ml-auto">
+                                    Unsaved changes
+                                    {editedTabs.size > 1 && " on more than one tab"}
+                                </span>
                             )}
                         </div>
-
-                        <ApiTokensPanel />
-                    </div>
-                )}
-
-                <Footer />
-            </div>
+                    )}
+                </>
+            )}
 
             <Dialog
                 isOpen={dialog.isOpen}
@@ -287,6 +312,6 @@ export default function SettingsPage() {
                 message={dialog.message}
                 type={dialog.type}
             />
-        </div>
+        </>
     );
 }

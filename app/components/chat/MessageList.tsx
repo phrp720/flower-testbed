@@ -2,11 +2,13 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Bot, User } from "lucide-react";
+import { Icon } from "@/app/components/ui";
 import ToolCallCard from "./ToolCallCard";
 import ThinkingBlock from "./ThinkingBlock";
 import ActionApprovalCard from "./ActionApprovalCard";
 import ExperimentWidget from "./ExperimentWidget";
+import AgentStatus from "./AgentStatus";
+import { Callout, CopyButton } from "@/app/components/ui";
 import type { AgentMessage, ToolCall } from "./types";
 
 type Props = {
@@ -16,12 +18,14 @@ type Props = {
     streamingText: string;
     streamingThinking: string;
     isRunning: boolean;
+    /** The conversation's own status, so a failed turn leaves a visible trace. */
+    status?: string;
     onDecided: () => void;
 };
 
 function Markdown({ children }: { children: string }) {
     return (
-        <div className="text-sm text-gray-800 leading-relaxed space-y-3">
+        <div className="text-sm text-ink leading-relaxed space-y-3">
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -29,10 +33,10 @@ function Markdown({ children }: { children: string }) {
                     ul: ({ children }) => <ul className="list-disc pl-5 space-y-1">{children}</ul>,
                     ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1">{children}</ol>,
                     strong: ({ children }) => (
-                        <strong className="font-semibold text-gray-900">{children}</strong>
+                        <strong className="font-semibold text-ink">{children}</strong>
                     ),
                     a: ({ href, children }) => (
-                        <a href={href} className="text-blue-600 hover:underline">
+                        <a href={href} className="text-info hover:underline">
                             {children}
                         </a>
                     ),
@@ -42,30 +46,30 @@ function Markdown({ children }: { children: string }) {
                         return isBlock ? (
                             <code className="block">{children}</code>
                         ) : (
-                            <code className="bg-gray-100 text-gray-900 px-1.5 py-0.5 rounded text-xs font-mono">
+                            <code className="bg-surface-muted text-ink px-1.5 py-0.5 rounded text-xs font-mono">
                                 {children}
                             </code>
                         );
                     },
                     pre: ({ children }) => (
-                        <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto">
+                        <pre className="bg-ink text-ink-inverted rounded-[var(--radius)] p-3.5 text-xs font-mono overflow-x-auto">
                             {children}
                         </pre>
                     ),
                     table: ({ children }) => (
                         <div className="overflow-x-auto">
-                            <table className="min-w-full text-xs border border-gray-200 rounded">
+                            <table className="min-w-full text-xs border border-line rounded-[var(--radius)]">
                                 {children}
                             </table>
                         </div>
                     ),
                     th: ({ children }) => (
-                        <th className="border-b border-gray-200 bg-gray-50 px-3 py-1.5 text-left font-medium">
+                        <th className="border-b border-line bg-surface-muted px-3 py-1.5 text-left font-medium">
                             {children}
                         </th>
                     ),
                     td: ({ children }) => (
-                        <td className="border-b border-gray-100 px-3 py-1.5">{children}</td>
+                        <td className="border-b border-line px-3 py-1.5">{children}</td>
                     ),
                 }}
             >
@@ -107,17 +111,32 @@ function experimentIdsFrom(calls: ToolCall[]): string[] {
     return [...ids];
 }
 
-function Avatar({ role }: { role: string }) {
-    const isUser = role === "user";
+/**
+ * The agent's marker.
+ *
+ * Only the agent gets one: a right-aligned filled bubble already says who wrote
+ * it, and a second avatar on that side would be redundant chrome.
+ */
+function AgentAvatar() {
     return (
-        <div
-            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                isUser ? "bg-gray-200 text-gray-700" : "bg-gray-800 text-white"
-            }`}
-        >
-            {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-        </div>
+        <span className="w-6 h-6 rounded-[var(--radius)] flex items-center justify-center shrink-0 bg-accent text-ink-inverted">
+            <Icon name="agent" size={13} />
+        </span>
     );
+}
+
+/**
+ * What the agent is currently doing, in words.
+ *
+ * Derived from state that already exists rather than tracked separately, so it
+ * cannot disagree with what the transcript shows.
+ */
+function currentActivity(toolCalls: ToolCall[], thinking: string, text: string): string {
+    const running = toolCalls.find((call) => call.status === "running");
+    if (running) return `Running ${running.toolName}`;
+    if (text) return "Writing";
+    if (thinking) return "Thinking";
+    return "Working";
 }
 
 export default function MessageList({
@@ -127,6 +146,7 @@ export default function MessageList({
     streamingText,
     streamingThinking,
     isRunning,
+    status,
     onDecided,
 }: Props) {
     const callsByMessage = new Map<string, ToolCall[]>();
@@ -155,12 +175,40 @@ export default function MessageList({
                     .map((b) => (b.type === "text" ? b.text : ""))
                     .join("\n");
 
+                // What the person typed, on the right, in a filled bubble.
+                // Rendered as plain text rather than markdown: people type
+                // sentences, and markdown styling inside an inverted bubble
+                // fights the fill for contrast.
+                if (message.role === "user") {
+                    if (!text) return null;
+                    return (
+                        <div key={message.id} className="group flex flex-col items-end">
+                            <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-accent text-ink-inverted px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                                {text}
+                            </div>
+                            {/* Revealed on hover so a transcript is not a column
+                                of buttons, but always present below sm: a
+                                pointer is the only thing that can hover. */}
+                            <div className="mt-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+                                <CopyButton value={text} title="Copy message" />
+                            </div>
+                        </div>
+                    );
+                }
+
                 return (
-                    <div key={message.id} className="flex gap-3">
-                        <Avatar role={message.role} />
+                    <div key={message.id} className="group flex gap-3">
+                        <AgentAvatar />
                         <div className="min-w-0 flex-1">
                             {thinking && <ThinkingBlock text={thinking} />}
                             {text && <Markdown>{text}</Markdown>}
+                            {text && (
+                                <div className="mt-1 -ml-2.5 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+                                    {/* The markdown source, not the rendered
+                                        text: pasting a table as prose loses it. */}
+                                    <CopyButton value={text} title="Copy reply" />
+                                </div>
+                            )}
 
                             {calls.map((call) =>
                                 call.status === "pending" ? (
@@ -180,38 +228,41 @@ export default function MessageList({
                             ))}
 
                             {message.errorMessage && (
-                                <p className="text-sm text-red-600 mt-2">{message.errorMessage}</p>
+                                <p className="text-sm text-danger mt-2">{message.errorMessage}</p>
                             )}
                         </div>
                     </div>
                 );
             })}
 
-            {isRunning && (streamingText || streamingThinking) && (
+            {/* One agent block for the whole live turn: whatever has streamed
+                so far, with the status line underneath it. Keeping them
+                together means the indicator never sits above text that has
+                already arrived. */}
+            {isRunning && (
                 <div className="flex gap-3">
-                    <Avatar role="assistant" />
+                    <AgentAvatar />
                     <div className="min-w-0 flex-1">
                         {streamingThinking && <ThinkingBlock text={streamingThinking} streaming />}
                         {streamingText && <Markdown>{streamingText}</Markdown>}
+                        <AgentStatus
+                            label={currentActivity(toolCalls, streamingThinking, streamingText)}
+                        />
                     </div>
                 </div>
             )}
 
-            {isRunning && !streamingText && !streamingThinking && (
-                <div className="flex gap-3">
-                    <Avatar role="assistant" />
-                    <div className="flex items-center gap-1.5 h-7">
-                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
-                        <span
-                            className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse"
-                            style={{ animationDelay: "150ms" }}
-                        />
-                        <span
-                            className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse"
-                            style={{ animationDelay: "300ms" }}
-                        />
-                    </div>
-                </div>
+            {/* A turn that died mid-flight only raised a dialog at the time, so
+                coming back to the conversation showed a question with no answer
+                and no reason. The status outlives the dialog. */}
+            {!isRunning && status === "error" && messages.length > 0 && (
+                <Callout tone="danger" title="The agent did not reply">
+                    The last turn failed. Check that a model and API key are set in{" "}
+                    <a href="/testbed/settings" className="underline underline-offset-2">
+                        Settings
+                    </a>
+                    , then send the message again.
+                </Callout>
             )}
         </div>
     );

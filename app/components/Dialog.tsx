@@ -1,14 +1,18 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, HelpCircle, Info, Loader2, X } from 'lucide-react';
+import { useEffect } from "react";
+import Button from "@/app/components/ui/Button";
+import Icon, { type IconName } from "@/app/components/ui/Icon";
+import { cn } from "@/app/components/ui/cn";
+
+type DialogType = "info" | "error" | "success" | "warning" | "confirm";
 
 type DialogProps = {
     isOpen: boolean;
     onClose: () => void;
     title: string;
     message: string;
-    type?: 'info' | 'error' | 'success' | 'warning' | 'confirm';
+    type?: DialogType;
     onConfirm?: () => void;
     confirmText?: string;
     cancelText?: string;
@@ -16,152 +20,123 @@ type DialogProps = {
     loadingText?: string;
 };
 
+const LOOK: Record<DialogType, { icon: IconName; tint: string }> = {
+    info: { icon: "info", tint: "bg-surface-muted text-ink-muted" },
+    error: { icon: "error", tint: "bg-danger-surface text-danger" },
+    success: { icon: "success", tint: "bg-ok-surface text-ok" },
+    warning: { icon: "warning", tint: "bg-warn-surface text-warn" },
+    confirm: { icon: "help", tint: "bg-surface-muted text-ink-muted" },
+};
+
+/**
+ * The application's only modal.
+ *
+ * Reserved for something the reader must answer or acknowledge before going
+ * on; anything they merely need to know belongs in a Callout on the page. The
+ * icon is a small tinted square rather than a large circle, so an error does
+ * not shout louder than the sentence explaining it.
+ */
 export default function Dialog({
     isOpen,
     onClose,
     title,
     message,
-    type = 'info',
+    type = "info",
     onConfirm,
-    confirmText = 'OK',
-    cancelText = 'Cancel',
+    confirmText = "OK",
+    cancelText = "Cancel",
     isLoading = false,
-    loadingText = 'Processing...',
+    loadingText = "Working...",
 }: DialogProps) {
-    // Lock body scroll when modal is open
     useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-
+        if (!isOpen) return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
         return () => {
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = previous;
         };
     }, [isOpen]);
 
-    // Close on Escape key
     useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isOpen && !isLoading) {
-                onClose();
-            }
+        if (!isOpen) return;
+        const onEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape" && !isLoading) onClose();
         };
-
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
+        document.addEventListener("keydown", onEscape);
+        return () => document.removeEventListener("keydown", onEscape);
     }, [isOpen, isLoading, onClose]);
 
     if (!isOpen) return null;
 
-    const getIcon = () => {
-        switch (type) {
-            case 'error':
-                return (
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                        <X className="h-6 w-6 text-red-600" strokeWidth={2} />
-                    </div>
-                );
-            case 'success':
-                return (
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                        <CheckCircle2 className="h-6 w-6 text-green-600" strokeWidth={1.5} />
-                    </div>
-                );
-            case 'warning':
-                return (
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
-                        <AlertTriangle className="h-6 w-6 text-yellow-600" strokeWidth={1.5} />
-                    </div>
-                );
-            case 'confirm':
-                return (
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                        <HelpCircle className="h-6 w-6 text-gray-600" strokeWidth={1.5} />
-                    </div>
-                );
-            default:
-                return (
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                        <Info className="h-6 w-6 text-gray-600" strokeWidth={1.5} />
-                    </div>
-                );
-        }
-    };
+    const look = LOOK[type];
+    const confirming = type === "confirm";
 
     const handleConfirm = () => {
-        if (onConfirm) {
-            onConfirm();
-        }
-        if (type !== 'confirm') {
-            onClose();
-        }
+        onConfirm?.();
+        // A confirm dialog stays up while its action runs; the caller closes it
+        // once the work either finishes or fails.
+        if (!confirming) onClose();
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] overflow-y-auto" onClick={isLoading ? undefined : onClose}>
-            {/* Backdrop with fade animation */}
+        <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dialog-title"
+            onClick={isLoading ? undefined : onClose}
+        >
             <div
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
-                style={{ animation: 'fadeIn 0.2s ease-out' }}
+                className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
+                style={{ animation: "fadeIn 0.15s ease-out" }}
             />
 
-            {/* Modal Container */}
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-                <div
-                    className="relative transform overflow-hidden rounded-xl bg-white shadow-2xl transition-all duration-300 ease-out w-full max-w-md"
-                    style={{ animation: 'scaleIn 0.2s ease-out' }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="bg-white px-6 pb-4 pt-5">
-                        <div className="flex items-start gap-4">
-                            {getIcon()}
-                            <div className="flex-1 mt-0">
-                                <h3 className="text-xl font-semibold leading-6 text-gray-900 mb-2">
-                                    {title}
-                                </h3>
-                                <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                                    {message}
-                                </p>
-                            </div>
+            <div
+                className="relative w-full max-w-sm bg-surface border border-line rounded-[var(--radius)] shadow-lg overflow-hidden"
+                style={{ animation: "scaleIn 0.15s ease-out" }}
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="p-5">
+                    <div className="flex items-start gap-3">
+                        <span
+                            className={cn(
+                                "flex items-center justify-center w-8 h-8 rounded-[var(--radius)] shrink-0",
+                                look.tint
+                            )}
+                        >
+                            <Icon name={look.icon} size={16} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <h2 id="dialog-title" className="text-sm font-semibold text-ink">
+                                {title}
+                            </h2>
+                            <p className="text-sm text-ink-muted mt-1.5 whitespace-pre-wrap break-words">
+                                {message}
+                            </p>
                         </div>
                     </div>
-                    <div className="bg-gray-50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-gray-200">
-                        {type === 'confirm' ? (
-                            <>
-                                <button
-                                    type="button"
-                                    onClick={handleConfirm}
-                                    disabled={isLoading}
-                                    className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                                >
-                                    {isLoading ? (
-                                        <span className="inline-flex items-center gap-2">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            {loadingText}
-                                        </span>
-                                    ) : confirmText}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    disabled={isLoading}
-                                    className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                                >
-                                    {cancelText}
-                                </button>
-                            </>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="px-4 py-2 text-sm font-semibold text-white bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                </div>
+
+                <div className="flex justify-end gap-2 px-5 py-3 bg-surface-muted border-t border-line">
+                    {confirming ? (
+                        <>
+                            <Button size="sm" variant="ghost" onClick={onClose} disabled={isLoading}>
+                                {cancelText}
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="danger"
+                                onClick={handleConfirm}
+                                loading={isLoading}
                             >
-                                {confirmText}
-                            </button>
-                        )}
-                    </div>
+                                {isLoading ? loadingText : confirmText}
+                            </Button>
+                        </>
+                    ) : (
+                        <Button size="sm" variant="primary" onClick={onClose}>
+                            {confirmText}
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>

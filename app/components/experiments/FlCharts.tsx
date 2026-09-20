@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { SectionLabel, Spinner } from "@/app/components/ui";
 
 type FlStats = {
     rounds: number[];
@@ -63,12 +64,10 @@ function Panel({
     children: React.ReactNode;
 }) {
     return (
-        <div className="rounded-lg border border-gray-200 p-3">
-            <p className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
-                {title}
-            </p>
+        <div className="rounded-[var(--radius)] border border-line p-3">
+            <SectionLabel>{title}</SectionLabel>
             <div className="h-24 mt-2 -mx-1">{children}</div>
-            {subtitle && <p className="text-[11px] text-gray-500 mt-1.5">{subtitle}</p>}
+            {subtitle && <p className="text-[11px] text-ink-muted mt-1.5 tabular">{subtitle}</p>}
         </div>
     );
 }
@@ -98,8 +97,8 @@ export default function FlCharts({ experimentId, status, variant = "sidebar" }: 
                 {["Client participation", "Communication cost", "Client loss distribution", "Convergence rate"].map(
                     (title) => (
                         <Panel key={title} title={title}>
-                            <div className="h-full flex items-center justify-center text-xs text-gray-400">
-                                loading
+                            <div className="h-full flex items-center justify-center">
+                                <Spinner size={14} />
                             </div>
                         </Panel>
                     )
@@ -125,15 +124,15 @@ export default function FlCharts({ experimentId, status, variant = "sidebar" }: 
                     <AreaChart data={data.participation}>
                         <YAxis hide domain={[0, 1]} />
                         <Tooltip
-                            contentStyle={{ fontSize: 11, borderRadius: 6 }}
+                            contentStyle={{ fontSize: 11, borderRadius: "var(--radius)", border: "1px solid var(--line)", background: "var(--surface)" }}
                             formatter={(value?: number) => [value != null ? `${(value * 100).toFixed(0)}%` : "—", "training"]}
                             labelFormatter={(round) => `Round ${round}`}
                         />
                         <Area
                             type="stepAfter"
                             dataKey="fraction"
-                            stroke="#059669"
-                            fill="#059669"
+                            stroke="var(--ok)"
+                            fill="var(--ok)"
                             fillOpacity={0.15}
                             strokeWidth={2}
                             isAnimationActive={false}
@@ -152,7 +151,7 @@ export default function FlCharts({ experimentId, status, variant = "sidebar" }: 
                 }
             >
                 {data.communicationSource === "unavailable" ? (
-                    <div className="h-full flex items-center justify-center text-xs text-gray-400">
+                    <div className="h-full flex items-center justify-center text-xs text-ink-subtle">
                         no data
                     </div>
                 ) : (
@@ -160,15 +159,15 @@ export default function FlCharts({ experimentId, status, variant = "sidebar" }: 
                     <AreaChart data={data.communication}>
                         <YAxis hide />
                         <Tooltip
-                            contentStyle={{ fontSize: 11, borderRadius: 6 }}
+                            contentStyle={{ fontSize: 11, borderRadius: "var(--radius)", border: "1px solid var(--line)", background: "var(--surface)" }}
                             formatter={(value?: number) => [value != null ? formatBytes(value) : "—", "cumulative"]}
                             labelFormatter={(round) => `Round ${round}`}
                         />
                         <Area
                             type="monotone"
                             dataKey="cumulativeBytes"
-                            stroke="#ea580c"
-                            fill="#ea580c"
+                            stroke="var(--warn)"
+                            fill="var(--warn)"
                             fillOpacity={0.15}
                             strokeWidth={2}
                             isAnimationActive={false}
@@ -194,7 +193,7 @@ export default function FlCharts({ experimentId, status, variant = "sidebar" }: 
                                 the whole point of this panel. */}
                             <YAxis hide domain={["dataMin", "dataMax"]} />
                             <Tooltip
-                                contentStyle={{ fontSize: 11, borderRadius: 6 }}
+                                contentStyle={{ fontSize: 11, borderRadius: "var(--radius)", border: "1px solid var(--line)", background: "var(--surface)" }}
                                 formatter={(value?: number, name?: string) => [value != null ? value.toFixed(4) : "—", name ?? ""]}
                                 labelFormatter={(round) => `Round ${round}`}
                             />
@@ -216,7 +215,7 @@ export default function FlCharts({ experimentId, status, variant = "sidebar" }: 
                         </LineChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div className="h-full flex items-center justify-center text-xs text-gray-400">
+                    <div className="h-full flex items-center justify-center text-xs text-ink-subtle">
                         no data
                     </div>
                 )}
@@ -234,7 +233,7 @@ export default function FlCharts({ experimentId, status, variant = "sidebar" }: 
                     <LineChart data={data.convergence}>
                         <YAxis hide />
                         <Tooltip
-                            contentStyle={{ fontSize: 11, borderRadius: 6 }}
+                            contentStyle={{ fontSize: 11, borderRadius: "var(--radius)", border: "1px solid var(--line)", background: "var(--surface)" }}
                             formatter={(value?: number) => [
                                 value != null ? `${(value * 100).toFixed(2)} pts` : "—",
                                 "gain",
@@ -244,7 +243,7 @@ export default function FlCharts({ experimentId, status, variant = "sidebar" }: 
                         <Line
                             type="monotone"
                             dataKey="improvement"
-                            stroke="#1f2937"
+                            stroke="var(--ink)"
                             strokeWidth={2}
                             dot={false}
                             isAnimationActive={false}

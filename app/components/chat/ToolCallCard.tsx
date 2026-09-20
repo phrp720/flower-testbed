@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, CheckCircle2, ChevronRight, Loader2, Wrench } from "lucide-react";
+import { Badge, Icon, SectionLabel, Spinner, cn } from "@/app/components/ui";
 import type { ToolCall } from "./types";
 
 type Props = { toolCall: ToolCall };
 
 /**
- * A completed or in-flight tool call. Collapsed to one line by default, because
- * a transcript full of expanded JSON is unreadable; the full input and result
- * are one click away.
+ * A completed or in-flight tool call.
+ *
+ * Collapsed to one line by default: a transcript full of expanded JSON is
+ * unreadable, and the full input and result are one click away.
  */
 export default function ToolCallCard({ toolCall }: Props) {
     const [expanded, setExpanded] = useState(false);
@@ -17,61 +18,60 @@ export default function ToolCallCard({ toolCall }: Props) {
     const running = toolCall.status === "running";
     const failed = toolCall.status === "failed" || toolCall.isError;
     const rejected = toolCall.status === "rejected";
-
     const result = toolCall.resultContent?.text ?? "";
 
     return (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg my-2 overflow-hidden">
+        <div className="border border-line rounded-[var(--radius)] my-2 overflow-hidden">
             <button
                 onClick={() => setExpanded((v) => !v)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-mono text-left hover:bg-gray-100 transition-colors"
+                aria-expanded={expanded}
+                className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-left hover:bg-surface-muted transition-colors"
             >
-                <ChevronRight
-                    className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
-                        expanded ? "rotate-90" : ""
-                    }`}
+                <Icon
+                    name="forward"
+                    size={13}
+                    className={cn("text-ink-subtle shrink-0 transition-transform", expanded && "rotate-90")}
                 />
                 {running ? (
-                    <Loader2 className="w-3.5 h-3.5 text-blue-600 shrink-0 animate-spin" />
-                ) : failed ? (
-                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                ) : rejected ? (
-                    <AlertCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <Spinner size={13} className="shrink-0 text-info" />
                 ) : (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                    <Icon
+                        name={failed ? "error" : rejected ? "close" : "success"}
+                        size={13}
+                        className={cn(
+                            "shrink-0",
+                            failed ? "text-danger" : rejected ? "text-ink-subtle" : "text-ok"
+                        )}
+                    />
                 )}
-                <Wrench className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <span className="text-gray-900 font-medium truncate">{toolCall.toolName}</span>
-                {running && (
-                    <span className="bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded text-[10px] animate-pulse shrink-0">
-                        running
-                    </span>
-                )}
-                {rejected && <span className="text-gray-500 shrink-0">declined</span>}
+                <span className="font-mono text-ink truncate">{toolCall.toolName}</span>
+                {running && <Badge tone="info">running</Badge>}
+                {rejected && <Badge tone="neutral">declined</Badge>}
                 {toolCall.durationMs != null && !running && (
-                    <span className="text-gray-400 ml-auto shrink-0">{toolCall.durationMs}ms</span>
+                    <span className="text-ink-subtle tabular ml-auto shrink-0">
+                        {toolCall.durationMs}ms
+                    </span>
                 )}
             </button>
 
             {expanded && (
-                <div className="border-t border-gray-200 px-3 py-2.5 space-y-2.5 bg-white">
+                <div className="border-t border-line px-2.5 py-2.5 space-y-2.5">
                     <div>
-                        <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Input</p>
-                        <pre className="text-xs font-mono bg-gray-50 border border-gray-100 rounded p-2 overflow-x-auto">
+                        <SectionLabel className="mb-1">Input</SectionLabel>
+                        <pre className="text-[11px] font-mono bg-surface-muted rounded p-2 overflow-x-auto">
                             {JSON.stringify(toolCall.input, null, 2)}
                         </pre>
                     </div>
                     {result && (
                         <div>
-                            <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">
-                                Result
-                            </p>
+                            <SectionLabel className="mb-1">Result</SectionLabel>
                             <pre
-                                className={`text-xs font-mono border rounded p-2 overflow-x-auto max-h-64 whitespace-pre-wrap ${
+                                className={cn(
+                                    "text-[11px] font-mono rounded p-2 overflow-x-auto max-h-64 whitespace-pre-wrap",
                                     failed
-                                        ? "bg-red-50 border-red-100 text-red-800"
-                                        : "bg-gray-50 border-gray-100"
-                                }`}
+                                        ? "bg-danger-surface text-danger"
+                                        : "bg-surface-muted text-ink"
+                                )}
                             >
                                 {result}
                             </pre>

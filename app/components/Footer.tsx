@@ -1,16 +1,14 @@
-"use client";
-
 export default function Footer() {
     return (
-        <footer className="mt-8 pt-3 pb-2">
-            <div className="text-center">
-                <p className="text-xs text-gray-400">
-                    Powered by{" "}
+        <footer className="mt-auto border-t border-line">
+            <div className="max-w-7xl mx-auto px-6 py-4">
+                <p className="text-xs text-ink-subtle">
+                    Flower Testbed ·{" "}
                     <a
                         href="https://github.com/phrp720"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-gray-500 hover:text-gray-800 transition"
+                        className="hover:text-ink-muted transition-colors"
                     >
                         phrp720
                     </a>

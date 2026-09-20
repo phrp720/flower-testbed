@@ -106,7 +106,7 @@ export default function NetworkDiagram({
                 {["X₁", "X₂"].map((label, index) => (
                     <div
                         key={label}
-                        className="absolute flex items-center justify-center rounded border-2 border-gray-800 bg-white text-sm font-medium text-gray-700"
+                        className="absolute flex items-center justify-center rounded border border-ink bg-surface text-xs font-medium text-ink"
                         style={{
                             left: columnX(0),
                             top: centreY(2, index) - NEURON / 2,
@@ -122,7 +122,7 @@ export default function NetworkDiagram({
                     neurons.map((grid, index) => (
                         <div
                             key={`${layerIndex}-${index}`}
-                            className="absolute rounded overflow-hidden border-2 border-gray-800 bg-white"
+                            className="absolute rounded overflow-hidden border border-ink bg-surface"
                             style={{
                                 left: columnX(layerIndex + 1),
                                 top: centreY(neurons.length, index) - NEURON / 2,

@@ -1,11 +1,20 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2, Download, Info, Cpu, MonitorDot } from "lucide-react";
 import SingleFileUploader from "@/app/components/FileUploader";
 import Dialog from "@/app/components/Dialog";
-import Navigation from "@/app/components/Navigation";
-import Footer from "@/app/components/Footer";
+import {
+    Button,
+    Callout,
+    Card,
+    CardHeader,
+    Icon,
+    Input,
+    PageHeader,
+    SectionLabel,
+    Select,
+    Spinner,
+} from "@/app/components/ui";
 import { useCreateExperiment, useResources } from "@/app/hooks/useExperiments";
 
 interface SystemResources {
@@ -32,9 +41,73 @@ const TEMPLATES = {
     config: '/api/templates/pytorch/config_template.py',
 };
 
+function downloadTemplate(template: keyof typeof TEMPLATES) {
+    window.open(TEMPLATES[template], "_blank");
+}
+
+/**
+ * One upload slot: label, template link, dropzone and its default.
+ *
+ * Declared here rather than inside the page. A component defined in a render
+ * body is a new type on every render, so React unmounts and remounts its whole
+ * subtree -- which threw away the dropzone's state the instant a file was
+ * chosen, and made a successful upload look like nothing had happened.
+ */
+function UploadSlot({
+    label,
+    template,
+    id,
+    accept,
+    hint,
+    file,
+    onSelect,
+    fallback,
+}: {
+    label: string;
+    template: keyof typeof TEMPLATES;
+    id: string;
+    accept: string;
+    hint: string;
+    file: File | null;
+    onSelect: (file: File | null) => void;
+    fallback?: string;
+}) {
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-2">
+                <SectionLabel>{label}</SectionLabel>
+                <button
+                    type="button"
+                    onClick={() => downloadTemplate(template)}
+                    className="inline-flex items-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors"
+                >
+                    <Icon name="download" size={12} />
+                    Template
+                </button>
+            </div>
+            <SingleFileUploader
+                id={id}
+                accept={accept}
+                hint={hint}
+                file={file}
+                onFileSelect={onSelect}
+            />
+            {fallback && <p className="text-[11px] text-ink-subtle mt-1.5">Default: {fallback}</p>}
+        </div>
+    );
+}
+
 export default function DashboardPage() {
     const router = useRouter();
-    const [preset, setPreset] = useState("pytorch");
+    /**
+     * The only runner that exists.
+     *
+     * Kept as a disabled field rather than dropped: the experiment records a
+     * framework, and showing which one is being used is more honest than
+     * silently sending a value the form never mentions. It becomes a real
+     * choice the moment a second runner ships.
+     */
+    const framework = "pytorch";
     /**
      * "" keeps the framework's own dataset (CIFAR-10 images). The other values
      * swap in a two-input dataset, which is the only kind whose input plane can
@@ -96,8 +169,8 @@ export default function DashboardPage() {
                 },
                 body: {
                     name: experimentName || `Experiment - ${new Date().toLocaleString()}`,
-                    description: `Federated Learning experiment using ${preset}`,
-                    framework: preset,
+                    description: `Federated Learning experiment using ${framework}`,
+                    framework,
                     numClients,
                     numRounds,
                     clientFraction,
@@ -125,464 +198,356 @@ export default function DashboardPage() {
         );
     };
 
-    const downloadTemplate = (templateKey: keyof typeof TEMPLATES) => {
-        window.open(TEMPLATES[templateKey], '_blank');
-    };
-
     const maxCpusPerClient = resources?.cpu.ray_count || 8;
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-7xl mx-auto px-4">
-                {/* Header */}
-                <div className="mb-8">
-                    <Navigation />
-                    <div className="mt-4">
-                        <h2 className="text-2xl font-bold text-gray-900">Create New Experiment</h2>
-                        <p className="text-gray-600 text-sm mt-1">Configure and launch a federated learning experiment</p>
-                    </div>
-                </div>
+        <>
+            <PageHeader
+                title="New experiment"
+                description="Configure a federation and launch it."
+                backHref="/testbed/experiments"
+            />
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column - Configuration */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Basic Info */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Experiment Details</h2>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Experiment Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={experimentName}
-                                        onChange={(e) => setExperimentName(e.target.value)}
-                                        placeholder="My Federated Learning Experiment"
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Framework
-                                    </label>
-                                    <select
-                                        value={preset}
-                                        onChange={(e) => setPreset(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
-                                    >
-                                        <option value="pytorch">PyTorch</option>
-                                        <option value="tensorflow" disabled={true}>TensorFlow</option>
-                                        {/*<option value="sklearn" >scikit-learn</option>*/}
-                                        {/*<option value="huggingface">Hugging Face</option>*/}
-                                        {/*<option value="jax">JAX</option>*/}
-                                        {/*<option value="mlx">MLX</option>*/}
-                                        {/*<option value="numpy">NumPy</option>*/}
-                                        {/*<option value="xgboost">XGBoost</option>*/}
-                                        {/*<option value="flowertune">FlowerTune</option>*/}
-                                        {/*<option value="flower-baseline">Flower Baseline</option>*/}
-                                    </select>
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Dataset
-                                    </label>
-                                    <select
-                                        value={datasetKind}
-                                        onChange={(e) => setDatasetKind(e.target.value)}
-                                        disabled={datasetFile !== null}
-                                        className="w-full rounded-lg border border-gray-300 pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent appearance-none disabled:bg-gray-100 disabled:text-gray-500 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[right_0.75rem_center] bg-no-repeat"
-                                    >
-                                        <option value="">CIFAR-10 images (default)</option>
-                                        <option value="circle">2D · circle</option>
-                                        <option value="spiral">2D · spiral</option>
-                                        <option value="xor">2D · xor</option>
-                                        <option value="gauss">2D · gauss</option>
-                                    </select>
-                                    <p className="text-xs text-gray-500 mt-1.5">
-                                        {datasetFile !== null
-                                            ? "Your uploaded dataset file is used instead."
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div className="lg:col-span-2 space-y-5">
+                    <Card>
+                        <CardHeader title="Details" className="mb-5" />
+                        <div className="space-y-4">
+                            <Input
+                                label="Name"
+                                value={experimentName}
+                                onChange={(e) => setExperimentName(e.target.value)}
+                                placeholder={`Experiment - ${new Date().toLocaleDateString()}`}
+                                hint="Left blank, it is named after the time it was created."
+                            />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Select
+                                    label="Framework"
+                                    value={framework}
+                                    disabled
+                                    hint="PyTorch is the only runner available."
+                                >
+                                    <option value="pytorch">PyTorch</option>
+                                </Select>
+
+                                <Select
+                                    label="Dataset"
+                                    value={datasetKind}
+                                    onChange={(e) => setDatasetKind(e.target.value)}
+                                    disabled={datasetFile !== null}
+                                    hint={
+                                        datasetFile !== null
+                                            ? "Your uploaded dataset is used instead."
                                             : datasetKind
-                                            ? "Two inputs, so the decision boundary can be drawn round by round."
-                                            : "Images. The experiment page shows the learned filters and per-class accuracy."}
-                                    </p>
-                                </div>
+                                            ? "Two inputs, so the decision boundary can be drawn."
+                                            : "Images; the run shows its learned filters."
+                                    }
+                                >
+                                    <option value="">CIFAR-10 images</option>
+                                    <option value="circle">2D · circle</option>
+                                    <option value="spiral">2D · spiral</option>
+                                    <option value="xor">2D · xor</option>
+                                    <option value="gauss">2D · gauss</option>
+                                </Select>
                             </div>
                         </div>
+                    </Card>
 
-                        {/* Training Parameters */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Training Configuration</h2>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Number of Clients
+                    <Card>
+                        <CardHeader title="Training" className="mb-5" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Input
+                                label="Clients"
+                                type="number"
+                                min={1}
+                                value={numClients}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value, 10);
+                                    if (!Number.isNaN(value)) setNumClients(value);
+                                }}
+                            />
+                            <Input
+                                label="Rounds"
+                                type="number"
+                                min={1}
+                                value={numRounds}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value, 10);
+                                    if (!Number.isNaN(value)) setNumRounds(value);
+                                }}
+                            />
+                            <Input
+                                label="Local epochs"
+                                type="number"
+                                min={1}
+                                value={localEpochs}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value, 10);
+                                    if (!Number.isNaN(value)) setLocalEpochs(value);
+                                }}
+                            />
+                            <Input
+                                label="Learning rate"
+                                type="number"
+                                step="0.001"
+                                min={0}
+                                value={learningRate}
+                                onChange={(e) => {
+                                    const value = parseFloat(e.target.value);
+                                    if (!Number.isNaN(value)) setLearningRate(value);
+                                }}
+                            />
+
+                            <div className="sm:col-span-2">
+                                <div className="flex items-baseline justify-between mb-2">
+                                    <label
+                                        htmlFor="client-fraction"
+                                        className="text-xs font-medium text-ink-muted"
+                                    >
+                                        Client fraction
                                     </label>
-                                    <input
-                                        type="number"
-                                        value={numClients}
-                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setNumClients(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                        min="1"
-                                    />
+                                    <span className="text-xs font-medium text-ink tabular">
+                                        {(clientFraction * 100).toFixed(0)}% ·{" "}
+                                        {Math.max(1, Math.round(numClients * clientFraction))} of{" "}
+                                        {numClients} per round
+                                    </span>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Number of Rounds
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={numRounds}
-                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setNumRounds(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                        min="1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Learning Rate
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.001"
-                                        value={learningRate}
-                                        onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) setLearningRate(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                        min="0"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Local Epochs
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={localEpochs}
-                                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) setLocalEpochs(v); }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                        min="1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Client Fraction
-                                    </label>
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="1"
-                                            step="0.1"
-                                            value={clientFraction}
-                                            onChange={(e) => setClientFraction(parseFloat(e.target.value))}
-                                            className="flex-1 accent-gray-800"
-                                        />
-                                        <span className="text-sm font-medium text-gray-900 w-12 text-right">
-                                            {(clientFraction * 100).toFixed(0)}%
+                                <input
+                                    id="client-fraction"
+                                    type="range"
+                                    min="0.1"
+                                    max="1"
+                                    step="0.1"
+                                    value={clientFraction}
+                                    onChange={(e) => setClientFraction(parseFloat(e.target.value))}
+                                    className="w-full accent-[var(--accent)]"
+                                />
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <CardHeader
+                            title="Resources"
+                            description="What this machine can give each client."
+                            className="mb-5"
+                        />
+
+                        {loadingResources ? (
+                            <Spinner size={14} label="Detecting resources" />
+                        ) : resources ? (
+                            <>
+                                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 p-3 mb-5 rounded-[var(--radius)] bg-surface-muted">
+                                    <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+                                        <Icon name="cpu" size={14} />
+                                        <span className="text-ink font-medium tabular">
+                                            {resources.cpu.ray_count}
                                         </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Resource Configuration */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Resource Configuration</h2>
-
-                            {/* Available Resources Info */}
-                            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                <h3 className="text-sm font-medium text-gray-700 mb-2">Available Resources</h3>
-                                {loadingResources ? (
-                                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Detecting resources...
-                                    </div>
-                                ) : resources ? (
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <Cpu className="w-4 h-4 text-gray-600" />
-                                            <span className="text-gray-700">
-                                                <strong>{resources.cpu.ray_count}</strong> Ray CPU budget
-                                                <span className="text-gray-500 ml-1">(host: {resources.cpu.count})</span>
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <MonitorDot className="w-4 h-4 text-gray-600" />
-                                            {resources.gpu.available ? (
-                                                <span className="text-gray-700">
-                                                    <strong>{resources.gpu.count}</strong> GPU{resources.gpu.count > 1 ? 's' : ''}
-                                                    <span className="text-gray-500 ml-1">({resources.gpu.backend})</span>
+                                        Ray CPUs
+                                        <span className="text-ink-subtle">
+                                            (host {resources.cpu.count})
+                                        </span>
+                                    </span>
+                                    <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+                                        <Icon name="gpu" size={14} />
+                                        {resources.gpu.available ? (
+                                            <>
+                                                <span className="text-ink font-medium tabular">
+                                                    {resources.gpu.count}
                                                 </span>
-                                            ) : (
-                                                <span className="text-gray-500">No GPU available</span>
-                                            )}
-                                        </div>
-                                        <div className="col-span-2 text-xs text-gray-500">
-                                            {resources.concurrency.max === null ? (
-                                                <span>Worker slots: unlimited</span>
-                                            ) : (
-                                                <span>
-                                                    Worker slots: {resources.concurrency.active}/{resources.concurrency.max} in use
-                                                    {resources.concurrency.available !== null && (
-                                                        <span className="ml-1">({resources.concurrency.available} available)</span>
-                                                    )}
+                                                GPU
+                                                <span className="text-ink-subtle">
+                                                    ({resources.gpu.backend})
                                                 </span>
-                                            )}
-                                        </div>
-                                        {resources.gpu.available && resources.gpu.devices.length > 0 && (
-                                            <div className="col-span-2 text-xs text-gray-500 mt-1">
-                                                {resources.gpu.devices.map(d => (
-                                                    <div key={d.id}>
-                                                        GPU {d.id}: {d.name} {d.memory_gb ? `(${d.memory_gb} GB)` : ''}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            </>
+                                        ) : (
+                                            "No GPU"
                                         )}
-                                    </div>
-                                ) : (
-                                    <span className="text-sm text-gray-500">Could not detect resources</span>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Compute Device Selection */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Compute Device
-                                    </label>
-                                    <div className="flex items-center gap-4">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="device"
-                                                checked={!useGpu}
-                                                onChange={() => setUseGpu(false)}
-                                                className="w-4 h-4 accent-gray-800 focus:ring-gray-500"
-                                            />
-                                            <span className="text-sm text-gray-700">CPU</span>
-                                        </label>
-                                        <label className={`flex items-center gap-2 ${resources?.gpu.available ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
-                                            <input
-                                                type="radio"
-                                                name="device"
-                                                checked={useGpu}
-                                                onChange={() => setUseGpu(true)}
-                                                disabled={!resources?.gpu.available}
-                                                className="w-4 h-4 accent-gray-800 focus:ring-gray-500"
-                                            />
-                                            <span className="text-sm text-gray-700">GPU</span>
-                                        </label>
-                                    </div>
+                                    </span>
+                                    {resources.concurrency.max !== null && (
+                                        <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+                                            <Icon name="tasks" size={14} />
+                                            <span className="text-ink font-medium tabular">
+                                                {resources.concurrency.active}/{resources.concurrency.max}
+                                            </span>
+                                            slots busy
+                                        </span>
+                                    )}
                                 </div>
 
-                                {/* CPUs per Client */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        CPUs per Client
-                                    </label>
-                                    <input
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <SectionLabel className="mb-2">Device</SectionLabel>
+                                        <div className="flex items-center gap-4 h-9">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="device"
+                                                    checked={!useGpu}
+                                                    onChange={() => setUseGpu(false)}
+                                                    className="w-4 h-4 accent-[var(--accent)]"
+                                                />
+                                                <span className="text-sm text-ink">CPU</span>
+                                            </label>
+                                            <label
+                                                className={`flex items-center gap-2 ${
+                                                    resources.gpu.available
+                                                        ? "cursor-pointer"
+                                                        : "cursor-not-allowed opacity-45"
+                                                }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="device"
+                                                    checked={useGpu}
+                                                    disabled={!resources.gpu.available}
+                                                    onChange={() => setUseGpu(true)}
+                                                    className="w-4 h-4 accent-[var(--accent)]"
+                                                />
+                                                <span className="text-sm text-ink">GPU</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <Input
+                                        label="CPUs per client"
                                         type="number"
+                                        min={1}
+                                        max={maxCpusPerClient}
                                         value={cpusPerClient}
                                         onChange={(e) => {
-                                            const v = parseInt(e.target.value);
-                                            if (!isNaN(v) && v >= 1) setCpusPerClient(Math.min(v, maxCpusPerClient));
+                                            const value = parseInt(e.target.value, 10);
+                                            if (!Number.isNaN(value)) setCpusPerClient(value);
                                         }}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                        min="1"
-                                        max={maxCpusPerClient}
+                                        hint={`Up to ${maxCpusPerClient} on this machine`}
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Max per client: {maxCpusPerClient}. Parallel clients at this setting: {resources ? Math.max(1, Math.floor(resources.cpu.ray_count / cpusPerClient)) : '...'}
-                                    </p>
-                                </div>
 
-                                {/* GPU Fraction per Client (only show if GPU enabled) */}
-                                {useGpu && resources?.gpu.available && (
-                                    <div className="col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            GPU Fraction per Client
-                                        </label>
-                                        <div className="flex items-center gap-3">
+                                    {useGpu && resources.gpu.available && (
+                                        <div className="sm:col-span-2">
+                                            <div className="flex items-baseline justify-between mb-2">
+                                                <label
+                                                    htmlFor="gpu-fraction"
+                                                    className="text-xs font-medium text-ink-muted"
+                                                >
+                                                    GPU fraction per client
+                                                </label>
+                                                <span className="text-xs font-medium text-ink tabular">
+                                                    {(gpuFractionPerClient * 100).toFixed(0)}%
+                                                </span>
+                                            </div>
                                             <input
+                                                id="gpu-fraction"
                                                 type="range"
                                                 min="0.05"
                                                 max="1"
                                                 step="0.05"
                                                 value={gpuFractionPerClient}
-                                                onChange={(e) => setGpuFractionPerClient(parseFloat(e.target.value))}
-                                                className="flex-1 accent-gray-800"
+                                                onChange={(e) =>
+                                                    setGpuFractionPerClient(parseFloat(e.target.value))
+                                                }
+                                                className="w-full accent-[var(--accent)]"
                                             />
-                                            <span className="text-sm font-medium text-gray-900 w-16 text-right">
-                                                {(gpuFractionPerClient * 100).toFixed(0)}%
-                                            </span>
+                                            <p className="text-[11px] text-ink-subtle mt-1.5">
+                                                {gpuFractionPerClient <= 0.5
+                                                    ? `${Math.floor(1 / gpuFractionPerClient)} clients share each GPU`
+                                                    : `Each client takes ${(gpuFractionPerClient * 100).toFixed(0)}% of a GPU`}
+                                            </p>
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {gpuFractionPerClient <= 0.5
-                                                ? `${Math.floor(1 / gpuFractionPerClient)} clients can share each GPU`
-                                                : `Each client uses ${(gpuFractionPerClient * 100).toFixed(0)}% of a GPU`
-                                            }
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Action Button */}
-                        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900">Ready to Start?</h3>
-                                    <p className="text-sm text-gray-600 mt-1 flex items-center gap-1.5">
-                                        <CheckCircle2 className="w-4 h-4 text-gray-600" />
-                                        {modelFile || datasetFile || algorithmFile
-                                            ? `Custom files: ${[modelFile && 'model', datasetFile && 'dataset', algorithmFile && 'strategy'].filter(Boolean).join(', ')}`
-                                            : 'Using defaults (CIFAR-10 CNN with FedAvg)'
-                                        }
-                                    </p>
-                                    {resources && concurrencyLimitReached && resources.concurrency.max !== null && (
-                                        <p className="text-sm text-red-600 mt-2">
-                                            All worker slots are busy ({resources.concurrency.active}/{resources.concurrency.max}). Creation is disabled until a slot is free.
-                                        </p>
                                     )}
                                 </div>
-                                <button
-                                    onClick={handleStartExperiment}
-                                    disabled={isCreating || concurrencyLimitReached}
-                                    className="bg-gray-800 text-white px-6 py-3 rounded-lg font-semibold shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isCreating ? (
-                                        <span className="flex items-center gap-2">
-                                            <Loader2 className="animate-spin h-5 w-5" />
-                                            Creating...
-                                        </span>
-                                    ) : concurrencyLimitReached ? 'No Worker Slots Available' : 'Start Experiment'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                            </>
+                        ) : (
+                            <Callout tone="warn">Could not detect this machine&apos;s resources.</Callout>
+                        )}
+                    </Card>
 
-                    {/* Right Column - File Uploads */}
-                    <div className="space-y-4">
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold text-gray-900">Upload Files</h2>
-                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">All optional</span>
-                            </div>
-                            <div className="space-y-4">
-                                {/* Model - Optional */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Model
-                                        </label>
-                                        <button
-                                            onClick={() => downloadTemplate('model')}
-                                            className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
-                                        >
-                                            <Download className="w-3 h-3" />
-                                            Template
-                                        </button>
-                                    </div>
-                                    <SingleFileUploader
-                                        id="model-uploader"
-                                        accept=".py,.pt,.pth"
-                                        hint="Drop model.py file"
-                                        type="model"
-                                        onFileSelect={setModelFile}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Default: CIFAR-10 CNN</p>
-                                </div>
+                    {concurrencyLimitReached && resources?.concurrency.max != null && (
+                        <Callout tone="warn" title="All worker slots are busy">
+                            {resources.concurrency.active} of {resources.concurrency.max} slots are in
+                            use. A new experiment can start once one frees up.
+                        </Callout>
+                    )}
 
-                                {/* Dataset - Optional */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Dataset
-                                        </label>
-                                        <button
-                                            onClick={() => downloadTemplate('dataset')}
-                                            className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
-                                        >
-                                            <Download className="w-3 h-3" />
-                                            Template
-                                        </button>
-                                    </div>
-                                    <SingleFileUploader
-                                        id="dataset-uploader"
-                                        accept=".py"
-                                        hint="Drop dataset.py file"
-                                        type="dataset"
-                                        onFileSelect={setDatasetFile}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Default: CIFAR-10 (IID)</p>
-                                </div>
-
-                                {/* Strategy/Algorithm - Optional */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Strategy
-                                        </label>
-                                        <button
-                                            onClick={() => downloadTemplate('strategy')}
-                                            className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
-                                        >
-                                            <Download className="w-3 h-3" />
-                                            Template
-                                        </button>
-                                    </div>
-                                    <SingleFileUploader
-                                        id="algorithm-uploader"
-                                        accept=".py"
-                                        hint="Drop strategy.py file"
-                                        type="algorithm"
-                                        onFileSelect={setAlgorithmFile}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Default: FedAvg</p>
-                                </div>
-
-                                {/* Config - Optional */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Configuration
-                                        </label>
-                                        <button
-                                            onClick={() => downloadTemplate('config')}
-                                            className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
-                                        >
-                                            <Download className="w-3 h-3" />
-                                            Template
-                                        </button>
-                                    </div>
-                                    <SingleFileUploader
-                                        id="config-uploader"
-                                        accept=".py,.json,.yaml"
-                                        hint="Drop config file"
-                                        type="config"
-                                        onFileSelect={setConfigFile}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Quick Start Guide */}
-                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
-                                <Info className="w-4 h-4" />
-                                Quick Start
-                            </h3>
-                            <ol className="text-xs text-gray-600 space-y-1.5 list-decimal list-inside">
-                                <li>Configure training parameters</li>
-                                <li>Optionally upload custom files</li>
-                                <li>Click &quot;Start Experiment&quot;</li>
-                                <li>Monitor progress in real-time</li>
-                            </ol>
-                        </div>
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-[var(--radius)] border border-line bg-surface-muted">
+                        <p className="text-xs text-ink-muted">
+                            {modelFile || datasetFile || algorithmFile
+                                ? `Custom: ${[
+                                      modelFile && "model",
+                                      datasetFile && "dataset",
+                                      algorithmFile && "strategy",
+                                  ]
+                                      .filter(Boolean)
+                                      .join(", ")}`
+                                : datasetKind
+                                ? `Defaults with the ${datasetKind} dataset and FedAvg`
+                                : "Defaults: CIFAR-10 CNN with FedAvg"}
+                        </p>
+                        <Button
+                            variant="primary"
+                            onClick={handleStartExperiment}
+                            loading={isCreating}
+                            disabled={concurrencyLimitReached}
+                        >
+                            {isCreating
+                                ? "Creating"
+                                : concurrencyLimitReached
+                                ? "No slots available"
+                                : "Start experiment"}
+                        </Button>
                     </div>
                 </div>
 
-                <Footer />
+                <div className="space-y-5">
+                    <Card>
+                        <CardHeader
+                            title="Files"
+                            description="All optional -- defaults are used for anything you leave empty."
+                            className="mb-5"
+                        />
+                        <div className="space-y-5">
+                            <UploadSlot
+                                label="Model"
+                                template="model"
+                                id="model-uploader"
+                                file={modelFile}
+                                accept=".py,.pt,.pth"
+                                hint="model.py"
+                                onSelect={setModelFile}
+                                fallback="CIFAR-10 CNN"
+                            />
+                            <UploadSlot
+                                label="Dataset"
+                                template="dataset"
+                                id="dataset-uploader"
+                                file={datasetFile}
+                                accept=".py"
+                                hint="dataset.py"
+                                onSelect={setDatasetFile}
+                                fallback="CIFAR-10 (IID)"
+                            />
+                            <UploadSlot
+                                label="Strategy"
+                                template="strategy"
+                                id="algorithm-uploader"
+                                file={algorithmFile}
+                                accept=".py"
+                                hint="strategy.py"
+                                onSelect={setAlgorithmFile}
+                                fallback="FedAvg"
+                            />
+                            <UploadSlot
+                                label="Config"
+                                template="config"
+                                id="config-uploader"
+                                file={configFile}
+                                accept=".py,.json,.yaml"
+                                hint="config.py"
+                                onSelect={setConfigFile}
+                            />
+                        </div>
+                    </Card>
+                </div>
             </div>
 
             <Dialog
@@ -592,6 +557,6 @@ export default function DashboardPage() {
                 message={dialog.message}
                 type={dialog.type}
             />
-        </div>
+        </>
     );
 }

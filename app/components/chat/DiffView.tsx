@@ -1,31 +1,33 @@
 "use client";
 
+import { cn } from "@/app/components/ui";
+
 type Props = { diff: string };
 
 /**
- * A unified diff. It is computed server-side and shipped as text, so the client
- * needs no diff library -- rendering is just colouring by line prefix.
+ * A unified diff.
+ *
+ * Computed server-side and shipped as text, so the client needs no diff
+ * library: rendering is only colouring by line prefix.
  */
 export default function DiffView({ diff }: Props) {
     return (
-        <pre className="text-xs font-mono border border-gray-200 rounded overflow-x-auto max-h-80 bg-white">
-            {diff.split("\n").map((line, i) => {
+        <pre className="text-[11px] font-mono border border-line rounded-[var(--radius)] overflow-x-auto max-h-80 bg-surface">
+            {diff.split("\n").map((line, index) => {
                 const added = line.startsWith("+") && !line.startsWith("+++");
                 const removed = line.startsWith("-") && !line.startsWith("---");
                 const header = line.startsWith("+++") || line.startsWith("---");
 
                 return (
                     <div
-                        key={i}
-                        className={`px-2 py-0.5 ${
-                            added
-                                ? "bg-green-50 text-green-900"
-                                : removed
-                                  ? "bg-red-50 text-red-900"
-                                  : header
-                                    ? "bg-gray-100 text-gray-600"
-                                    : "text-gray-700"
-                        }`}
+                        key={index}
+                        className={cn(
+                            "px-2 py-0.5",
+                            added && "bg-ok-surface text-ok",
+                            removed && "bg-danger-surface text-danger",
+                            header && "bg-surface-muted text-ink-subtle",
+                            !added && !removed && !header && "text-ink-muted"
+                        )}
                     >
                         {line || " "}
                     </div>
