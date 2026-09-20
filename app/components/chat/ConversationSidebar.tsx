@@ -143,7 +143,7 @@ export default function ConversationSidebar({
     creating,
 }: Props) {
     return (
-        <aside className="w-60 shrink-0 flex flex-col border-r border-line">
+        <aside className="w-60 shrink-0 min-h-0 flex flex-col border-r border-line">
             <div className="p-3">
                 <Button
                     variant="primary"
@@ -157,7 +157,7 @@ export default function ConversationSidebar({
                 </Button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5">
+            <nav className="flex-1 min-h-0 overflow-y-auto px-2 pb-3 space-y-0.5">
                 {conversations.length === 0 ? (
                     <EmptyState
                         icon="chat"

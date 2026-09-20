@@ -367,15 +367,15 @@ export default function ChatShell({ conversationId }: Props) {
         });
 
     return (
-        <>
-            <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
                 <div className="min-w-0">
+                    {/* No subtitle: the suggestions panel below says the same
+                        thing, and on a view sized to the viewport every line
+                        here is a line taken off the conversation. */}
                     <h1 className="text-xl font-semibold text-ink truncate">
                         {conversation?.title ?? "Chat"}
                     </h1>
-                    <p className="text-sm text-ink-muted mt-0.5">
-                        Ask the agent about your federated learning experiments.
-                    </p>
                 </div>
 
                 {conversation && (
@@ -396,15 +396,17 @@ export default function ChatShell({ conversationId }: Props) {
             </div>
 
             {conversation?.autoRun && (
-                <Callout tone="warn" className="mb-4">
+                <Callout tone="warn" className="mb-3 shrink-0">
                     The agent will start experiments and write files without asking for approval
                     first.
                 </Callout>
             )}
 
-            {/* Fixed height rather than page scroll: a conversation reads as a
-                pane with its own scrollback, and the composer must stay put. */}
-            <Card padded={false} className="flex h-[calc(100vh-15rem)] min-h-[28rem] overflow-hidden">
+            {/* Fills the space left over instead of subtracting a guessed
+                amount of chrome from the viewport. The old calc had to be kept
+                in step with the nav, the padding, the header and the footer by
+                hand, and was wrong the moment any of them changed. */}
+            <Card padded={false} className="flex flex-1 basis-0 min-h-[16rem] overflow-hidden">
                 <ConversationSidebar
                     conversations={conversations}
                     activeId={conversationId}
@@ -413,7 +415,7 @@ export default function ChatShell({ conversationId }: Props) {
                     creating={creating}
                 />
 
-                <div className="flex-1 min-w-0 flex flex-col">
+                <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                     <div
                         ref={paneRef}
                         onScroll={() => {
@@ -476,6 +478,6 @@ export default function ChatShell({ conversationId }: Props) {
                 isLoading={deleting}
                 loadingText="Deleting"
             />
-        </>
+        </div>
     );
 }
