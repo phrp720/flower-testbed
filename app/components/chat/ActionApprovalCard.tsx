@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import DiffView from "./DiffView";
-import { Badge, Button, Callout, Icon, SectionLabel, cn } from "@/app/components/ui";
+import { Badge, Button, Callout, CopyButton, Icon, SectionLabel, cn } from "@/app/components/ui";
 import { useDecideAction } from "@/app/hooks/useAgent";
 import { RISK_LABELS, type ToolCall } from "./types";
+import { splitToolInput } from "./toolInput";
 
 type Props = {
     toolCall: ToolCall;
@@ -35,6 +36,7 @@ export default function ActionApprovalCard({ toolCall, conversationId, onDecided
     const decideAction = useDecideAction(conversationId);
     const [busy, setBusy] = useState<"approve" | "approveAll" | "reject" | null>(null);
     const [expanded, setExpanded] = useState(false);
+    const { code, rest } = splitToolInput(toolCall.input);
     const [error, setError] = useState<string | null>(null);
 
     const decide = (choice: "approve" | "approveAll" | "reject") => {
@@ -94,9 +96,29 @@ export default function ActionApprovalCard({ toolCall, conversationId, onDecided
                 </button>
 
                 {expanded && (
-                    <pre className="mt-2 text-[11px] font-mono bg-surface-muted rounded-[var(--radius)] p-2.5 overflow-x-auto">
-                        {JSON.stringify(toolCall.input, null, 2)}
-                    </pre>
+                    <div className="mt-2 space-y-2.5">
+                        {/* Code first and rendered as code. This is the moment
+                            someone decides whether to allow it, and a module
+                            escaped onto one line inside JSON cannot be read,
+                            let alone judged. */}
+                        {code.map((section) => (
+                            <div key={section.key}>
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                    <SectionLabel>{section.label}</SectionLabel>
+                                    <CopyButton value={section.text} />
+                                </div>
+                                <pre className="text-[11px] font-mono bg-ink text-ink-inverted rounded-[var(--radius)] p-2.5 overflow-x-auto max-h-96">
+                                    {section.text}
+                                </pre>
+                            </div>
+                        ))}
+
+                        {rest != null && (
+                            <pre className="text-[11px] font-mono bg-surface-muted rounded-[var(--radius)] p-2.5 overflow-x-auto">
+                                {JSON.stringify(rest, null, 2)}
+                            </pre>
+                        )}
+                    </div>
                 )}
 
                 {error && (

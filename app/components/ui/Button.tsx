@@ -113,7 +113,19 @@ export default function Button({
     );
 }
 
-type LinkButtonProps = CommonProps & { href: string; title?: string };
+type LinkButtonProps = CommonProps & {
+    href: string;
+    title?: string;
+    /**
+     * Render a plain anchor rather than a client-routed Link.
+     *
+     * Required for anything the browser itself has to handle -- a download, or
+     * any response carrying Content-Disposition. Client routing would try to
+     * render it as a page and nothing would happen.
+     */
+    external?: boolean;
+    target?: string;
+};
 
 /** A link styled as a button, for navigation that should look like an action. */
 export function LinkButton({
@@ -125,25 +137,45 @@ export function LinkButton({
     children,
     className,
     title,
+    external,
+    target,
 }: LinkButtonProps) {
     const iconSize = children ? (size === "sm" ? 14 : 16) : size === "sm" ? 16 : 18;
     const glyph = icon ? <Icon name={icon} size={iconSize} className="shrink-0" /> : null;
 
-    return (
-        <Link
-            href={href}
-            title={title}
-            className={cn(
-                BASE,
-                VARIANTS[variant],
-                SIZES[size],
-                children ? PADDING[size] : SQUARE[size],
-                className
-            )}
-        >
+    const classes = cn(
+        BASE,
+        VARIANTS[variant],
+        SIZES[size],
+        children ? PADDING[size] : SQUARE[size],
+        className
+    );
+
+    const content = (
+        <>
             {!iconAfter && glyph}
             {children}
             {iconAfter && glyph}
+        </>
+    );
+
+    if (external || target) {
+        return (
+            <a
+                href={href}
+                title={title}
+                target={target}
+                rel={target === "_blank" ? "noreferrer" : undefined}
+                className={classes}
+            >
+                {content}
+            </a>
+        );
+    }
+
+    return (
+        <Link href={href} title={title} className={classes}>
+            {content}
         </Link>
     );
 }

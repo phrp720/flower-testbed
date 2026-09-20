@@ -7,6 +7,7 @@ import Dialog from "@/app/components/Dialog";
 import MetricsTable from "@/app/components/MetricsTable";
 import CheckpointsList from "@/app/components/CheckpointsList";
 import PlaygroundView from "@/app/components/experiments/PlaygroundView";
+import ModulesCard from "@/app/components/experiments/ModulesCard";
 import LogsDialog from "@/app/components/experiments/LogsDialog";
 import {
   Button,
@@ -49,6 +50,10 @@ type Experiment = {
   errorMessage: string | null;
   logs: string | null;
   customConfig: { dataset?: { kind?: string } } | null;
+  algorithmPath: string | null;
+  modelPath: string | null;
+  configPath: string | null;
+  datasetPath: string | null;
 };
 
 type Metric = {
@@ -428,6 +433,14 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
           )}
         </KeyValueGrid>
       </Card>
+
+      <ModulesCard
+        experimentId={id}
+        algorithmPath={experiment.algorithmPath}
+        modelPath={experiment.modelPath}
+        configPath={experiment.configPath}
+        datasetPath={experiment.datasetPath}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <MetricsTable metrics={metrics} />
