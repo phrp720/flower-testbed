@@ -9,6 +9,9 @@ jobs:
     name: Package Release
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -42,7 +45,7 @@ jobs:
 
       - name: Upload artifacts
         run: |
-          gh release upload ${{ github.event.release.tag_name }} release/deployment.zip
+          gh release upload "${{ github.event.release.tag_name }}" release/deployment.zip --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
