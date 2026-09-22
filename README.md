@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img src="public/testbed-icon-v2.png" alt="Flower Testbed" style="width:400px;height:400px;object-fit:contain;">
+    <img src="public/lockup.svg" alt="Flower Testbed" width="420">
   </picture>
 </p>
 

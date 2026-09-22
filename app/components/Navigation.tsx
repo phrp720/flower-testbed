@@ -42,7 +42,7 @@ export default function Navigation() {
                     href="/testbed/dashboard"
                     className="flex items-center gap-0.5 shrink-0 hover:opacity-70 transition-opacity"
                 >
-                    <Image src="/testbed-icon-v2.png" alt="" width={40} height={40} priority />
+                    <Image src="/mark.svg" alt="" width={40} height={40} priority />
                     <span className="text-sm font-semibold text-ink tracking-tight">
                         Flower Testbed
                     </span>

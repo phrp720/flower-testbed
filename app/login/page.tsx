@@ -50,7 +50,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center text-center mb-6">
-          <Image src="/testbed-icon-v2.png" alt="" width={140} height={140} priority />
+          <Image src="/mark.svg" alt="" width={140} height={140} priority />
           <h1 className="text-xl font-semibold text-ink mt-2">Flower Testbed</h1>
           <p className="text-sm text-ink-muted mt-1">
             Federated learning experiment platform
