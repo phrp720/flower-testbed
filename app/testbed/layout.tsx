@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Navigation from "@/app/components/Navigation";
+import SystemBanner from "@/app/components/SystemBanner";
 import Footer from "@/app/components/Footer";
 import Spinner from "@/app/components/ui/Spinner";
 import { cn } from "@/app/components/ui/cn";
@@ -48,6 +49,7 @@ export default function TestbedLayout({ children }: { children: React.ReactNode 
 
     return (
         <div className="min-h-screen flex flex-col">
+            <SystemBanner />
             <Navigation />
             <main
                 className={cn(
