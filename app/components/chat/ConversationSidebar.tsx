@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Button, EmptyState, Icon, cn, CONTROL } from "@/app/components/ui";
+import { Button, EmptyState, Icon, Menu, cn, CONTROL } from "@/app/components/ui";
 import { useUpdateConversation } from "@/app/hooks/useAgent";
 import type { Conversation } from "./types";
 
@@ -110,32 +110,27 @@ function ConversationRow({
                 <span className="truncate">{conversation.title}</span>
             </Link>
 
-            {/* Revealed on hover to keep a column of titles quiet, but always
-                present below sm: a pointer is the only thing that can hover,
-                and these are the only way to rename or remove a conversation. */}
-            <div className="flex items-center shrink-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    icon="edit"
-                    title="Rename"
-                    aria-label={`Rename ${conversation.title}`}
-                    className="w-7 h-7"
-                    onClick={() => {
-                        setDraft(conversation.title);
-                        setEditing(true);
-                    }}
-                />
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    icon="delete"
-                    title="Delete"
-                    aria-label={`Delete ${conversation.title}`}
-                    className="w-7 h-7 hover:text-danger hover:bg-danger-surface"
-                    onClick={() => onDelete(conversation)}
-                />
-            </div>
+            <Menu
+                label={`Actions for ${conversation.title}`}
+                size="sm"
+                className="sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity"
+                items={[
+                    {
+                        label: "Rename",
+                        icon: "edit",
+                        onSelect: () => {
+                            setDraft(conversation.title);
+                            setEditing(true);
+                        },
+                    },
+                    {
+                        label: "Delete",
+                        icon: "delete",
+                        danger: true,
+                        onSelect: () => onDelete(conversation),
+                    },
+                ]}
+            />
         </div>
     );
 }

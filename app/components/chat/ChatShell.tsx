@@ -413,7 +413,7 @@ export default function ChatShell({ conversationId }: Props) {
         setDialog({
             isOpen: true,
             title: "Delete conversation",
-            message: `Delete "${target.title}"? This cannot be undone.`,
+            message: "Are you sure you want to delete this conversation?",
             type: "confirm",
             onConfirm: () => {
                 deleteConversation.mutate(target.id, {

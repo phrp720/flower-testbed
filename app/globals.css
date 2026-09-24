@@ -156,3 +156,10 @@ select {
   background-position: right 0.75rem center;
   background-repeat: no-repeat;
 }
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+label[for],
+summary {
+  cursor: pointer;
+}
