@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { gpuDetail, gpuSummary } from "./gpu";
 import Link from "next/link";
 import {
   CartesianGrid,
@@ -16,6 +17,8 @@ import {
   CardHeader,
   EmptyState,
   Icon,
+  KeyValue,
+  KeyValueGrid,
   LinkButton,
   PageHeader,
   Progress,
@@ -23,9 +26,14 @@ import {
   Spinner,
   Stat,
   StatusBadge,
+  cn,
   type IconName,
 } from "@/app/components/ui";
-import { useExperiments } from "@/app/hooks/useExperiments";
+import {
+  useExperiments,
+  useResources,
+  type Experiment,
+} from "@/app/hooks/useExperiments";
 
 function ShortcutCard({
   href,
@@ -71,8 +79,123 @@ function ShortcutCard({
   );
 }
 
+/**
+ * Which problem a run was solving.
+ *
+ * `customConfig.dataset.kind` is set for the built-in 2D sets; an uploaded
+ * module is its own thing and cannot be compared to anything else; everything
+ * left is the CIFAR-10 default.
+ */
+function datasetOf(experiment: Experiment): string {
+  return experiment.customConfig?.dataset?.kind ?? (experiment.datasetPath ? "custom" : "cifar10");
+}
+
+/**
+ * Which aggregation strategy a run actually used.
+ *
+ * The same precedence the runner applies in create_strategy: an uploaded module
+ * wins over a named built-in, which wins over FedAvg. Reading only
+ * customConfig.strategy would have reported a run with its own
+ * get_strategy() as "fedavg" -- claiming the platform had never been pushed
+ * past the default by the very runs that did.
+ */
+function strategyOf(experiment: Experiment): string {
+  if (experiment.algorithmPath) return "custom";
+  return experiment.customConfig?.strategy?.name ?? "fedavg";
+}
+
+function tally(items: Experiment[], key: (item: Experiment) => string) {
+  const counts = items.reduce<Record<string, number>>((acc, item) => {
+    const k = key(item);
+    acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ${Math.round(seconds % 60)}s`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
+/**
+ * What the platform can do, against what has been tried.
+*/
+const SUPPORTED = {
+  strategies: ["fedavg", "fedprox", "fedadam", "fedadagrad", "fedyogi"],
+  partitioning: ["iid", "dirichlet", "shard", "pathological"],
+};
+
+/** One colour per dataset series, reused in order. */
+const SERIES = ["var(--ink)", "#2563eb", "#ea580c", "#16a34a", "#9333ea", "#0891b2"];
+
+/**
+ * One row per option the platform supports, used or not.
+*/
+function Coverage({
+  label,
+  used,
+  supported,
+  className,
+}: {
+  label: string;
+  used: Array<[string, number]>;
+  supported: string[];
+  className?: string;
+}) {
+  const counts = new Map(used);
+  const total = used.reduce((sum, [, count]) => sum + count, 0);
+
+  // Supported options first, in their declared order, then anything used that
+  // is not a built-in -- an uploaded module, which has no slot to sit in.
+  const extras = used.map(([name]) => name).filter((name) => !supported.includes(name));
+  const rows = [...supported, ...extras];
+
+  return (
+    <div className={className}>
+      <div className="flex items-baseline justify-between gap-3 mb-2">
+        <SectionLabel>{label}</SectionLabel>
+        <span className="text-xs text-ink-subtle tabular">
+          {counts.size} of {rows.length} used
+        </span>
+      </div>
+
+      <div className="space-y-1">
+        {rows.map((name) => {
+          const count = counts.get(name) ?? 0;
+          return (
+            <div key={name} className="flex items-center gap-2.5">
+              <span
+                className={cn(
+                  "w-24 shrink-0 truncate text-xs",
+                  count > 0 ? "text-ink" : "text-ink-subtle"
+                )}
+                title={name}
+              >
+                {name}
+              </span>
+              <Progress value={total ? count / total : 0} className="flex-1" />
+              <span
+                className={cn(
+                  "w-6 text-right text-xs tabular",
+                  count > 0 ? "text-ink font-medium" : "text-ink-subtle"
+                )}
+              >
+                {count > 0 ? count : "\u2013"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { data: experiments = [], isLoading } = useExperiments();
+  const { data: resources } = useResources();
 
   const summary = useMemo(() => {
     const total = experiments.length;
@@ -92,17 +215,36 @@ export default function DashboardPage() {
       return acc;
     }, {});
 
-    // Oldest to newest, so the line reads left to right as time. The list
-    // arrives newest first, which would otherwise plot the trend backwards.
-    const trend = [...scored]
-      .reverse()
-      .slice(-12)
-      .map((exp) => ({
-        name: exp.name,
-        accuracy: (exp.finalAccuracy ?? 0) * 100,
-        clients: exp.numClients,
-        rounds: exp.numRounds,
-      }));
+    /**
+     * One series per dataset, because accuracy across datasets is not a trend.
+    */
+    const ordered = [...scored].reverse().slice(-24);
+
+    const trend = ordered.map((exp, index) => ({
+      index,
+      name: exp.name,
+      clients: exp.numClients,
+      rounds: exp.numRounds,
+      [datasetOf(exp)]: (exp.finalAccuracy ?? 0) * 100,
+    }));
+
+    const datasets = [...new Set(ordered.map(datasetOf))];
+
+    /** What has actually been explored, against what the platform supports. */
+    const coverage = {
+      strategies: tally(experiments, strategyOf),
+      partitioning: tally(experiments, (e) => e.customConfig?.partitioner?.kind ?? "iid"),
+    };
+
+    const durations = experiments
+      .filter((e) => e.startedAt && e.completedAt)
+      .map(
+        (e) =>
+          (new Date(e.completedAt as string).getTime() -
+            new Date(e.startedAt as string).getTime()) /
+          1000
+      )
+      .sort((a, b) => a - b);
 
     return {
       total,
@@ -115,6 +257,10 @@ export default function DashboardPage() {
       totalRounds: experiments.reduce((sum, e) => sum + e.numRounds, 0),
       totalClients: experiments.reduce((sum, e) => sum + e.numClients, 0),
       trend,
+      datasets,
+      coverage,
+      medianDuration: durations.length ? durations[Math.floor(durations.length / 2)] : null,
+      slowestDuration: durations.length ? durations[durations.length - 1] : null,
       frameworks: Object.entries(byFramework).map(([name, count]) => ({ name, count })),
     };
   }, [experiments]);
@@ -222,8 +368,8 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader
-            title="Accuracy over time"
-            description="Final accuracy of each completed run, oldest to newest."
+            title="Accuracy by dataset"
+            description="Final accuracy of each completed run, oldest to newest, one line per problem."
             className="mb-4"
           />
           {summary.trend.length < 2 ? (
@@ -236,7 +382,7 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={summary.trend} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
                 <CartesianGrid strokeDasharray="2 4" stroke="var(--line)" vertical={false} />
-                <XAxis dataKey="name" hide />
+                <XAxis dataKey="index" hide />
                 <YAxis
                   stroke="var(--ink-subtle)"
                   fontSize={11}
@@ -253,37 +399,128 @@ export default function DashboardPage() {
                     borderRadius: "var(--radius)",
                     fontSize: 12,
                   }}
-                  formatter={(value?: number) => [
+                  formatter={(value?: number, name?: string) => [
                     value != null ? `${value.toFixed(1)}%` : "-",
-                    "accuracy",
+                    name ?? "accuracy",
                   ]}
-                  labelFormatter={(label: string) => label}
+                  labelFormatter={() => ""}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="accuracy"
-                  stroke="var(--ink)"
-                  strokeWidth={1.75}
-                  dot={{ r: 2.5, strokeWidth: 0, fill: "var(--ink)" }}
-                  isAnimationActive={false}
-                />
+                {/* connectNulls, because a dataset's runs are rarely
+                    consecutive: without it each series would be a scatter of
+                    disconnected dots rather than its own trajectory. */}
+                {summary.datasets.map((dataset, index) => (
+                  <Line
+                    key={dataset}
+                    type="monotone"
+                    dataKey={dataset}
+                    name={dataset}
+                    stroke={SERIES[index % SERIES.length]}
+                    strokeWidth={1.75}
+                    dot={{ r: 2.5, strokeWidth: 0, fill: SERIES[index % SERIES.length] }}
+                    connectNulls
+                    isAnimationActive={false}
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           )}
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-4 mt-4 border-t border-line">
-            <SectionLabel>Frameworks</SectionLabel>
-            {summary.frameworks.map((entry) => (
-              <span key={entry.name} className="text-xs text-ink-muted tabular">
-                {entry.name} <span className="text-ink font-medium">{entry.count}</span>
+          {/* The legend replaces the framework tally, which only ever said
+              "pytorch" and is now stated once in Configuration instead. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-4 mt-4 border-t border-line">
+            <SectionLabel>Datasets</SectionLabel>
+            {summary.datasets.map((dataset, index) => (
+              <span key={dataset} className="flex items-center gap-1.5 text-xs text-ink-muted">
+                <span
+                  className="w-2.5 h-0.5 rounded-full"
+                  style={{ background: SERIES[index % SERIES.length] }}
+                />
+                {dataset}
               </span>
             ))}
-            {summary.frameworks.length === 0 && (
+            {summary.datasets.length === 0 && (
               <span className="text-xs text-ink-subtle">none</span>
             )}
           </div>
         </Card>
       </div>
+
+      <Card className="mb-5">
+        {!resources ? (
+          <div className="h-8 flex items-center">
+            <Spinner size={14} label="Reading machine resources" />
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
+            <div className="min-w-0">
+              <SectionLabel>Capacity</SectionLabel>
+             <div className="flex items-center gap-2 mt-1">
+                <span
+                  className={cn(
+                    "text-xl font-semibold tabular leading-none",
+                    resources.concurrency.canCreate ? "text-ok" : "text-warn"
+                  )}
+                >
+                  {resources.concurrency.available ?? "\u221e"}
+                </span>
+                <span className="text-xs text-ink-muted leading-none">
+                  {resources.concurrency.max == null
+                    ? "no concurrency limit set"
+                    : `of ${resources.concurrency.max} slots free`}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-[18rem]">
+              <KeyValueGrid>
+                <KeyValue label="Running now" value={resources.concurrency.active} mono />
+                <KeyValue label="CPUs" value={resources.cpu.count} mono />
+                <KeyValue label="Ray CPUs" value={resources.cpu.ray_count} mono />
+                <KeyValue label="GPU" value={gpuSummary(resources)} title={gpuDetail(resources)} />
+              </KeyValueGrid>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card className="mb-5">
+        <CardHeader
+          title="What you have explored"
+          description="Across every run, not just the completed ones."
+          className="mb-5"
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+          <Coverage
+            label="Aggregation strategy"
+            used={summary.coverage.strategies}
+            supported={SUPPORTED.strategies}
+          />
+          <Coverage
+            label="Partitioning"
+            used={summary.coverage.partitioning}
+            supported={SUPPORTED.partitioning}
+          />
+        </div>
+
+        {summary.medianDuration != null && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-4 mt-5 border-t border-line">
+            <SectionLabel>Run time</SectionLabel>
+            <span className="text-xs text-ink-muted tabular">
+              median{" "}
+              <span className="text-ink font-medium">
+                {formatDuration(summary.medianDuration)}
+              </span>
+            </span>
+            <span className="text-xs text-ink-muted tabular">
+              slowest{" "}
+              <span className="text-ink font-medium">
+                {formatDuration(summary.slowestDuration ?? 0)}
+              </span>
+            </span>
+          </div>
+        )}
+      </Card>
 
       <Card padded={false} className="mb-5">
         <CardHeader

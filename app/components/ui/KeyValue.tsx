@@ -34,17 +34,22 @@ export function KeyValue({
     label,
     value,
     mono,
+    title,
 }: {
     label: ReactNode;
     value: ReactNode;
     mono?: boolean;
+    title?: string;
 }) {
     return (
         <div className="min-w-0">
             <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
                 {label}
             </dt>
-            <dd className={cn("text-sm text-ink mt-1 truncate", mono && "font-mono tabular")}>
+            <dd
+                title={title}
+                className={cn("text-sm text-ink mt-1 truncate", mono && "font-mono tabular")}
+            >
                 {value}
             </dd>
         </div>

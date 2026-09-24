@@ -29,6 +29,11 @@ export type Experiment = {
     modelPath: string | null;
     configPath: string | null;
     datasetPath: string | null;
+    customConfig: {
+        dataset?: { kind?: string };
+        partitioner?: { kind?: string; alpha?: number };
+        strategy?: { name?: string };
+    } | null;
     createdAt: string;
     startedAt: string | null;
     completedAt: string | null;
@@ -195,8 +200,7 @@ export function useResources() {
     return useQuery({
         queryKey: queryKeys.resources,
         queryFn: () => apiFetch<SystemResources>("/api/resources"),
-        // Spawns a Python process on the server, so this is the one query worth
-        // keeping cheap; it only changes when a run starts or finishes.
         staleTime: 30_000,
+        refetchOnWindowFocus: true,
     });
 }
