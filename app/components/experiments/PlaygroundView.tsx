@@ -410,10 +410,7 @@ export default function PlaygroundView({
                             </div>
                         </div>
                     ) : (
-                        <Callout
-                            title="Nothing drawable for this model"
-                            className="max-w-3xl"
-                        >
+                         <Callout title="Nothing drawable for this model">
                             <p>
                                 {view?.reason ??
                                     view?.error ??
