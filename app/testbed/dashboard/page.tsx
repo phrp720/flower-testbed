@@ -157,10 +157,18 @@ function Coverage({
   const counts = new Map(used);
   const total = used.reduce((sum, [, count]) => sum + count, 0);
 
-  // Supported options first, in their declared order, then anything used that
-  // is not a built-in -- an uploaded module, which has no slot to sit in.
+  /**
+   * Used options first, heaviest first; then everything untried, alphabetically.
+ */
   const extras = used.map(([name]) => name).filter((name) => !supported.includes(name));
-  const rows = [...supported, ...extras];
+  const everything = [...supported, ...extras];
+
+  const rows = [
+    ...everything
+      .filter((name) => (counts.get(name) ?? 0) > 0)
+      .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || a.localeCompare(b)),
+    ...everything.filter((name) => !counts.get(name)).sort((a, b) => a.localeCompare(b)),
+  ];
 
   return (
     <div className={className}>
