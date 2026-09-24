@@ -14,6 +14,7 @@ import {
     SectionLabel,
     Select,
     Spinner,
+    cn,
 } from "@/app/components/ui";
 import { useCreateExperiment, useResources } from "@/app/hooks/useExperiments";
 
@@ -53,6 +54,68 @@ function downloadTemplate(template: keyof typeof TEMPLATES) {
  * subtree -- which threw away the dropzone's state the instant a file was
  * chosen, and made a successful upload look like nothing had happened.
  */
+type VerifyState =
+    | { phase: "idle" }
+    | { phase: "checking" }
+    | { phase: "done"; ok: boolean; message: string };
+
+export type ModuleType = "model" | "dataset" | "algorithm" | "config";
+
+/**
+ * Run the platform's own module checks against a file that has not been
+ * uploaded yet.
+ *
+ * The same two checks startExperiment enforces: the structure of the module,
+ * and -- for a strategy -- whether the factory it exposes can actually be
+ * called. Lives at page level rather than inside the slot because pressing
+ * Start runs it for every file at once, and the results have to land under the
+ * file that produced them.
+ */
+async function verifyFile(file: File, type: ModuleType): Promise<VerifyState> {
+    try {
+        const body = new FormData();
+        body.append("file", file);
+        body.append("type", type);
+
+        const response = await fetch("/api/experiments/verify", { method: "POST", body });
+        const result = await response.json();
+
+        if (!response.ok) {
+            return { phase: "done", ok: false, message: result.error ?? "Check failed." };
+        }
+
+        if (!result.checked) {
+            return { phase: "done", ok: true, message: result.reason };
+        }
+
+        if (result.ok) {
+            const cls = result.dryRun?.strategyClass;
+            return {
+                phase: "done",
+                ok: true,
+                message: cls ? `Looks good \u2014 builds ${cls}.` : "Looks good.",
+            };
+        }
+
+        return {
+            phase: "done",
+            ok: false,
+            message:
+                result.dryRun?.error ??
+                result.structure?.error ??
+                "This module did not pass its check.",
+        };
+    } catch (error) {
+        // A checker that cannot be reached is not evidence the file is wrong,
+        // but it is also not a pass, so it is reported rather than swallowed.
+        return {
+            phase: "done",
+            ok: false,
+            message: error instanceof Error ? error.message : "Could not reach the checker.",
+        };
+    }
+}
+
 function UploadSlot({
     label,
     template,
@@ -62,6 +125,8 @@ function UploadSlot({
     file,
     onSelect,
     fallback,
+    verify,
+    onVerify,
 }: {
     label: string;
     template: keyof typeof TEMPLATES;
@@ -71,19 +136,42 @@ function UploadSlot({
     file: File | null;
     onSelect: (file: File | null) => void;
     fallback?: string;
+    verify: VerifyState;
+    onVerify: () => void;
 }) {
     return (
         <div>
             <div className="flex items-center justify-between mb-2">
                 <SectionLabel>{label}</SectionLabel>
-                <button
-                    type="button"
-                    onClick={() => downloadTemplate(template)}
-                    className="inline-flex items-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors"
-                >
-                    <Icon name="download" size={12} />
-                    Template
-                </button>
+                <div className="flex items-center gap-3">
+                    {/* Offered only once there is something to check. Pressing
+                        Start runs the same checks for every file, so this is
+                        for finding out early rather than a step that can be
+                        skipped. */}
+                    {file && (
+                        <button
+                            type="button"
+                            onClick={onVerify}
+                            disabled={verify.phase === "checking"}
+                            className="inline-flex items-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors disabled:opacity-50"
+                        >
+                            {verify.phase === "checking" ? (
+                                <Spinner size={11} />
+                            ) : (
+                                <Icon name="check" size={12} />
+                            )}
+                            {verify.phase === "checking" ? "Checking" : "Verify"}
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => downloadTemplate(template)}
+                        className="inline-flex items-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors"
+                    >
+                        <Icon name="download" size={12} />
+                        Template
+                    </button>
+                </div>
             </div>
             <SingleFileUploader
                 id={id}
@@ -92,7 +180,26 @@ function UploadSlot({
                 file={file}
                 onFileSelect={onSelect}
             />
-            {fallback && <p className="text-[11px] text-ink-subtle mt-1.5">Default: {fallback}</p>}
+
+            {verify.phase === "done" && (
+                <p
+                    className={cn(
+                        "flex items-start gap-1.5 text-[11px] mt-1.5",
+                        verify.ok ? "text-ok" : "text-danger"
+                    )}
+                >
+                    <Icon
+                        name={verify.ok ? "success" : "error"}
+                        size={12}
+                        className="shrink-0 mt-px"
+                    />
+                    <span className="break-words">{verify.message}</span>
+                </p>
+            )}
+
+            {fallback && verify.phase !== "done" && (
+                <p className="text-[11px] text-ink-subtle mt-1.5">Default: {fallback}</p>
+            )}
         </div>
     );
 }
@@ -121,6 +228,33 @@ export default function DashboardPage() {
     const [datasetFile, setDatasetFile] = useState<File | null>(null);
     const [algorithmFile, setAlgorithmFile] = useState<File | null>(null);
 
+    /**
+     * Verification results, keyed by slot.
+     *
+     * Held here rather than inside each slot because pressing Start checks
+     * every file at once, and a failure has to appear under the file that
+     * caused it -- a single dialog naming four possible culprits is not
+     * feedback, it is a puzzle.
+     */
+    const [verifyStates, setVerifyStates] = useState<Record<ModuleType, VerifyState>>({
+        model: { phase: "idle" },
+        dataset: { phase: "idle" },
+        algorithm: { phase: "idle" },
+        config: { phase: "idle" },
+    });
+
+    const setVerifyState = (type: ModuleType, state: VerifyState) =>
+        setVerifyStates((current) => ({ ...current, [type]: state }));
+
+    /** Checks one slot and records the result under it. Returns whether it passed. */
+    const checkSlot = async (type: ModuleType, file: File | null): Promise<boolean> => {
+        if (!file) return true;
+        setVerifyState(type, { phase: "checking" });
+        const result = await verifyFile(file, type);
+        setVerifyState(type, result);
+        return result.phase === "done" && result.ok;
+    };
+
     // Experiment configuration
     const [experimentName, setExperimentName] = useState("");
     const [numClients, setNumClients] = useState(10);
@@ -143,6 +277,8 @@ export default function DashboardPage() {
         setCpusPerClient((current) => Math.min(current, resources.cpu.ray_count));
     }, [resources]);
 
+    const [verifying, setVerifying] = useState(false);
+
     const concurrencyLimitReached = resources ? !resources.concurrency.canCreate : false;
 
     // Dialog state
@@ -158,7 +294,29 @@ export default function DashboardPage() {
         type: 'info',
     });
 
-    const handleStartExperiment = () => {
+    const handleStartExperiment = async () => {
+        /**
+         * Checked before anything is created.
+         *
+         * The mutation uploads, creates and starts in one go, and startExperiment
+         * refuses a broken module -- which would leave an experiment created,
+         * pending and unstartable, with nothing in the UI able to edit or finish
+         * it. Verifying first means a failed check costs nothing and leaves
+         * nothing behind.
+         */
+        setVerifying(true);
+        const results = await Promise.all([
+            checkSlot("model", modelFile),
+            checkSlot("dataset", datasetFile),
+            checkSlot("algorithm", algorithmFile),
+            checkSlot("config", configFile),
+        ]);
+        setVerifying(false);
+
+        // The failures are already rendered under their own files, so there is
+        // nothing useful left to say in a dialog.
+        if (results.some((passed) => !passed)) return;
+
         createExperiment.mutate(
             {
                 files: {
@@ -485,11 +643,13 @@ export default function DashboardPage() {
                         </p>
                         <Button
                             variant="primary"
-                            onClick={handleStartExperiment}
-                            loading={isCreating}
+                            onClick={() => void handleStartExperiment()}
+                            loading={isCreating || verifying}
                             disabled={concurrencyLimitReached}
                         >
-                            {isCreating
+                            {verifying
+                                ? "Checking modules"
+                                : isCreating
                                 ? "Creating"
                                 : concurrencyLimitReached
                                 ? "No slots available"
@@ -510,6 +670,8 @@ export default function DashboardPage() {
                                 label="Model"
                                 template="model"
                                 id="model-uploader"
+                                verify={verifyStates.model}
+                                onVerify={() => void checkSlot("model", modelFile)}
                                 file={modelFile}
                                 accept=".py,.pt,.pth"
                                 hint="model.py"
@@ -520,6 +682,8 @@ export default function DashboardPage() {
                                 label="Dataset"
                                 template="dataset"
                                 id="dataset-uploader"
+                                verify={verifyStates.dataset}
+                                onVerify={() => void checkSlot("dataset", datasetFile)}
                                 file={datasetFile}
                                 accept=".py"
                                 hint="dataset.py"
@@ -530,6 +694,8 @@ export default function DashboardPage() {
                                 label="Strategy"
                                 template="strategy"
                                 id="algorithm-uploader"
+                                verify={verifyStates.algorithm}
+                                onVerify={() => void checkSlot("algorithm", algorithmFile)}
                                 file={algorithmFile}
                                 accept=".py"
                                 hint="strategy.py"
@@ -540,6 +706,8 @@ export default function DashboardPage() {
                                 label="Config"
                                 template="config"
                                 id="config-uploader"
+                                verify={verifyStates.config}
+                                onVerify={() => void checkSlot("config", configFile)}
                                 file={configFile}
                                 accept=".py,.json,.yaml"
                                 hint="config.py"

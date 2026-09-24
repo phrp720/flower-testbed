@@ -31,6 +31,28 @@ const COLUMNS = {
   dataset: 'datasetPath',
 } as const satisfies Record<UploadType, string>;
 
+/**
+ * The module that runs when nothing was uploaded.
+ *
+ * Leaving a slot empty does not mean no code ran -- it means the platform's own
+ * module ran, and that code is as much a part of what the experiment did as an
+ * upload would be. Serving it makes a default run reproducible: you can read
+ * exactly what trained, and start from it.
+ *
+ * Fixed paths, never derived from the request, so widening the route past the
+ * data directory does not widen what a caller can ask for. `algorithm` has no
+ * entry on purpose: the default strategy is a FedAvg instance constructed in
+ * server.py, not a module, so there is no file that would be the honest answer.
+ */
+const DEFAULT_MODULES: Partial<Record<UploadType, string>> = {
+  model: 'runner/pytorch/defaults/model.py',
+  dataset: 'runner/pytorch/defaults/dataset.py',
+  config: 'runner/pytorch/defaults/config.py',
+};
+
+/** The 2D playground swaps the dataset module out for its own. */
+const TOY2D_DATASET = 'runner/pytorch/defaults/toy2d.py';
+
 /** Rendered in the browser rather than downloaded, when asked for inline. */
 const TEXT_TYPES: Record<string, string> = {
   '.py': 'text/plain; charset=utf-8',
@@ -58,15 +80,31 @@ export async function GET(
     const experiment = await getExperiment(assertExperimentId(id));
     const stored = experiment[COLUMNS[type as UploadType]];
 
-    if (!stored) throw new NotFoundError(`This experiment has no ${type} module.`);
+    let absolute: string;
 
-    // The stored path is relative to the project root when DATA_DIR is unset and
-    // absolute when it is set -- a contract the Python ModuleLoader and the
-    // GitHub Action both rely on, so it is resolved here rather than normalised.
-    const absolute = path.resolve(getProjectRoot(), stored);
+    if (stored) {
+      // The stored path is relative to the project root when DATA_DIR is unset
+      // and absolute when it is set -- a contract the Python ModuleLoader and
+      // the GitHub Action both rely on, so it is resolved here rather than
+      // normalised.
+      absolute = path.resolve(getProjectRoot(), stored);
 
-    if (!isPathInside(getDataDir(), absolute)) {
-      throw new NotFoundError('That module is not stored where uploads live.');
+      if (!isPathInside(getDataDir(), absolute)) {
+        throw new NotFoundError('That module is not stored where uploads live.');
+      }
+    } else {
+      const config = experiment.customConfig as { dataset?: { kind?: string } } | null;
+      const isToy2d = type === 'dataset' && Boolean(config?.dataset?.kind);
+      const fallback = isToy2d ? TOY2D_DATASET : DEFAULT_MODULES[type as UploadType];
+
+      if (!fallback) {
+        throw new NotFoundError(
+          `This experiment has no ${type} module, and the platform default for ` +
+            '\u0074hat slot is not a file.'
+        );
+      }
+
+      absolute = path.resolve(getProjectRoot(), fallback);
     }
 
     const info = await stat(absolute).catch(() => null);

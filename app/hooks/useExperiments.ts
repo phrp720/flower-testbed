@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiDelete, apiFetch, apiPost } from "@/lib/api";
+import { apiDelete, apiFetch, apiPatch, apiPost } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 
 /**
@@ -76,6 +76,32 @@ export function useExperiments() {
     });
 }
 
+/**
+ * The captured logs, re-read while the run is still producing them.
+ *
+ * Its own query rather than part of the detail payload: logs are the one field
+ * that grows without bound, and the SSE stream deliberately omits them for that
+ * reason -- which is why they used to appear only once the run had finished.
+ * Polls only while the dialog is open and the run is live.
+ */
+export function useExperimentLogs(id: string, enabled: boolean) {
+    return useQuery({
+        queryKey: [...queryKeys.experiments.detail(id), "logs"],
+        queryFn: () =>
+            apiFetch<{ logs: string; status: string; bytes: number }>(
+                `/api/experiments/${id}/logs`
+            ),
+        enabled: enabled && Boolean(id),
+        refetchInterval: (query) => {
+            const status = query.state.data?.status;
+            return status === "running" || status === "pending" ? 2000 : false;
+        },
+        // Keep the last text on screen while the next poll is in flight, or the
+        // pane would blank every two seconds.
+        placeholderData: (previous) => previous,
+    });
+}
+
 export function useExperiment(id: string) {
     return useQuery({
         queryKey: queryKeys.experiments.detail(id),
@@ -84,6 +110,36 @@ export function useExperiment(id: string) {
                 `/api/experiments/${id}`
             ),
         enabled: Boolean(id),
+    });
+}
+
+export function useDuplicateExperiment() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, name }: { id: string; name?: string }) =>
+            apiPost<{ experiment: Experiment }>(`/api/experiments/${id}/duplicate`, { name }),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.experiments.list() });
+        },
+    });
+}
+
+/** Rename or re-describe a run. Allowed at any status; see updateExperiment. */
+export function useUpdateExperiment(id: string) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (patch: { name?: string; description?: string | null }) =>
+            apiPatch<{ experiment: Experiment }>(`/api/experiments/${id}`, patch),
+        onSuccess: ({ experiment }) => {
+            queryClient.setQueryData(
+                queryKeys.experiments.detail(id),
+                (previous: { experiment: Experiment } | undefined) =>
+                    previous ? { ...previous, experiment } : previous
+            );
+            void queryClient.invalidateQueries({ queryKey: queryKeys.experiments.list() });
+        },
     });
 }
 

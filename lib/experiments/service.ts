@@ -7,6 +7,7 @@ import { getEffectiveRayCpuCount } from '@/lib/resources';
 import { getExperimentCheckpointDir } from '@/lib/storage';
 import { getProjectRoot } from '@/lib/paths';
 import { parseExperimentIdParam } from '@/lib/experiment-id';
+import { describeProblems, verifyExperimentModules } from './verification';
 import {
   ensureExperimentRuntimeDirs,
   getExperimentCapacity,
@@ -372,7 +373,20 @@ export async function updateExperiment(
 ): Promise<Experiment> {
   const experiment = await getExperiment(experimentId);
 
-  if (experiment.status !== 'pending') {
+  /**
+   * Name and description are editable at any time; everything else is not.
+   *
+   * The guard exists because the runner reads its configuration once at start,
+   * so changing clients or rounds mid-run would describe an experiment that is
+   * not the one executing. That reasoning does not extend to what the thing is
+   * called: a finished run is exactly when you know what to name it, and
+   * refusing to fix a typo afterwards was a rule enforced past its purpose.
+   */
+  const metadataOnly = Object.keys(patch).every(
+    (field) => field === 'name' || field === 'description'
+  );
+
+  if (experiment.status !== 'pending' && !metadataOnly) {
     throw new ValidationError(
       `Experiment configuration can only be changed while it is pending (current status: ${experiment.status}).`
     );
@@ -442,6 +456,20 @@ export async function startExperiment(experimentId: string): Promise<void> {
   }
 
   await assertCapacity(experimentId);
+
+  /**
+   * Checked here rather than at the upload, so every route in is covered.
+   *
+   * The form, the HTTP API and the agent all start runs through this function,
+   * and a broken module is equally wasteful whichever of them supplied it.
+   * Costs nothing for a run with no uploads, and a second or two for one with
+   * them -- against a training run that would have failed anyway, several
+   * minutes later, with the reason buried in the logs.
+   */
+  const problems = await verifyExperimentModules(experiment);
+  if (problems.length > 0) {
+    throw new ValidationError(describeProblems(problems));
+  }
 
   await db
     .update(schema.experiments)

@@ -16,6 +16,7 @@ import {
   type SetupConfig,
 } from "@/app/components/experiments/describeSetup";
 import LogsDialog from "@/app/components/experiments/LogsDialog";
+import RenameExperimentDialog from "@/app/components/experiments/RenameExperimentDialog";
 import {
   Button,
   Callout,
@@ -24,6 +25,7 @@ import {
   KeyValue,
   KeyValueGrid,
   LinkButton,
+  Menu,
   PageHeader,
   Progress,
   SectionLabel,
@@ -33,6 +35,7 @@ import {
 } from "@/app/components/ui";
 import {
   useDeleteExperiment,
+  useDuplicateExperiment,
   useExperiment,
   useStopExperiment,
 } from "@/app/hooks/useExperiments";
@@ -112,6 +115,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const queryClient = useQueryClient();
   const { data, isLoading: loading } = useExperiment(id);
   const stopExperiment = useStopExperiment();
+  const duplicateExperiment = useDuplicateExperiment();
   const deleteExperiment = useDeleteExperiment();
 
   const experiment = (data?.experiment ?? null) as Experiment | null;
@@ -127,6 +131,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -273,8 +278,34 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     });
   };
 
+  const handleDuplicate = () => {
+    duplicateExperiment.mutate(
+      { id },
+      {
+        onSuccess: ({ experiment: copy }: { experiment: Experiment }) =>
+          router.push(`/testbed/experiments/${copy.id}`),
+        onError: (error: unknown) =>
+          setDialog({
+            isOpen: true,
+            title: 'Error',
+            message: error instanceof Error ? error.message : 'Could not duplicate this experiment.',
+            type: 'error',
+          }),
+      }
+    );
+  };
+
   return (
     <>
+      {renaming && (
+        <RenameExperimentDialog
+          experimentId={id}
+          name={experiment.name}
+          description={experiment.description}
+          onClose={() => setRenaming(false)}
+        />
+      )}
+
       <PageHeader
         title={experiment.name}
         description={experiment.description ?? undefined}
@@ -282,14 +313,23 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         actions={
           <>
             <StatusBadge status={displayStatus} />
-            {experiment.logs && !isActive && (
-              <Button
-                variant="ghost"
-                icon="logs"
-                title="Execution logs"
-                onClick={() => setShowLogs(true)}
-              />
-            )}
+            {/* Always offered, including mid-run: the logs stream now, and a
+                button that appears only once a run is over is useless exactly
+                when someone wants to watch it. */}
+            <Button
+              variant="ghost"
+              icon="logs"
+              title="Execution logs"
+              onClick={() => setShowLogs(true)}
+            />
+
+            <Menu
+              label="Experiment actions"
+              items={[
+                { label: "Rename", icon: "edit", onSelect: () => setRenaming(true) },
+                { label: "Duplicate", icon: "copy", onSelect: handleDuplicate },
+              ]}
+            />
             {canShowStopButton && isActive && (
               <Button
                 variant="secondary"
@@ -390,18 +430,14 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         </Card>
       )}
 
-      {experiment.status === 'failed' && experiment.errorMessage && (
-        <Callout
-          tone={wasStopped ? "neutral" : "danger"}
-          title={wasStopped ? "Stopped by user" : "This run failed"}
-          className="mb-5"
-        >
-          {!wasStopped && (
-            <p className="font-mono text-xs break-words">{experiment.errorMessage}</p>
-          )}
-          {wasStopped && (
-            <p>The run was ended before it finished, so its results are partial.</p>
-          )}
+      {/* A stopped run needs a word of explanation, because "failed" is how it
+          is recorded and that is not what happened. A genuine failure does not:
+          the status badge already says so, and the reason -- with its traceback,
+          which is the part worth reading -- is in the execution logs rather than
+          reproduced here as a wall of red. */}
+      {wasStopped && (
+        <Callout tone="neutral" title="Stopped by user" className="mb-5">
+          <p>The run was ended before it finished, so its results are partial.</p>
         </Callout>
       )}
 
@@ -467,6 +503,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         modelPath={experiment.modelPath}
         configPath={experiment.configPath}
         datasetPath={experiment.datasetPath}
+        datasetKind={experiment.customConfig?.dataset?.kind ?? null}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -501,10 +538,13 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         type={dialog.type}
       />
 
+      {/* Opens regardless of whether logs exist yet: a run that has just
+          started has none, and refusing to open is indistinguishable from a
+          broken button. */}
       <LogsDialog
-        open={showLogs && Boolean(experiment.logs)}
+        open={showLogs}
         onClose={() => setShowLogs(false)}
-        logs={experiment.logs ?? ""}
+        experimentId={id}
         title={experiment.name}
       />
     </>

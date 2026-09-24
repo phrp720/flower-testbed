@@ -7,6 +7,7 @@ import io
 import os
 import json
 import time
+import traceback
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List
 
@@ -167,6 +168,7 @@ class SimulationOrchestrator:
         """Execute the complete simulation workflow."""
         # Start capturing logs (silent mode - saves to DB, no terminal output)
         self.log_capture = LogCapture(on_flush=self._flush_logs)
+        failure: Optional[str] = None
 
         try:
             with self.log_capture:
@@ -195,6 +197,16 @@ class SimulationOrchestrator:
             error_msg = f"{type(e).__name__}: {str(e)}"
             print(f"[Orchestrator] Experiment failed: {error_msg}")
             self.experiment_manager.update_status("failed", error_msg)
+
+            # Held for the finally block to append.
+            #
+            # This except runs *after* the LogCapture context has exited, so
+            # anything printed here goes to the real stdout and never reaches
+            # the saved logs. A failed run therefore ended with the start-up
+            # banner and no indication of what went wrong -- the reason lived
+            # only in the error_message column. The traceback is the useful
+            # part: the message names what broke, the traceback names where.
+            failure = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             raise
 
         finally:
@@ -202,6 +214,14 @@ class SimulationOrchestrator:
             if self.log_capture:
                 try:
                     logs = self.log_capture.get_logs()
+                    if failure:
+                        logs = (
+                            f"{logs}\n"
+                            f"{'=' * 60}\n"
+                            f"Experiment failed\n"
+                            f"{'=' * 60}\n"
+                            f"{failure}"
+                        )
                     if logs:
                         self.experiment_manager.save_logs(logs)
                 except Exception as e:
