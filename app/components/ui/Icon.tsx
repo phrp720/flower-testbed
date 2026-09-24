@@ -45,6 +45,7 @@ import {
     Settings02Icon,
     SparklesIcon,
     Refresh01Icon,
+    MoreHorizontalIcon,
     SquareIcon,
     TaskDone01Icon,
     TerminalIcon,
@@ -91,6 +92,7 @@ const ICONS = {
     pending: Clock01Icon,
     spinner: Loading03Icon,
     refresh: Refresh01Icon,
+    more: MoreHorizontalIcon,
 
     // actions
     delete: Delete02Icon,

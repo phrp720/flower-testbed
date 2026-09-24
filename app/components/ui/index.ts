@@ -7,6 +7,7 @@
  */
 export { default as Icon, type IconName } from "./Icon";
 export { default as Button, LinkButton } from "./Button";
+export { default as Menu, type MenuItem } from "./Menu";
 export { default as Badge, type Tone } from "./Badge";
 export { default as StatusBadge } from "./StatusBadge";
 export { default as Callout } from "./Callout";

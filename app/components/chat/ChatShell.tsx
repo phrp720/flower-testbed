@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button, Card, Spinner } from "@/app/components/ui";
 import Dialog from "@/app/components/Dialog";
 import ConversationSidebar from "./ConversationSidebar";
+import ConversationHeader from "./ConversationHeader";
 import MessageList from "./MessageList";
 import MessageComposer from "./MessageComposer";
 import ChatSuggestions from "./ChatSuggestions";
@@ -427,21 +428,6 @@ export default function ChatShell({ conversationId }: Props) {
 
     return (
         <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
-                <div className="min-w-0">
-                    {/* No subtitle: the suggestions panel below says the same
-                        thing, and on a view sized to the viewport every line
-                        here is a line taken off the conversation. */}
-                    <h1
-                        title={conversation?.title ?? undefined}
-                        className="text-xl font-semibold text-ink truncate"
-                    >
-                        {conversation?.title ?? "Chat"}
-                    </h1>
-                </div>
-
-            </div>
-
             {/* Fills the space left over instead of subtracting a guessed
                 amount of chrome from the viewport. The old calc had to be kept
                 in step with the nav, the padding, the header and the footer by
@@ -456,6 +442,8 @@ export default function ChatShell({ conversationId }: Props) {
                 />
 
                 <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+                    <ConversationHeader conversation={conversation} onDelete={confirmDelete} />
+
                     <div
                         ref={paneRef}
                         onScroll={() => {
