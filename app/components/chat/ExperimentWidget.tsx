@@ -123,6 +123,8 @@ export default function ExperimentWidget({ experimentId }: Props) {
 
                 <Link
                     href={`/testbed/experiments/${experiment.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors shrink-0"
                 >
                     Open

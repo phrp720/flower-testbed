@@ -106,6 +106,8 @@ export default function ModelViewWidget({ experimentId }: { experimentId: string
 
                 <Link
                     href={`/testbed/experiments/${experimentId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors shrink-0"
                 >
                     Full view
