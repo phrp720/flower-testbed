@@ -307,7 +307,7 @@ export default function ChatShell({ conversationId }: Props) {
                         await refreshThread();
                         break;
                     case "error":
-                        fail(new Error(event.message), "Agent error");
+                        await refreshThread();
                         break;
                     case "turn_end":
                         setIsRunning(false);
