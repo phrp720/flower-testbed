@@ -10,6 +10,7 @@ import MessageList from "./MessageList";
 import MessageComposer from "./MessageComposer";
 import ChatSuggestions from "./ChatSuggestions";
 import { readAgentStream } from "@/app/testbed/chat/lib/sse";
+import { apiFetch } from "@/lib/api";
 import {
     useConversations,
     useCancelTurn,
@@ -161,6 +162,20 @@ export default function ChatShell({ conversationId }: Props) {
     const stickToBottom = useRef(true);
 
     /** Refetch the thread; used whenever the stream reports something changed. */
+    const swapInPersisted = async () => {
+        if (!conversationId) return;
+        try {
+            const fresh = await apiFetch<Thread>(`/api/agent/conversations/${conversationId}`);
+            queryClient.setQueryData(queryKeys.agent.thread(conversationId), fresh);
+        } catch {
+            // A failed refetch is not worth losing the reply over; the polling
+            // in useThread will catch up.
+        }
+        setStreamingText("");
+        setStreamingThinking("");
+        setPending([]);
+    };
+
     const refreshThread = async () => {
         if (!conversationId) return;
         await queryClient.invalidateQueries({
@@ -224,18 +239,12 @@ export default function ChatShell({ conversationId }: Props) {
             setIsRunning(true);
             setStreamingText((prev) => prev + JSON.parse((e as MessageEvent).data).text);
         });
-        source.addEventListener("message", () => {
-            setStreamingText("");
-            setStreamingThinking("");
-            void refreshThread();
-        });
+        source.addEventListener("message", () => void swapInPersisted());
         source.addEventListener("tool_call", () => void refreshThread());
         source.addEventListener("tool_result", () => void refreshThread());
         source.addEventListener("turn_end", () => {
             setIsRunning(false);
-            setStreamingText("");
-            setStreamingThinking("");
-            void refreshThread();
+            void swapInPersisted();
             source.close();
         });
 
@@ -289,12 +298,7 @@ export default function ChatShell({ conversationId }: Props) {
                         setStreamingThinking((prev) => prev + event.text);
                         break;
                     case "message":
-                        // The persisted message replaces both the streaming
-                        // buffer and the optimistic copy.
-                        setStreamingText("");
-                        setStreamingThinking("");
-                        setPending([]);
-                        await refreshThread();
+                        await swapInPersisted();
                         break;
                     case "tool_call":
                     case "tool_result":
