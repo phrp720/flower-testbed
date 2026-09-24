@@ -7,7 +7,7 @@ import { promisify } from 'util';
 import { db, schema } from '@/lib/db';
 import { eq, or } from 'drizzle-orm';
 import { getCheckpointsDir, getExperimentCheckpointDir } from '@/lib/storage';
-import { getPythonExecutable, getRunnerScript } from '@/lib/python';
+import { getPythonExecutable, getRunnerScript, getVenvRoot } from '@/lib/python';
 import { getProjectRoot } from '@/lib/paths';
 
 const DOCKER_API_VERSION = 'v1.41';
@@ -178,6 +178,45 @@ async function stopLocalWorker(experimentId: string): Promise<void> {
   await removeExperimentPid(experimentId);
 }
 
+/**
+ * Give the runner a CA bundle if the interpreter has none.
+*/
+function withCertificateBundle(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  if (env.SSL_CERT_FILE || env.REQUESTS_CA_BUNDLE) return env;
+
+  const bundle = findCertifiBundle();
+  if (!bundle) return env;
+
+  return { ...env, SSL_CERT_FILE: bundle, REQUESTS_CA_BUNDLE: bundle };
+}
+
+/**
+ * certifi lives beside the interpreter that will import it.
+ *
+ * Read from getVenvRoot() rather than derived from the executable path, so it
+ * follows VENV_PATH -- which is how the image puts the environment at
+ * /opt/venv instead of alongside the source. The worker runs the same image as
+ * the app, so what resolves here resolves there.
+ */
+function findCertifiBundle(): string | null {
+  const venvRoot = getVenvRoot();
+
+  // Debian bookworm ships 3.11; a local venv on macOS is commonly 3.13.
+  for (const version of ['3.13', '3.12', '3.11', '3.10']) {
+    const candidate = path.join(
+      venvRoot,
+      'lib',
+      `python${version}`,
+      'site-packages',
+      'certifi',
+      'cacert.pem'
+    );
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return null;
+}
+
 async function startLocalWorker(experimentId: string): Promise<void> {
   const projectRoot = getProjectRoot();
   const pythonScript = getRunnerScript('flower_runner.py');
@@ -188,6 +227,7 @@ async function startLocalWorker(experimentId: string): Promise<void> {
     cwd: projectRoot,
     detached: true,
     stdio: showLogs ? 'inherit' : 'ignore',
+    env: withCertificateBundle(process.env),
   };
 
   const pythonProcess = spawn(pythonPath, [pythonScript, experimentId], spawnOptions);
@@ -297,11 +337,22 @@ function buildWorkerEnv(): string[] {
     'RAY_DEDUP_LOGS',
     'RAY_COLOR_PREFIX',
     'RAY_LOG_TO_STDERR',
+    // Forwarded so an operator behind a TLS-inspecting proxy, who has pointed
+    // the app at their own trust store, does not find the worker unable to
+    // reach anything. The list is an allowlist, so anything absent from it
+    // silently does not cross into the container.
+    'SSL_CERT_FILE',
+    'REQUESTS_CA_BUNDLE',
   ];
+
+  // Same fallback the local worker gets. Harmless in the shipped image, whose
+  // Debian Python already trusts the system bundle, and load-bearing for any
+  // base image where it does not.
+  const env = withCertificateBundle(process.env);
 
   return keys
     .map((key) => {
-      const value = process.env[key];
+      const value = env[key];
       return value === undefined ? null : `${key}=${value}`;
     })
     .filter((value): value is string => value !== null);

@@ -62,7 +62,7 @@ export default function ModulesCard({
             type: "algorithm",
             label: "Strategy",
             path: algorithmPath,
-            fallback: "built-in FedAvg \u2014 constructed in code, no module",
+            fallback: "built-in FedAvg",
             viewable: false,
         },
         { type: "config", label: "Config", path: configPath, fallback: "built-in defaults", viewable: true },

@@ -46,7 +46,7 @@ export default function RenameExperimentDialog({
     const submit = () => {
         const trimmed = draftName.trim();
         if (!trimmed) {
-            setError("A name is required.");
+            setError("Name is required.");
             return;
         }
 

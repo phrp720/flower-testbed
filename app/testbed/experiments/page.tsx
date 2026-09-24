@@ -10,13 +10,20 @@ import {
   EmptyState,
   Icon,
   LinkButton,
+  Menu,
   PageHeader,
   Pagination,
   StatusBadge,
   Spinner,
   CONTROL,
 } from "@/app/components/ui";
-import { useDeleteExperiment, useExperiments } from "@/app/hooks/useExperiments";
+import {
+  useDeleteExperiment,
+  useDuplicateExperiment,
+  useExperiments,
+  type Experiment,
+} from "@/app/hooks/useExperiments";
+import RenameExperimentDialog from "@/app/components/experiments/RenameExperimentDialog";
 
 const PER_PAGE = 10;
 
@@ -26,11 +33,21 @@ const STATUSES = ["pending", "running", "completed", "failed"] as const;
 export default function ExperimentsPage() {
   const { data: experiments = [], isLoading } = useExperiments();
   const deleteExperiment = useDeleteExperiment();
+  const duplicateExperiment = useDuplicateExperiment();
 
   // Empty means no status filter, which is what an untouched filter bar should do.
   const [statuses, setStatuses] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  /**
+   * Held at page level, not per row.
+   *
+   * Renaming needs a mutation bound to one id, and a hook cannot be called
+   * inside a list. Keeping the target here means one dialog and one hook for
+   * however many rows are on screen.
+   */
+  const [renameTarget, setRenameTarget] = useState<Experiment | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
@@ -191,14 +208,24 @@ export default function ExperimentsPage() {
                       icon="view"
                       title="Open experiment"
                     />
-                    <Button
+                    <Menu
                       size="sm"
-                      variant="ghost"
-                      icon="delete"
-                      title="Delete experiment"
-                      className="hover:text-danger hover:bg-danger-surface"
-                      loading={isDeleting && deleteId === exp.id}
-                      onClick={() => setDeleteId(exp.id)}
+                      label={`Actions for ${exp.name}`}
+                      items={[
+                        { label: "Rename", icon: "edit", onSelect: () => setRenameTarget(exp) },
+                        {
+                          label: "Duplicate",
+                          icon: "copy",
+                          onSelect: () => duplicateExperiment.mutate({ id: exp.id }),
+                        },
+                        {
+                          label: "Delete",
+                          icon: "delete",
+                          danger: true,
+                          disabled: isDeleting && deleteId === exp.id,
+                          onSelect: () => setDeleteId(exp.id),
+                        },
+                      ]}
                     />
                   </div>
                 </div>
@@ -213,6 +240,15 @@ export default function ExperimentsPage() {
             className="mt-4"
           />
         </>
+      )}
+
+      {renameTarget && (
+        <RenameExperimentDialog
+          experimentId={renameTarget.id}
+          name={renameTarget.name}
+          description={renameTarget.description}
+          onClose={() => setRenameTarget(null)}
+        />
       )}
 
       <Dialog

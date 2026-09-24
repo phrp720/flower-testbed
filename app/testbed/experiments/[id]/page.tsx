@@ -36,6 +36,7 @@ import {
 import {
   useDeleteExperiment,
   useDuplicateExperiment,
+  useStartExperiment,
   useExperiment,
   useStopExperiment,
 } from "@/app/hooks/useExperiments";
@@ -116,6 +117,7 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
   const { data, isLoading: loading } = useExperiment(id);
   const stopExperiment = useStopExperiment();
   const duplicateExperiment = useDuplicateExperiment();
+  const startExperiment = useStartExperiment();
   const deleteExperiment = useDeleteExperiment();
 
   const experiment = (data?.experiment ?? null) as Experiment | null;
@@ -278,6 +280,18 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
     });
   };
 
+  const handleStart = () => {
+    startExperiment.mutate(id, {
+      onError: (error: unknown) =>
+        setDialog({
+          isOpen: true,
+          title: 'Could not start',
+          message: error instanceof Error ? error.message : 'Unknown error',
+          type: 'error',
+        }),
+    });
+  };
+
   const handleDuplicate = () => {
     duplicateExperiment.mutate(
       { id },
@@ -323,13 +337,6 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
               onClick={() => setShowLogs(true)}
             />
 
-            <Menu
-              label="Experiment actions"
-              items={[
-                { label: "Rename", icon: "edit", onSelect: () => setRenaming(true) },
-                { label: "Duplicate", icon: "copy", onSelect: handleDuplicate },
-              ]}
-            />
             {canShowStopButton && isActive && (
               <Button
                 variant="secondary"
@@ -341,14 +348,34 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
                 {isStopping ? "Stopping" : "Stop"}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              icon="delete"
-              title="Delete experiment"
-              className="hover:text-danger hover:bg-danger-surface"
-              loading={isDeleting}
-              disabled={isStopping}
-              onClick={handleDeleteClick}
+
+            {experiment.status === 'pending' && (
+              <Button
+                variant="primary"
+                icon="play"
+                loading={startExperiment.isPending}
+                onClick={handleStart}
+              >
+                {startExperiment.isPending ? "Starting" : "Run"}
+              </Button>
+            )}
+
+            {/* Last, and holding the destructive action. Delete sat beside Run
+                as a bare icon, which is a misclick that cannot be undone
+                sitting next to the one people reach for most. */}
+            <Menu
+              label="Experiment actions"
+              items={[
+                { label: "Rename", icon: "edit", onSelect: () => setRenaming(true) },
+                { label: "Duplicate", icon: "copy", onSelect: handleDuplicate },
+                {
+                  label: "Delete",
+                  icon: "delete",
+                  danger: true,
+                  disabled: isStopping || isDeleting,
+                  onSelect: handleDeleteClick,
+                },
+              ]}
             />
           </>
         }
@@ -538,9 +565,6 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
         type={dialog.type}
       />
 
-      {/* Opens regardless of whether logs exist yet: a run that has just
-          started has none, and refusing to open is indistinguishable from a
-          broken button. */}
       <LogsDialog
         open={showLogs}
         onClose={() => setShowLogs(false)}

@@ -32,6 +32,25 @@ from .defaults.toy2d import get_model as get_toy2d_model, load_data as load_toy2
 from .defaults.config import DEFAULT_CONFIG
 
 
+def _strategy_name_of(custom_config: Dict[str, Any]) -> Optional[str]:
+    """
+    The built-in strategy named in custom_config, whichever way it was written.
+
+    Two shapes reach this field and both are legitimate. configure_aggregation
+    writes {"name": "fedprox", "params": {...}} because it carries parameters;
+    an uploaded config module writes "fedavg", because that is what the config
+    template shows and a bare name is the natural thing to type. Reading only
+    the first shape raised 'str' object has no attribute 'get' the moment
+    someone uploaded the template unchanged.
+    """
+    spec = custom_config.get('strategy')
+    if isinstance(spec, str):
+        return spec
+    if isinstance(spec, dict):
+        return spec.get('name')
+    return None
+
+
 class LogCapture:
     """
     Captures stdout and stderr without printing to terminal (silent mode).
@@ -325,7 +344,7 @@ class SimulationOrchestrator:
 
             setup = resolve_setup(
                 strategy=strategy,
-                strategy_name=(custom_config.get('strategy') or {}).get('name'),
+                strategy_name=_strategy_name_of(custom_config),
                 algorithm_path=self.config.get('algorithm_path'),
                 dataset_path=self.config.get('dataset_path'),
                 model=self.model_fn() if self.model_fn else None,
