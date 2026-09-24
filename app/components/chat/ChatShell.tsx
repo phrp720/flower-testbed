@@ -81,6 +81,13 @@ function optimisticMessage(text: string, seq: number): AgentMessage {
 export default function ChatShell({ conversationId }: Props) {
     const router = useRouter();
 
+
+    const claimed = pendingHandoff;
+    const handoff =
+        conversationId != null && claimed != null && claimed.conversationId === conversationId
+            ? claimed
+            : null;
+
     const queryClient = useQueryClient();
 
     const { data: conversations = [] } = useConversations();
@@ -99,11 +106,13 @@ export default function ChatShell({ conversationId }: Props) {
 
     // The server's messages, plus anything sent but not yet acknowledged.
     const serverMessages = thread?.messages ?? [];
-    const [pending, setPending] = useState<AgentMessage[]>([]);
+    const [pending, setPending] = useState<AgentMessage[]>(() =>
+        handoff ? [optimisticMessage(handoff.text, 1)] : []
+    );
     const messages = [...serverMessages, ...pending];
 
     const [input, setInput] = useState("");
-    const [isRunning, setIsRunning] = useState(false);
+    const [isRunning, setIsRunning] = useState(() => handoff != null);
     const [streamingText, setStreamingText] = useState("");
     const [streamingThinking, setStreamingThinking] = useState("");
     const [dialog, setDialog] = useState<DialogState>(CLOSED);
@@ -454,7 +463,7 @@ export default function ChatShell({ conversationId }: Props) {
                         }}
                         className="flex-1 overflow-y-auto px-5 py-5"
                     >
-                        {loading ? (
+                        {loading && messages.length === 0 ? (
                             <div className="flex justify-center py-20">
                                 <Spinner size={16} label="Loading conversation" />
                             </div>
