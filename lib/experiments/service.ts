@@ -181,6 +181,17 @@ export interface ExperimentSnapshot {
     status: string;
     currentRound: number;
     totalRounds: number;
+    /**
+     * The run's own result, once it has one.
+     *
+     * Absent from this projection originally, which made get_experiment_status
+     * report a completed run with no final numbers -- so the agent would say a
+     * run had finished and that it had no idea how it did, while the row it had
+     * just read held the answer. The live page never noticed because it reads
+     * the metrics series instead.
+     */
+    finalAccuracy: number | null;
+    finalLoss: number | null;
   };
   metrics: Array<{
     id: string;
@@ -235,6 +246,8 @@ export async function buildExperimentSnapshot(
       status: experiment.status,
       currentRound: latestMetrics?.round || 0,
       totalRounds: experiment.numRounds,
+      finalAccuracy: experiment.finalAccuracy,
+      finalLoss: experiment.finalLoss,
     },
     metrics: metrics.map((m, index) => ({
       id: m.id,

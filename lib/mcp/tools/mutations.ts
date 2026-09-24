@@ -219,20 +219,41 @@ export const setPartitioningTool = defineTool({
   name: 'set_partitioning',
   title: 'Set data partitioning',
   description:
-    'Choose how the dataset is split across clients. IID gives every client the ' +
-    'same label distribution, which is unrealistic and makes strategies hard to ' +
-    'tell apart. Dirichlet with a low alpha (0.5 moderate, 0.1 severe) is the ' +
-    'standard non-IID benchmark; shard and pathological restrict each client to ' +
-    'a few classes. Applies to the default CIFAR-10 loader.',
+    'Choose how the dataset is split across clients, along either of two ' +
+    'independent axes. Label skew changes who sees which classes: dirichlet ' +
+    'with a low alpha (0.5 moderate, 0.1 severe) is the standard non-IID ' +
+    'benchmark, while shard and pathological restrict each client to a few ' +
+    'classes. Quantity skew leaves the labels alone and changes how much data ' +
+    'each client holds: linear, exponential and square grow the partitions with ' +
+    'the client index, which is how stragglers and unequal devices are modelled ' +
+    'and which gives the largest clients most of the weight under FedAvg. IID ' +
+    'is an equal random split -- realistic of nothing, and it makes strategies ' +
+    'hard to tell apart. Applies to the default CIFAR-10 loader.',
   group: 'nodes',
   risk: 'write',
   inputSchema: z.object({
     experimentId: experimentIdSchema,
-    kind: z.enum(['iid', 'dirichlet', 'shard', 'pathological']),
+    // Mirrors build_partitioner in runner/pytorch/defaults/dataset.py. An
+    // unknown kind there degrades silently to IID, so this enum is what stops a
+    // typo producing a run that reports success having trained on the wrong
+    // split -- it is load-bearing, not just validation.
+    kind: z.enum([
+      'iid',
+      'dirichlet',
+      'shard',
+      'pathological',
+      'linear',
+      'exponential',
+      'square',
+    ]),
     alpha: z.number().min(0.01).max(1000).optional().describe('Dirichlet only. Lower is more skewed.'),
     numShardsPerPartition: z.number().int().min(1).optional().describe('Shard only.'),
     numClassesPerPartition: z.number().int().min(1).optional().describe('Pathological only.'),
-    seed: z.number().int().optional(),
+    seed: z
+      .number()
+      .int()
+      .optional()
+      .describe('Label-skew kinds only; the quantity-skew splits are deterministic.'),
   }),
   handler: async ({ experimentId, kind, alpha, numShardsPerPartition, numClassesPerPartition, seed }) => {
     const partitioner: Record<string, unknown> = { kind };

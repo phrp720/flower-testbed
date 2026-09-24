@@ -129,6 +129,39 @@ class ExperimentManager:
             self.conn.commit()
         print(f"[ExperimentManager] Saved final results - Accuracy: {accuracy:.4f}, Loss: {loss:.4f}")
 
+    def save_resolved_setup(self, setup: dict):
+        """
+        Record what the run is actually made of, under custom_config.resolved.
+
+        Merged into the existing blob rather than replacing it, because the
+        configured values sitting beside it are what the user asked for and are
+        still worth keeping -- the pair is only interesting when they disagree.
+
+        jsonb concatenation does the merge in Postgres, so a run that is
+        restarted overwrites its own resolved block without disturbing the
+        partitioner or strategy config next to it. Never fatal: failing to
+        describe a run is not a reason to stop it.
+        """
+        if not self.conn:
+            raise RuntimeError("Not connected to database")
+
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE experiments
+                       SET custom_config = COALESCE(custom_config, '{}'::jsonb)
+                                           || jsonb_build_object('resolved', %s::jsonb)
+                     WHERE id = %s
+                    """,
+                    (json.dumps(setup), self.experiment_id),
+                )
+                self.conn.commit()
+            print(f"[ExperimentManager] Resolved setup: {setup}")
+        except Exception as error:
+            self.conn.rollback()
+            print(f"[ExperimentManager] Could not save resolved setup: {error}")
+
     def record_checkpoint(
         self,
         round_num: int,

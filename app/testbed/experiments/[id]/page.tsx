@@ -8,6 +8,13 @@ import MetricsTable from "@/app/components/MetricsTable";
 import CheckpointsList from "@/app/components/CheckpointsList";
 import PlaygroundView from "@/app/components/experiments/PlaygroundView";
 import ModulesCard from "@/app/components/experiments/ModulesCard";
+import {
+  describeDataset,
+  describeModel,
+  describePartitioning,
+  describeStrategy,
+  type SetupConfig,
+} from "@/app/components/experiments/describeSetup";
 import LogsDialog from "@/app/components/experiments/LogsDialog";
 import {
   Button,
@@ -49,7 +56,7 @@ type Experiment = {
   finalLoss: number | null;
   errorMessage: string | null;
   logs: string | null;
-  customConfig: { dataset?: { kind?: string } } | null;
+  customConfig: SetupConfig;
   algorithmPath: string | null;
   modelPath: string | null;
   configPath: string | null;
@@ -421,6 +428,26 @@ export default function ExperimentPage({ params }: { params: Promise<{ id: strin
           />
           <KeyValue label="Local epochs" value={experiment.localEpochs} mono />
           <KeyValue label="Learning rate" value={experiment.learningRate} mono />
+
+          {/* The three choices that change a run most, and the three the page
+              never mentioned: all of them live in custom_config or in the
+              presence of an upload rather than in a column, so a run configured
+              through the agent used to look exactly like a default one. */}
+          <KeyValue label="Dataset" value={describeDataset(experiment.customConfig, experiment.datasetPath)} />
+          <KeyValue
+            label="Partitioning"
+            value={describePartitioning(experiment.customConfig, experiment.datasetPath)}
+          />
+          <KeyValue
+            label="Strategy"
+            value={describeStrategy(experiment.customConfig, experiment.algorithmPath)}
+          />
+          {describeModel(experiment.customConfig, experiment.modelPath) && (
+            <KeyValue
+              label="Model"
+              value={describeModel(experiment.customConfig, experiment.modelPath)}
+            />
+          )}
           <KeyValue
             label="Created"
             value={new Date(experiment.createdAt).toLocaleString()}

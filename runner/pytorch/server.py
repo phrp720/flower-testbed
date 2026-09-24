@@ -186,13 +186,16 @@ def create_strategy(
     if strategy_fn is not None:
         try:
             strategy = strategy_fn()
-            print(f"[Server] Using custom strategy: {type(strategy).__name__}")
-            # A custom strategy still needs the platform's aggregators, or the
-            # run produces no eval metrics.
-            return _inject_defaults(strategy, on_fit_config_fn, on_evaluate_config_fn)
         except Exception as e:
-            print(f"[Server] Failed to create custom strategy: {e}")
-            print("[Server] Falling back to FedAvg")
+            raise RuntimeError(
+                f"The uploaded strategy could not be created: {e}. "
+                "The run was stopped."
+            ) from e
+
+        print(f"[Server] Using custom strategy: {type(strategy).__name__}")
+        # A custom strategy still needs the platform's aggregators, or the
+        # run produces no eval metrics.
+        return _inject_defaults(strategy, on_fit_config_fn, on_evaluate_config_fn)
 
     # Calculate minimum clients
     min_clients = max(1, int(num_clients * client_fraction))
@@ -213,13 +216,13 @@ def create_strategy(
     spec = _BUILTIN_STRATEGIES.get(requested)
 
     if spec is None:
-        print(
-            f"[Server] Unknown strategy '{requested}'. Available: "
+        # Fatal for the same reason an uncreatable custom strategy is: a run
+        # that quietly used FedAvg when asked for FedProx is a result that
+        # cannot be trusted and does not announce itself.
+        raise ValueError(
+            f"Unknown strategy '{requested}'. Available: "
             + ", ".join(sorted(_BUILTIN_STRATEGIES))
-            + ". Falling back to FedAvg."
         )
-        spec = _BUILTIN_STRATEGIES["fedavg"]
-        requested = "fedavg"
 
     kwargs = dict(common_kwargs)
     kwargs.update(spec["params"])

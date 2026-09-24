@@ -23,6 +23,8 @@ from ..core.module_loader import ModuleLoader
 from ..core.checkpoint_manager import CheckpointManager
 from .client import create_client_fn
 from .server import create_strategy
+from .defaults.dataset import build_partitioner
+from ..core.resolved_setup import resolve as resolve_setup
 from .defaults.model import get_model as get_default_model
 from .defaults.dataset import load_data as load_default_data
 from .defaults.toy2d import get_model as get_toy2d_model, load_data as load_toy2d_data
@@ -288,6 +290,32 @@ class SimulationOrchestrator:
             merged = {**DEFAULT_CONFIG, **user_config}
             self.config['custom_config'] = merged
 
+    def _record_resolved_setup(self, strategy):
+        """Describe the run on its own row; never fatal if it cannot."""
+        try:
+            custom_config = self.config.get('custom_config') or {}
+            partitioner = None
+            if not self.config.get('dataset_path'):
+                # Same call the default loader makes, so the class recorded is
+                # the class that will be used.
+                partitioner = build_partitioner(
+                    self.config.get('num_clients', 1),
+                    custom_config.get('partitioner'),
+                )
+
+            setup = resolve_setup(
+                strategy=strategy,
+                strategy_name=(custom_config.get('strategy') or {}).get('name'),
+                algorithm_path=self.config.get('algorithm_path'),
+                dataset_path=self.config.get('dataset_path'),
+                model=self.model_fn() if self.model_fn else None,
+                partitioner=partitioner,
+                dataset_id='toy2d' if self._is_toy2d() else 'cifar10',
+            )
+            self.experiment_manager.save_resolved_setup(setup)
+        except Exception as error:
+            print(f"[Orchestrator] Could not resolve setup: {error}")
+
     def _setup_device(self):
         """Setup compute device (CPU/GPU)."""
         use_gpu = self.config.get('use_gpu', False)
@@ -409,6 +437,12 @@ class SimulationOrchestrator:
             strategy_params=strategy_params,
             initial_parameters=initial_parameters,
         )
+
+        # Record what this run is actually made of, before wrapping obscures the
+        # class name. create_strategy falls back to FedAvg when an uploaded
+        # module raises, so this is the only place the difference between asked
+        # for and got is still visible.
+        self._record_resolved_setup(strategy)
 
         # Wrap strategy to capture metrics
         strategy = self._wrap_strategy_with_callbacks(strategy)

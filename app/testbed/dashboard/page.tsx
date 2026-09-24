@@ -125,7 +125,16 @@ function formatDuration(seconds: number): string {
 */
 const SUPPORTED = {
   strategies: ["fedavg", "fedprox", "fedadam", "fedadagrad", "fedyogi"],
-  partitioning: ["iid", "dirichlet", "shard", "pathological"],
+  // Label skew first, then quantity skew -- the order the panel reads in.
+  partitioning: [
+    "iid",
+    "dirichlet",
+    "shard",
+    "pathological",
+    "linear",
+    "exponential",
+    "square",
+  ],
 };
 
 /** One colour per dataset series, reused in order. */

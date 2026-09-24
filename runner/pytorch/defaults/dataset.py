@@ -15,9 +15,12 @@ from torchvision import transforms
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import (
     DirichletPartitioner,
+    ExponentialPartitioner,
     IidPartitioner,
+    LinearPartitioner,
     PathologicalPartitioner,
     ShardPartitioner,
+    SquarePartitioner,
 )
 
 
@@ -51,7 +54,9 @@ def build_partitioner(num_partitions: int, config: Optional[Dict[str, Any]] = No
     """
     Build a partitioner from a config dict.
 
-    Supported kinds:
+    Two independent axes of heterogeneity.
+
+    Label skew -- who sees which classes:
       iid           -- equal random split (the default)
       dirichlet     -- label distribution drawn from Dir(alpha); lower alpha is
                        more skewed. alpha=0.5 is a common non-IID benchmark,
@@ -59,6 +64,18 @@ def build_partitioner(num_partitions: int, config: Optional[Dict[str, Any]] = No
       shard         -- each client gets a fixed number of label shards, so most
                        clients see only a few classes
       pathological  -- each client sees exactly num_classes_per_partition classes
+
+    Quantity skew -- how much each client holds, with labels left alone:
+      linear        -- sizes grow linearly with partition id
+      exponential   -- sizes grow exponentially, so the largest client dwarfs
+                       the smallest
+      square        -- sizes grow with the square of the id
+
+    These compose differently than they sound: label skew breaks the assumption
+    that every client optimises the same objective, while quantity skew leaves
+    the objective alone and instead makes FedAvg's sample-count weighting hand
+    a few clients most of the vote. A strategy can be robust to one and not the
+    other, which is exactly why both are worth having.
 
     Non-IID partitioning is the point of most federated learning research: with an
     IID split, FedAvg is hard to beat and strategy differences barely show.
@@ -92,13 +109,33 @@ def build_partitioner(num_partitions: int, config: Optional[Dict[str, Any]] = No
                 num_classes_per_partition=int(config.get("num_classes_per_partition", 2)),
                 seed=int(config.get("seed", 42)),
             )
+
+        # Quantity skew. These take no label column and no seed: the split is a
+        # deterministic function of the partition id, so there is nothing to
+        # randomise.
+        if kind == "linear":
+            return LinearPartitioner(num_partitions=num_partitions)
+
+        if kind == "exponential":
+            return ExponentialPartitioner(num_partitions=num_partitions)
+
+        if kind == "square":
+            return SquarePartitioner(num_partitions=num_partitions)
     except Exception as e:
-        # A bad partitioner config should degrade to IID, not lose the run.
-        print(f"[Dataset] Failed to build '{kind}' partitioner ({e}); using IID.")
-        return IidPartitioner(num_partitions=num_partitions)
+        # Deliberately fatal. Degrading to IID produced a run that completed
+        # and reported metrics while training on a different split than the one
+        # requested -- and IID is the split that makes strategies hardest to
+        # tell apart, so the failure flatters the results.
+        raise ValueError(
+            f"Could not build the '{kind}' partitioner: {e}. "
+            "The run was stopped."
+        ) from e
 
     if kind != "iid":
-        print(f"[Dataset] Unknown partitioner '{kind}'; using IID.")
+        raise ValueError(
+            f"Unknown partitioner '{kind}'. Available: iid, dirichlet, shard, "
+            "pathological, linear, exponential, square"
+        )
 
     return IidPartitioner(num_partitions=num_partitions)
 
