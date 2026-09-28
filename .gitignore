@@ -9,6 +9,7 @@ node_modules/
 venv
 .codex
 .claude
+*.tsbuildinfo
 
 # Uploads and experiment data
 uploads/
