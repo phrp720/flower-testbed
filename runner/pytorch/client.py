@@ -87,8 +87,17 @@ class FlowerClient(fl.client.NumPyClient):
         local_epochs = int(config.get("local_epochs", self.local_epochs))
         learning_rate = float(config.get("learning_rate", self.learning_rate))
 
+        # FedProx sends proximal_mu in the fit config; the proximal term itself
+        # has to be applied here, on the client. Without it FedProx trains
+        # exactly like FedAvg and only the strategy name differs.
+        proximal_mu = float(config.get("proximal_mu", 0.0))
+        weight_decay = float(config.get("weight_decay", 0.0))
+
         # Train the model
-        train_loss, train_acc = self._train(local_epochs, learning_rate)
+        train_loss, train_acc = self._train(
+            local_epochs, learning_rate,
+            proximal_mu=proximal_mu, weight_decay=weight_decay,
+        )
 
         # Return updated parameters, number of samples, and metrics
         return (
@@ -130,13 +139,21 @@ class FlowerClient(fl.client.NumPyClient):
             },
         )
 
-    def _train(self, epochs: int, learning_rate: float) -> Tuple[float, float]:
+    def _train(
+        self,
+        epochs: int,
+        learning_rate: float,
+        proximal_mu: float = 0.0,
+        weight_decay: float = 0.0,
+    ) -> Tuple[float, float]:
         """
         Train the model for specified epochs.
 
         Args:
             epochs: Number of epochs to train
             learning_rate: Learning rate
+            proximal_mu: FedProx coefficient; adds (mu/2)*||w - w_global||^2
+            weight_decay: L2 regularisation passed to SGD
 
         Returns:
             Average loss and accuracy
@@ -147,6 +164,11 @@ class FlowerClient(fl.client.NumPyClient):
             self.model.parameters(),
             lr=learning_rate,
             momentum=0.9,
+            weight_decay=weight_decay,
+        )
+        global_params = (
+            [p.detach().clone() for p in self.model.parameters()]
+            if proximal_mu > 0 else None
         )
 
         total_loss = 0.0
@@ -161,6 +183,12 @@ class FlowerClient(fl.client.NumPyClient):
                 optimizer.zero_grad()
                 outputs = self.model(images)
                 loss = criterion(outputs, labels)
+                if global_params is not None:
+                    proximal = sum(
+                        (w - g).pow(2).sum()
+                        for w, g in zip(self.model.parameters(), global_params)
+                    )
+                    loss = loss + (proximal_mu / 2.0) * proximal
                 loss.backward()
                 optimizer.step()
 

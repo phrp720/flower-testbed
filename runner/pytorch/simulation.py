@@ -437,11 +437,15 @@ class SimulationOrchestrator:
 
         # Create fit/evaluate config functions
         def on_fit_config_fn(server_round: int) -> Dict[str, Any]:
-            return {
+            fit_config = {
                 "server_round": server_round,
                 "local_epochs": local_epochs,
                 "learning_rate": learning_rate,
             }
+            # Optional L2 regularisation for the client optimiser.
+            if custom_config.get('weight_decay') is not None:
+                fit_config["weight_decay"] = float(custom_config['weight_decay'])
+            return fit_config
 
         def on_evaluate_config_fn(server_round: int) -> Dict[str, Any]:
             return {"server_round": server_round}
