@@ -2,12 +2,16 @@
 FlowerClient - PyTorch client implementation for Flower federated learning.
 """
 
+import copy
+import os
 from collections import OrderedDict
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 import flwr as fl
@@ -34,6 +38,7 @@ class FlowerClient(fl.client.NumPyClient):
         local_epochs: int = 1,
         learning_rate: float = 0.01,
         partition_id: Optional[int] = None,
+        state_dir: Optional[Path] = None,
     ):
         """
         Initialize the Flower client.
@@ -56,6 +61,10 @@ class FlowerClient(fl.client.NumPyClient):
         # Reporting the partition explicitly is what lets analysis line a client's
         # model up with the data it actually trained on.
         self.partition_id = partition_id
+        # Where per-client state that must survive between rounds is kept
+        # (MOON's previous local model). Simulation recreates the client every
+        # round, so it cannot live on the object.
+        self.state_dir = Path(state_dir) if state_dir is not None else None
 
     def get_parameters(self, config: Dict[str, Scalar]) -> NDArrays:
         """Return model parameters as a list of NumPy arrays."""
@@ -93,10 +102,16 @@ class FlowerClient(fl.client.NumPyClient):
         proximal_mu = float(config.get("proximal_mu", 0.0))
         weight_decay = float(config.get("weight_decay", 0.0))
 
+        # MOON (Li et al., CVPR 2021) model-contrastive term, off unless the
+        # fit config carries moon_mu > 0.
+        moon_mu = float(config.get("moon_mu", 0.0))
+        moon_temperature = float(config.get("moon_temperature", 0.5))
+
         # Train the model
         train_loss, train_acc = self._train(
             local_epochs, learning_rate,
             proximal_mu=proximal_mu, weight_decay=weight_decay,
+            moon_mu=moon_mu, moon_temperature=moon_temperature,
         )
 
         # Return updated parameters, number of samples, and metrics
@@ -145,6 +160,8 @@ class FlowerClient(fl.client.NumPyClient):
         learning_rate: float,
         proximal_mu: float = 0.0,
         weight_decay: float = 0.0,
+        moon_mu: float = 0.0,
+        moon_temperature: float = 0.5,
     ) -> Tuple[float, float]:
         """
         Train the model for specified epochs.
@@ -154,6 +171,8 @@ class FlowerClient(fl.client.NumPyClient):
             learning_rate: Learning rate
             proximal_mu: FedProx coefficient; adds (mu/2)*||w - w_global||^2
             weight_decay: L2 regularisation passed to SGD
+            moon_mu: MOON coefficient; adds mu * model-contrastive loss
+            moon_temperature: MOON temperature tau
 
         Returns:
             Average loss and accuracy
@@ -171,6 +190,12 @@ class FlowerClient(fl.client.NumPyClient):
             if proximal_mu > 0 else None
         )
 
+        moon = moon_mu > 0
+        if moon:
+            global_net, prev_net = self._moon_reference_models()
+
+        cos = nn.CosineSimilarity(dim=-1)
+
         total_loss = 0.0
         correct = 0
         total = 0
@@ -181,8 +206,22 @@ class FlowerClient(fl.client.NumPyClient):
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 optimizer.zero_grad()
-                outputs = self.model(images)
+                if moon:
+                    z, outputs = self.model.forward_with_projection(images)
+                else:
+                    outputs = self.model(images)
                 loss = criterion(outputs, labels)
+                if moon:
+                    # Positive pair: this model vs the global model; negative
+                    # pair: this model vs this client's previous local model.
+                    with torch.no_grad():
+                        z_glob, _ = global_net.forward_with_projection(images)
+                        z_prev, _ = prev_net.forward_with_projection(images)
+                    sims = torch.stack(
+                        [cos(z, z_glob), cos(z, z_prev)], dim=1
+                    ) / moon_temperature
+                    targets = torch.zeros(sims.size(0), dtype=torch.long, device=self.device)
+                    loss = loss + moon_mu * criterion(sims, targets)
                 if global_params is not None:
                     proximal = sum(
                         (w - g).pow(2).sum()
@@ -200,7 +239,44 @@ class FlowerClient(fl.client.NumPyClient):
         avg_loss = total_loss / len(self.trainloader) / epochs
         accuracy = correct / total
 
+        if moon:
+            self._save_moon_state()
+
         return avg_loss, accuracy
+
+    def _moon_state_path(self) -> Path:
+        if self.state_dir is None or self.partition_id is None:
+            raise RuntimeError(
+                "MOON needs a per-client state directory and partition id to keep "
+                "the previous local model between rounds."
+            )
+        return self.state_dir / f"moon_prev_partition_{int(self.partition_id)}.pt"
+
+    def _moon_reference_models(self) -> Tuple[nn.Module, nn.Module]:
+        """Frozen copies of the global model (just loaded) and this client's
+        previous local model. Before a client has trained once, the previous
+        model is the global model, as in the MOON reference code."""
+        if not hasattr(self.model, "forward_with_projection"):
+            raise RuntimeError(
+                "MOON (moon_mu > 0) needs the model to define "
+                "forward_with_projection(x) -> (projection, logits)."
+            )
+        global_net = copy.deepcopy(self.model).eval()
+        prev_net = copy.deepcopy(self.model).eval()
+        path = self._moon_state_path()
+        if path.exists():
+            prev_net.load_state_dict(torch.load(path, map_location=self.device))
+        for net in (global_net, prev_net):
+            for p in net.parameters():
+                p.requires_grad_(False)
+        return global_net, prev_net
+
+    def _save_moon_state(self) -> None:
+        path = self._moon_state_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        torch.save(self.model.state_dict(), tmp)
+        os.replace(tmp, path)
 
     def _evaluate(self) -> Tuple[float, float]:
         """
@@ -224,6 +300,7 @@ def create_client_fn(
     local_epochs: int = 1,
     learning_rate: float = 0.01,
     client_overrides: Optional[Dict[Any, Dict[str, Any]]] = None,
+    state_dir: Optional[Path] = None,
 ) -> Callable[[Context], Client]:
     """
     Create a client function for Flower simulation.
@@ -277,6 +354,7 @@ def create_client_fn(
             local_epochs=node_epochs,
             learning_rate=node_lr,
             partition_id=int(partition_id),
+            state_dir=state_dir,
         )
 
         # Convert NumPyClient to Client (required by modern Flower API)

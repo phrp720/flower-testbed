@@ -30,6 +30,12 @@ RUN python3 -m venv $VENV_PATH \
 
 COPY . .
 
+# Shown in the footer: release tag if set, else short commit hash.
+ARG APP_VERSION=""
+ARG GIT_COMMIT=""
+ENV APP_VERSION=$APP_VERSION
+ENV GIT_COMMIT=$GIT_COMMIT
+
 ENV NODE_ENV=production
 RUN pnpm build
 

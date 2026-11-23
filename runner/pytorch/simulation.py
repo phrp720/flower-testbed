@@ -433,6 +433,10 @@ class SimulationOrchestrator:
             local_epochs=local_epochs,
             learning_rate=learning_rate,
             client_overrides=client_overrides,
+            # Per-client state kept between rounds (MOON's previous local
+            # model). Next to the checkpoints, not inside them, so checkpoint
+            # listings stay unchanged.
+            state_dir=self.checkpoint_manager.checkpoints_base / f"client_state_{self.experiment_id}",
         )
 
         # Create fit/evaluate config functions
@@ -445,6 +449,10 @@ class SimulationOrchestrator:
             # Optional L2 regularisation for the client optimiser.
             if custom_config.get('weight_decay') is not None:
                 fit_config["weight_decay"] = float(custom_config['weight_decay'])
+            # MOON: model-contrastive term on the client (off unless moon_mu > 0).
+            if custom_config.get('moon_mu') is not None:
+                fit_config["moon_mu"] = float(custom_config['moon_mu'])
+                fit_config["moon_temperature"] = float(custom_config.get('moon_temperature', 0.5))
             return fit_config
 
         def on_evaluate_config_fn(server_round: int) -> Dict[str, Any]:
